@@ -21,7 +21,9 @@ export default function Navbar({ currentRoute, setCurrentRoute }) {
         <button className={`zone-admin ${currentRoute === 'kanban-dashboard' ? 'active' : ''}`} onClick={() => setCurrentRoute('kanban-dashboard')}>
           <i className="fa-solid fa-square-kanban" style={{ marginRight: '4px' }}></i> CRM Kanban
         </button>
-        <button className={`zone-admin ${currentRoute === 'admin-approval' ? 'active' : ''}`} onClick={() => setCurrentRoute('admin-approval')}>8. Admin Duyệt</button>
+        <button className={`zone-admin ${currentRoute === 'admin-dashboard' ? 'active' : ''}`} onClick={() => setCurrentRoute('admin-dashboard')}>
+          <i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }}></i> Admin Dashboard
+        </button>
         <button className={`zone-admin ${currentRoute === 'sales-products' ? 'active' : ''}`} onClick={() => setCurrentRoute('sales-products')}>9. Sales Đăng Giá</button>
         <button className={`zone-admin ${currentRoute === 'sales-rfq' ? 'active' : ''}`} onClick={() => setCurrentRoute('sales-rfq')}>10. Xử Lý Báo Giá</button>
         <button className={`zone-admin ${currentRoute === 'finance-mgmt' ? 'active' : ''}`} onClick={() => setCurrentRoute('finance-mgmt')}>11. Kế Toán Nợ</button>
