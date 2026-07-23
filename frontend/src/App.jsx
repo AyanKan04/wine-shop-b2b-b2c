@@ -11,19 +11,14 @@ import CatalogPage from './pages/CatalogPage.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import CompanyRegisterPage from './pages/CompanyRegisterPage.jsx';
 import AuthPage from './pages/AuthPage.jsx';
-import CRMKanbanPage from './pages/CRMKanbanPage.jsx';
-import AdminDashboardPage from './pages/AdminDashboardPage.jsx';
 import RFQManagementPage from './pages/RFQManagementPage.jsx';
 import OrdersCreditPage from './pages/OrdersCreditPage.jsx';
 
-import AdminApprovalPage from './pages/AdminApprovalPage.jsx';
-import SalesProductMgmtPage from './pages/SalesProductMgmtPage.jsx';
-import RFQProcessingPage from './pages/RFQProcessingPage.jsx';
-import FinanceMgmtPage from './pages/FinanceMgmtPage.jsx';
-import WarehouseLogisticsPage from './pages/WarehouseLogisticsPage.jsx';
+// Master Unified Admin Workspace Page
+import MasterAdminWorkspacePage from './pages/MasterAdminWorkspacePage.jsx';
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState('admin-dashboard');
+  const [currentRoute, setCurrentRoute] = useState('master-admin');
   const [selectedProductId, setSelectedProductId] = useState(101);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -153,16 +148,10 @@ export default function App() {
           <ProductDetailPage productId={selectedProductId} products={products} showToast={showToast} />
         )}
         {currentRoute === 'auth' && (
-          <AuthPage showToast={showToast} onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('admin-dashboard'); }} />
+          <AuthPage showToast={showToast} onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('master-admin'); }} />
         )}
         {currentRoute === 'register' && (
           <CompanyRegisterPage showToast={showToast} />
-        )}
-        {currentRoute === 'kanban-dashboard' && (
-          <CRMKanbanPage showToast={showToast} />
-        )}
-        {currentRoute === 'admin-dashboard' && (
-          <AdminDashboardPage showToast={showToast} />
         )}
         {currentRoute === 'buyer-rfqs' && (
           <RFQManagementPage rfqs={rfqs} quotations={quotations} showToast={showToast} />
@@ -170,20 +159,20 @@ export default function App() {
         {currentRoute === 'orders-credit' && (
           <OrdersCreditPage orders={orders} credit={credit} invoices={invoices} showToast={showToast} />
         )}
-        {currentRoute === 'admin-approval' && (
-          <AdminApprovalPage licenses={licenses} showToast={showToast} />
-        )}
-        {currentRoute === 'sales-products' && (
-          <SalesProductMgmtPage products={products} showToast={showToast} />
-        )}
-        {currentRoute === 'sales-rfq' && (
-          <RFQProcessingPage rfqs={rfqs} showToast={showToast} />
-        )}
-        {currentRoute === 'finance-mgmt' && (
-          <FinanceMgmtPage credit={credit} invoices={invoices} showToast={showToast} />
-        )}
-        {currentRoute === 'warehouse-logistics' && (
-          <WarehouseLogisticsPage inventory={inventory} orders={orders} showToast={showToast} />
+
+        {/* UNIFIED MASTER ADMIN CONSOLE WORKSPACE */}
+        {currentRoute === 'master-admin' && (
+          <MasterAdminWorkspacePage
+            showToast={showToast}
+            products={products}
+            rfqs={rfqs}
+            quotations={quotations}
+            orders={orders}
+            credit={credit}
+            invoices={invoices}
+            licenses={licenses}
+            inventory={inventory}
+          />
         )}
       </main>
 
