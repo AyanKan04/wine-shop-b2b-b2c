@@ -10,6 +10,8 @@ import HomePage from './pages/HomePage.jsx';
 import CatalogPage from './pages/CatalogPage.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import CompanyRegisterPage from './pages/CompanyRegisterPage.jsx';
+import AuthPage from './pages/AuthPage.jsx';
+import CRMKanbanPage from './pages/CRMKanbanPage.jsx';
 import RFQManagementPage from './pages/RFQManagementPage.jsx';
 import OrdersCreditPage from './pages/OrdersCreditPage.jsx';
 
@@ -20,8 +22,9 @@ import FinanceMgmtPage from './pages/FinanceMgmtPage.jsx';
 import WarehouseLogisticsPage from './pages/WarehouseLogisticsPage.jsx';
 
 export default function App() {
-  const [currentRoute, setCurrentRoute] = useState('home');
+  const [currentRoute, setCurrentRoute] = useState('kanban-dashboard');
   const [selectedProductId, setSelectedProductId] = useState(101);
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [products, setProducts] = useState([
     {
@@ -135,7 +138,7 @@ export default function App() {
 
   return (
     <div>
-      <TopBar />
+      <TopBar currentUser={currentUser} />
       <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} />
 
       <main>
@@ -148,8 +151,14 @@ export default function App() {
         {currentRoute === 'product-detail' && (
           <ProductDetailPage productId={selectedProductId} products={products} showToast={showToast} />
         )}
+        {currentRoute === 'auth' && (
+          <AuthPage showToast={showToast} onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('kanban-dashboard'); }} />
+        )}
         {currentRoute === 'register' && (
           <CompanyRegisterPage showToast={showToast} />
+        )}
+        {currentRoute === 'kanban-dashboard' && (
+          <CRMKanbanPage showToast={showToast} />
         )}
         {currentRoute === 'buyer-rfqs' && (
           <RFQManagementPage rfqs={rfqs} quotations={quotations} showToast={showToast} />
