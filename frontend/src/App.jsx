@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import TopBar from './components/TopBar.jsx';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
+import AgeVerificationModal from './components/AgeVerificationModal.jsx';
 
 // Page Components
 import HomePage from './pages/HomePage.jsx';
@@ -134,6 +135,7 @@ export default function App() {
 
   return (
     <div>
+      <AgeVerificationModal />
       <TopBar currentUser={currentUser} />
       <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} />
 
