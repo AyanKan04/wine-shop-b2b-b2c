@@ -226,11 +226,97 @@ const dbMock = {
   ],
 
   inventory: [
-    { product_id: 101, sku: 'SKU-SCOT-MAC18', stock_on_hand: 450, reserved: 150 },
-    { product_id: 102, sku: 'SKU-FR-MARGAUX2018', stock_on_hand: 280, reserved: 50 },
-    { product_id: 103, sku: 'SKU-FR-DOM2012', stock_on_hand: 600, reserved: 80 },
-    { product_id: 104, sku: 'SKU-FR-HENNESSY-XO', stock_on_hand: 320, reserved: 40 }
-  ]
+    { product_id: 101, sku: 'SKU-SCOT-MAC18', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', stock_on_hand: 450, reserved: 150, min_stock_level: 50, location: 'Kho A1 - Quận 7' },
+    { product_id: 102, sku: 'SKU-FR-MARGAUX2018', product_name: 'Château Margaux Premier Grand Cru Classé 2018', stock_on_hand: 280, reserved: 50, min_stock_level: 30, location: 'Kho A1 - Quận 7' },
+    { product_id: 103, sku: 'SKU-FR-DOM2012', product_name: 'Dom Pérignon Vintage Brut Champagne 2012', stock_on_hand: 600, reserved: 80, min_stock_level: 60, location: 'Kho B2 - Quận 2' },
+    { product_id: 104, sku: 'SKU-FR-HENNESSY-XO', product_name: 'Hennessy X.O Cognac Extra Old Edition', stock_on_hand: 320, reserved: 40, min_stock_level: 40, location: 'Kho B2 - Quận 2' }
+  ],
+
+  shipments: [
+    {
+      shipment_id: 1,
+      order_id: 501,
+      order_number: 'ORD-2026-8821',
+      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+      tracking_number: 'VN-SHIP-20260715-001',
+      carrier: 'Giao Hàng Nhanh (GHN)',
+      shipment_status: 'DELIVERED',
+      items_summary: 'Macallan 18 x 20 thùng',
+      pickup_date: '2026-07-15',
+      estimated_delivery: '2026-07-17',
+      actual_delivery: '2026-07-16',
+      delivery_note_url: '/uploads/delivery_note_501.pdf',
+      created_at: '2026-07-15'
+    },
+    {
+      shipment_id: 2,
+      order_id: 502,
+      order_number: 'ORD-2026-8842',
+      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+      tracking_number: 'VN-SHIP-20260720-002',
+      carrier: 'J&T Express',
+      shipment_status: 'IN_TRANSIT',
+      items_summary: 'Château Margaux x 10 thùng, Dom Pérignon x 15 thùng',
+      pickup_date: '2026-07-20',
+      estimated_delivery: '2026-07-23',
+      actual_delivery: null,
+      delivery_note_url: null,
+      created_at: '2026-07-20'
+    },
+    {
+      shipment_id: 3,
+      order_id: null,
+      order_number: null,
+      buyer_company: 'TẬP ĐOÀN DỊCH VỤ ẨM THỰC RED CHILI',
+      tracking_number: null,
+      carrier: null,
+      shipment_status: 'PICKING',
+      items_summary: 'Dom Pérignon x 80 thùng',
+      pickup_date: null,
+      estimated_delivery: '2026-07-30',
+      actual_delivery: null,
+      delivery_note_url: null,
+      created_at: '2026-07-22'
+    }
+  ],
+
+  activity_logs: [
+    { id: 'ACT-001', timestamp: '2026-07-28 20:25', module: 'CRM', action: 'Chuyển DEAL-101 sang Đang Đàm Phán', actor: 'Sales Admin', icon: 'fa-square-kanban', color: '#F59E0B' },
+    { id: 'ACT-002', timestamp: '2026-07-28 19:40', module: 'Finance', action: 'Thanh toán hóa đơn INV-2026-0091 thành công', actor: 'Kế Toán', icon: 'fa-receipt', color: '#10B981' },
+    { id: 'ACT-003', timestamp: '2026-07-28 18:15', module: 'Warehouse', action: 'Xuất kho 20 thùng Macallan 18 cho ORD-2026-8821', actor: 'Warehouse Staff', icon: 'fa-boxes-stacked', color: '#3B82F6' },
+    { id: 'ACT-004', timestamp: '2026-07-28 17:00', module: 'Admin', action: 'Phê duyệt giấy phép rượu LIC-001 cho LOTTE SAIGON', actor: 'Platform Admin', icon: 'fa-shield-halved', color: '#E54D60' },
+    { id: 'ACT-005', timestamp: '2026-07-28 15:30', module: 'CRM', action: 'Tạo cơ hội B2B mới DEAL-106 từ CONTINENTAL', actor: 'Sales Rep', icon: 'fa-handshake', color: '#8B5CF6' },
+    { id: 'ACT-006', timestamp: '2026-07-28 14:00', module: 'Sales', action: 'Cập nhật Tier Price Macallan 18 - Giảm 5% Tier 3', actor: 'Sales Manager', icon: 'fa-tags', color: '#D4AF37' },
+    { id: 'ACT-007', timestamp: '2026-07-27 22:00', module: 'System', action: 'Backup dữ liệu hệ thống tự động hoàn tất', actor: 'System Worker', icon: 'fa-server', color: '#6B7280' },
+    { id: 'ACT-008', timestamp: '2026-07-27 16:30', module: 'Warehouse', action: 'Nhập kho 100 thùng Hennessy X.O từ nhà cung cấp', actor: 'Warehouse Staff', icon: 'fa-truck-ramp-box', color: '#3B82F6' }
+  ],
+
+  notifications: [
+    { id: 'NOTIF-001', type: 'warning', title: 'Hóa đơn sắp đến hạn', message: 'INV-2026-0104 đến hạn ngày 20/08/2026 (còn 23 ngày)', read: false, timestamp: '2026-07-28 20:00' },
+    { id: 'NOTIF-002', type: 'info', title: 'RFQ mới từ CONTINENTAL', message: 'Yêu cầu báo giá 40 thùng Château Margaux 2018', read: false, timestamp: '2026-07-28 19:30' },
+    { id: 'NOTIF-003', type: 'success', title: 'Giao hàng thành công', message: 'ORD-2026-8821 đã giao thành công đến LOTTE SAIGON', read: true, timestamp: '2026-07-28 16:00' },
+    { id: 'NOTIF-004', type: 'warning', title: 'Tồn kho thấp', message: 'Château Margaux còn 230 thùng khả dụng (dưới ngưỡng cảnh báo)', read: false, timestamp: '2026-07-28 14:00' },
+    { id: 'NOTIF-005', type: 'info', title: 'Giấy phép chờ duyệt', message: '2 hồ sơ giấy phép rượu B2B đang chờ phê duyệt', read: false, timestamp: '2026-07-28 10:00' }
+  ],
+
+  revenue_data: {
+    monthly: [
+      { month: 'T1', revenue: 8200000000, orders: 12 },
+      { month: 'T2', revenue: 9500000000, orders: 15 },
+      { month: 'T3', revenue: 7800000000, orders: 11 },
+      { month: 'T4', revenue: 11200000000, orders: 18 },
+      { month: 'T5', revenue: 13500000000, orders: 22 },
+      { month: 'T6', revenue: 15800000000, orders: 25 },
+      { month: 'T7', revenue: 18650000000, orders: 30 }
+    ],
+    top_products: [
+      { name: 'Macallan 18', revenue: 6800000000, percentage: 36 },
+      { name: 'Château Margaux', revenue: 4400000000, percentage: 24 },
+      { name: 'Dom Pérignon', revenue: 3000000000, percentage: 16 },
+      { name: 'Hennessy X.O', revenue: 2700000000, percentage: 14 },
+      { name: 'Khác', revenue: 1750000000, percentage: 10 }
+    ]
+  }
 };
 
 module.exports = {

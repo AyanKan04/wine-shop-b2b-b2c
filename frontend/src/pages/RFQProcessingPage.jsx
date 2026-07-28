@@ -1,33 +1,274 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatVND } from '../utils/formatters.js';
 
 export default function RFQProcessingPage({ rfqs, showToast }) {
-  return (
-    <div className="page-container">
-      <h2 className="page-title burgundy-text">9. SALES PROCESSING: TIẾP NHẬN & PHÁT HÀNH BÁO GIÁ QUOTATION</h2>
-      <p className="page-subtitle">Tính toán biên lợi nhuận và phát hành Báo giá chính thức cho Yêu cầu RFQ của khách hàng</p>
+  const [rfqList, setRfqList] = useState(rfqs || []);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const [selectedRfq, setSelectedRfq] = useState(null);
+  const [quoteForm, setQuoteForm] = useState({ offer_price: '', notes: '' });
+  const [quotationsSent, setQuotationsSent] = useState([]);
 
-      <div className="card-box">
+  const handleOpenQuote = (rfq) => {
+    setSelectedRfq(rfq);
+    setQuoteForm({ offer_price: String(rfq.target_price), notes: '' });
+    setShowQuoteModal(true);
+  };
+
+  const handleSendQuotation = (e) => {
+    e.preventDefault();
+    const offerPrice = parseFloat(quoteForm.offer_price);
+    if (!offerPrice || offerPrice <= 0) {
+      showToast('Vui lòng nhập đơn giá đề xuất hợp lệ!');
+      return;
+    }
+
+    const margin = selectedRfq.target_price > 0 
+      ? ((offerPrice - selectedRfq.target_price) / selectedRfq.target_price * 100).toFixed(1) 
+      : 0;
+
+    const quotation = {
+      quotation_id: 9900 + quotationsSent.length + 1,
+      rfq_id: selectedRfq.rfq_id,
+      buyer_company: selectedRfq.buyer_company,
+      product_name: selectedRfq.product_name,
+      quantity: selectedRfq.quantity,
+      target_price: selectedRfq.target_price,
+      offer_price: offerPrice,
+      total_value: offerPrice * selectedRfq.quantity,
+      margin_percent: margin,
+      notes: quoteForm.notes,
+      status: 'SENT',
+      created_at: new Date().toISOString().split('T')[0]
+    };
+
+    setQuotationsSent([quotation, ...quotationsSent]);
+    setRfqList(prev => prev.map(r =>
+      r.rfq_id === selectedRfq.rfq_id ? { ...r, status: 'QUOTATION_SENT' } : r
+    ));
+    showToast(`Đã phát hành Báo giá Quotation #${quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
+    setShowQuoteModal(false);
+    setSelectedRfq(null);
+  };
+
+  return (
+    <div className="page-container" style={{ maxWidth: '1600px' }}>
+      
+      {/* HEADER */}
+      <div style={{ marginBottom: '25px' }}>
+        <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+          <i className="fa-solid fa-comments-dollar gold-text"></i> Xử Lý RFQ & Phát Hành Báo Giá
+        </h2>
+        <p className="page-subtitle" style={{ margin: 0 }}>
+          Tiếp nhận Yêu cầu Báo giá (RFQ) từ khách hàng, tính toán biên lợi nhuận & phát hành Quotation chính thức.
+        </p>
+      </div>
+
+      {/* KPI METRICS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '25px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '18px' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>RFQ Chờ Xử Lý</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#F59E0B', marginTop: '4px' }}>
+            {rfqList.filter(r => r.status === 'SUBMITTED').length}
+          </div>
+        </div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '18px' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Đã Gửi Báo Giá</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#8B5CF6', marginTop: '4px' }}>
+            {quotationsSent.length}
+          </div>
+        </div>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '18px' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Tổng Giá Trị Báo Giá</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--accent-gold)', marginTop: '4px' }}>
+            {formatVND(quotationsSent.reduce((sum, q) => sum + q.total_value, 0))}
+          </div>
+        </div>
+      </div>
+
+      {/* RFQ TABLE */}
+      <div className="card-box" style={{ marginBottom: '25px' }}>
+        <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <i className="fa-solid fa-inbox gold-text"></i> Danh Sách RFQ Tiếp Nhận
+        </h4>
         <table className="data-table">
           <thead>
-            <tr><th>MÃ RFQ</th><th>KHÁCH HÀNG MUA</th><th>SẢN PHẨM</th><th>SL THÙNG</th><th>GIÁ KHÁCH ĐỀ XUẤT</th><th>HÀNH ĐỘNG SALES</th></tr>
+            <tr>
+              <th>MÃ RFQ</th>
+              <th>KHÁCH HÀNG MUA</th>
+              <th>TÊN HỢP ĐỒNG</th>
+              <th>SẢN PHẨM</th>
+              <th>SỐ LƯỢNG</th>
+              <th>GIÁ KHÁCH ĐỀ XUẤT</th>
+              <th>TRẠNG THÁI</th>
+              <th>HÀNH ĐỘNG SALES</th>
+            </tr>
           </thead>
           <tbody>
-            {rfqs.map(r => (
+            {rfqList.map(r => (
               <tr key={r.rfq_id}>
-                <td>#RFQ-{r.rfq_id}</td>
-                <td>{r.buyer_company}</td>
+                <td><code style={{ color: 'var(--accent-gold)' }}>#RFQ-{r.rfq_id}</code></td>
+                <td style={{ fontWeight: '600', color: '#FFF', fontSize: '0.85rem' }}>{r.buyer_company}</td>
+                <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{r.title}</td>
                 <td>{r.product_name}</td>
-                <td>{r.quantity} thùng</td>
-                <td className="gold-text">{formatVND(r.target_price)}</td>
+                <td><strong>{r.quantity}</strong> thùng</td>
+                <td className="gold-text"><strong>{formatVND(r.target_price)}</strong></td>
                 <td>
-                  <button className="btn-redapron-gold" style={{ padding: '4px 10px', fontSize: '0.7rem' }} onClick={() => showToast(`Đã phát hành Báo giá Quotation cho RFQ #${r.rfq_id}!`)}>Phát Hành Quotation</button>
+                  {r.status === 'SUBMITTED' && (
+                    <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
+                      ⏳ Chờ Xử Lý
+                    </span>
+                  )}
+                  {r.status === 'QUOTATION_SENT' && (
+                    <span style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
+                      📄 Đã Gửi Báo Giá
+                    </span>
+                  )}
+                </td>
+                <td>
+                  {r.status === 'SUBMITTED' ? (
+                    <button
+                      className="btn-redapron-gold"
+                      style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                      onClick={() => handleOpenQuote(r)}
+                    >
+                      <i className="fa-solid fa-paper-plane"></i> Tạo Báo Giá
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Đã xử lý</span>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* SENT QUOTATIONS TABLE */}
+      {quotationsSent.length > 0 && (
+        <div className="card-box">
+          <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="fa-solid fa-file-contract gold-text"></i> Báo Giá Đã Phát Hành
+          </h4>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>MÃ QUOTATION</th>
+                <th>RFQ GỐC</th>
+                <th>SẢN PHẨM</th>
+                <th>SỐ LƯỢNG</th>
+                <th>GIÁ KHÁCH MUỐN</th>
+                <th>GIÁ BÁO</th>
+                <th>BIÊN LN</th>
+                <th>TỔNG GIÁ TRỊ</th>
+                <th>NGÀY GỬI</th>
+              </tr>
+            </thead>
+            <tbody>
+              {quotationsSent.map(q => (
+                <tr key={q.quotation_id}>
+                  <td><code style={{ color: '#8B5CF6' }}>#QUOT-{q.quotation_id}</code></td>
+                  <td><code style={{ color: 'var(--text-muted)' }}>#RFQ-{q.rfq_id}</code></td>
+                  <td>{q.product_name}</td>
+                  <td>{q.quantity} thùng</td>
+                  <td style={{ color: 'var(--text-muted)' }}>{formatVND(q.target_price)}</td>
+                  <td className="gold-text"><strong>{formatVND(q.offer_price)}</strong></td>
+                  <td>
+                    <span style={{
+                      color: parseFloat(q.margin_percent) >= 0 ? '#10B981' : '#EF4444',
+                      fontWeight: '700'
+                    }}>
+                      {q.margin_percent > 0 ? '+' : ''}{q.margin_percent}%
+                    </span>
+                  </td>
+                  <td style={{ fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(q.total_value)}</td>
+                  <td>{q.created_at}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* MODAL: CREATE QUOTATION */}
+      {showQuoteModal && selectedRfq && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Phát Hành Báo Giá</h3>
+              <button onClick={() => setShowQuoteModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* RFQ SUMMARY */}
+            <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                <strong style={{ color: 'var(--accent-gold)' }}>RFQ #{selectedRfq.rfq_id}</strong> — {selectedRfq.buyer_company}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#FFF', fontWeight: '600' }}>{selectedRfq.product_name}</div>
+              <div style={{ display: 'flex', gap: '20px', marginTop: '8px', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>SL: <strong style={{ color: '#FFF' }}>{selectedRfq.quantity} thùng</strong></span>
+                <span style={{ color: 'var(--text-muted)' }}>Giá KH muốn: <strong className="gold-text">{formatVND(selectedRfq.target_price)}</strong></span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSendQuotation}>
+              <div className="form-group">
+                <label>Đơn Giá Báo Cho Khách (VNĐ / thùng) *</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="68500000"
+                  value={quoteForm.offer_price}
+                  onChange={e => setQuoteForm({ ...quoteForm, offer_price: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* MARGIN CALCULATION PREVIEW */}
+              {quoteForm.offer_price && (
+                <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '14px', marginBottom: '15px' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}>
+                    <i className="fa-solid fa-calculator"></i> TÍNH TOÁN BIÊN LỢI NHUẬN
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Tổng giá trị đơn:</span>
+                    <strong style={{ color: '#FFF' }}>{formatVND(parseFloat(quoteForm.offer_price) * selectedRfq.quantity)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Biên LN so với giá KH:</span>
+                    <strong style={{
+                      color: (parseFloat(quoteForm.offer_price) - selectedRfq.target_price) >= 0 ? '#10B981' : '#EF4444'
+                    }}>
+                      {selectedRfq.target_price > 0
+                        ? `${((parseFloat(quoteForm.offer_price) - selectedRfq.target_price) / selectedRfq.target_price * 100).toFixed(1)}%`
+                        : '—'
+                      }
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label>Ghi Chú Cho Khách</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Giá áp dụng cho đơn từ 150 thùng trở lên, hiệu lực 30 ngày..."
+                  value={quoteForm.notes}
+                  onChange={e => setQuoteForm({ ...quoteForm, notes: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowQuoteModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
+                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>
+                  <i className="fa-solid fa-paper-plane"></i> PHÁT HÀNH QUOTATION
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

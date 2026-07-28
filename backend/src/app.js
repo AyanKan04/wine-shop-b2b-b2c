@@ -7,6 +7,7 @@ const rfqRoutes = require('./routes/rfqRoutes');
 const financeRoutes = require('./routes/financeRoutes');
 const warehouseRoutes = require('./routes/warehouseRoutes');
 const authRoutes = require('./routes/authRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use('/api', companyRoutes);
 app.use('/api', rfqRoutes);
 app.use('/api', financeRoutes);
 app.use('/api', warehouseRoutes);
+app.use('/api', dashboardRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

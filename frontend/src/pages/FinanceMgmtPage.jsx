@@ -1,18 +1,284 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function FinanceMgmtPage({ showToast }) {
+export default function FinanceMgmtPage({ credit, invoices, showToast }) {
+  const [creditData, setCreditData] = useState(credit || { total_limit: 1000000000, used_amount: 350000000, available_balance: 650000000 });
+  const [invoicesList, setInvoicesList] = useState(invoices || []);
+  const [newLimitInput, setNewLimitInput] = useState('');
+  const [filterStatus, setFilterStatus] = useState('ALL');
+
+  const formatVND = (val) => {
+    if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
+    if (val >= 1000000) return (val / 1000000).toFixed(0) + ' Tr ₫';
+    return val.toLocaleString('vi-VN') + ' ₫';
+  };
+
+  const usagePercent = creditData.total_limit > 0 ? Math.round((creditData.used_amount / creditData.total_limit) * 100) : 0;
+
+  const handlePayInvoice = (invoiceId) => {
+    setInvoicesList(prev => prev.map(inv => {
+      if (inv.invoice_id === invoiceId && inv.status !== 'PAID') {
+        setCreditData(prevCredit => ({
+          ...prevCredit,
+          used_amount: prevCredit.used_amount - inv.amount,
+          available_balance: prevCredit.available_balance + inv.amount
+        }));
+        showToast(`Đã thanh toán hóa đơn ${inv.invoice_number} thành công! Hạn mức đã được khôi phục.`);
+        return { ...inv, status: 'PAID' };
+      }
+      return inv;
+    }));
+  };
+
+  const handleUpdateCreditLimit = (e) => {
+    e.preventDefault();
+    const val = parseFloat(newLimitInput);
+    if (!val || val <= 0) {
+      showToast('Vui lòng nhập hạn mức hợp lệ (số > 0)');
+      return;
+    }
+    setCreditData(prev => ({
+      ...prev,
+      total_limit: val,
+      available_balance: val - prev.used_amount
+    }));
+    showToast(`Đã cập nhật hạn mức tín dụng mới: ${formatVND(val)}`);
+    setNewLimitInput('');
+  };
+
+  const filteredInvoices = invoicesList.filter(inv => {
+    if (filterStatus === 'ALL') return true;
+    return inv.status === filterStatus;
+  });
+
+  const totalInvoiced = invoicesList.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalPaid = invoicesList.filter(i => i.status === 'PAID').reduce((sum, inv) => sum + inv.amount, 0);
+  const totalUnpaid = invoicesList.filter(i => i.status === 'UNPAID').reduce((sum, inv) => sum + inv.amount, 0);
+
   return (
-    <div className="page-container">
-      <h2 className="page-title burgundy-text">10. FINANCE OFFICER: QUẢN LÝ CÔNG NỢ & XUẤT HÓA ĐƠN INVOICE</h2>
-      <p className="page-subtitle">Cấp Hạn mức Tín dụng cho từng đối tác mua và theo dõi quá trình quyết toán</p>
-
-      <div className="card-box">
-        <h4 className="gold-text" style={{ fontFamily: 'var(--font-brand)', marginBottom: '15px' }}>THIẾT LẬP HẠN MỨC TÍN DỤNG (CREDIT LIMIT SETTING)</h4>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <input className="form-control" defaultValue="1,500,000,000 VNĐ" style={{ maxWidth: '300px' }} />
-          <button className="btn-redapron-gold" onClick={() => showToast('Đã cập nhật Hạn mức Tín dụng mới cho Doanh nghiệp!')}>Cập Nhật Hạn Mức Tín Dụng</button>
+    <div className="page-container" style={{ maxWidth: '1600px' }}>
+      
+      {/* HEADER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+        <div>
+          <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <i className="fa-solid fa-scale-balanced gold-text"></i> Quản Lý Công Nợ & Kế Toán
+          </h2>
+          <p className="page-subtitle" style={{ margin: 0 }}>
+            Giám sát hạn mức tín dụng Net-30, theo dõi hóa đơn và quản lý thanh toán doanh nghiệp B2B.
+          </p>
         </div>
       </div>
+
+      {/* KPI METRICS CARDS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '25px' }}>
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Hạn Mức Tín Dụng</span>
+            <i className="fa-solid fa-credit-card gold-text"></i>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: '700', color: 'var(--accent-gold)', marginTop: '8px' }}>{formatVND(creditData.total_limit)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Tổng hạn mức được cấp</div>
+        </div>
+
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Dư Nợ Đang Dùng</span>
+            <i className="fa-solid fa-money-bill-trend-up burgundy-text"></i>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#E54D60', marginTop: '8px' }}>{formatVND(creditData.used_amount)}</div>
+          <div style={{ marginTop: '8px' }}>
+            <div style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}>
+              <div style={{ width: `${usagePercent}%`, height: '100%', borderRadius: '3px', background: usagePercent > 80 ? '#EF4444' : usagePercent > 50 ? '#F59E0B' : '#10B981', transition: 'width 0.5s ease' }}></div>
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>Đã dùng {usagePercent}% hạn mức</div>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Số Dư Khả Dụng</span>
+            <i className="fa-solid fa-wallet" style={{ color: '#10B981' }}></i>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#10B981', marginTop: '8px' }}>{formatVND(creditData.available_balance)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Còn lại để đặt hàng</div>
+        </div>
+
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Hóa Đơn Chưa TT</span>
+            <i className="fa-solid fa-file-invoice" style={{ color: '#F59E0B' }}></i>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#F59E0B', marginTop: '8px' }}>{formatVND(totalUnpaid)}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>{invoicesList.filter(i => i.status === 'UNPAID').length} hóa đơn chờ thanh toán</div>
+        </div>
+      </div>
+
+      {/* TWO COLUMN LAYOUT: Credit Limit Settings + Payment Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+        
+        {/* CREDIT LIMIT ADJUSTMENT */}
+        <div className="card-box">
+          <h4 style={{ fontFamily: 'var(--font-heading)', color: 'var(--accent-gold)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="fa-solid fa-sliders"></i> Điều Chỉnh Hạn Mức Tín Dụng
+          </h4>
+          <form onSubmit={handleUpdateCreditLimit} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--accent-gold)', letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}>Hạn Mức Mới (VNĐ)</label>
+              <input
+                type="number"
+                className="form-control"
+                placeholder="Nhập hạn mức mới, ví dụ: 1500000000"
+                value={newLimitInput}
+                onChange={e => setNewLimitInput(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="btn-redapron-gold" style={{ padding: '12px 20px', whiteSpace: 'nowrap' }}>
+              <i className="fa-solid fa-check"></i> Cập Nhật
+            </button>
+          </form>
+
+          {/* AUTO-LOCK RULES */}
+          <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
+            <h5 style={{ fontSize: '0.8rem', color: '#F59E0B', marginBottom: '10px' }}>
+              <i className="fa-solid fa-triangle-exclamation"></i> Quy Tắc Tự Động Khóa
+            </h5>
+            <ul style={{ fontSize: '0.8rem', color: 'var(--text-muted)', paddingLeft: '16px', lineHeight: '1.8', margin: 0 }}>
+              <li>Khóa Net-30 khi dư nợ vượt ≥100% hạn mức</li>
+              <li>Chuyển Pre-payment nếu quá hạn &gt; 30 ngày</li>
+              <li>Email cảnh báo trước 5 ngày đến hạn</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* PAYMENT STATISTICS */}
+        <div className="card-box">
+          <h4 style={{ fontFamily: 'var(--font-heading)', color: '#10B981', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="fa-solid fa-chart-pie"></i> Thống Kê Thanh Toán
+          </h4>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Tổng phát hành:</span>
+              <strong style={{ color: '#FFF' }}>{formatVND(totalInvoiced)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Đã thanh toán:</span>
+              <strong style={{ color: '#10B981' }}>{formatVND(totalPaid)}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '12px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Chưa thanh toán:</span>
+              <strong style={{ color: '#F59E0B' }}>{formatVND(totalUnpaid)}</strong>
+            </div>
+          </div>
+
+          {/* PAYMENT RATE BAR */}
+          <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tỷ lệ thanh toán</span>
+              <strong style={{ color: '#10B981', fontSize: '0.9rem' }}>
+                {totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0}%
+              </strong>
+            </div>
+            <div style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'rgba(255,255,255,0.08)' }}>
+              <div style={{
+                width: `${totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0}%`,
+                height: '100%',
+                borderRadius: '5px',
+                background: 'linear-gradient(90deg, #10B981, #34D399)',
+                transition: 'width 0.5s ease'
+              }}></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* INVOICES TABLE */}
+      <div className="card-box">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+          <h4 style={{ fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <i className="fa-solid fa-file-invoice gold-text"></i> Danh Sách Hóa Đơn (Invoices)
+          </h4>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {['ALL', 'UNPAID', 'PAID'].map(status => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                style={{
+                  background: filterStatus === status ? 'var(--accent-burgundy)' : '#1A1315',
+                  color: filterStatus === status ? '#FFF' : 'var(--text-muted)',
+                  border: filterStatus === status ? '1px solid var(--border-gold)' : '1px solid var(--border-subtle)',
+                  padding: '6px 14px',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-brand)',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {status === 'ALL' ? 'Tất Cả' : status === 'PAID' ? 'Đã TT' : 'Chưa TT'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>MÃ HÓA ĐƠN</th>
+              <th>MÃ ĐƠN HÀNG</th>
+              <th>NGÀY PHÁT HÀNH</th>
+              <th>NGÀY ĐẾN HẠN</th>
+              <th>GIÁ TRỊ (VNĐ)</th>
+              <th>TRẠNG THÁI</th>
+              <th>HÀNH ĐỘNG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredInvoices.map(inv => (
+              <tr key={inv.invoice_id}>
+                <td><strong>{inv.invoice_number}</strong></td>
+                <td><code style={{ color: 'var(--text-muted)' }}>{inv.order_number}</code></td>
+                <td>{inv.issue_date || '—'}</td>
+                <td>
+                  {inv.due_date}
+                  {inv.status === 'UNPAID' && new Date(inv.due_date) < new Date() && (
+                    <div style={{ fontSize: '0.7rem', color: '#EF4444', marginTop: '2px' }}>
+                      <i className="fa-solid fa-triangle-exclamation"></i> Quá hạn
+                    </div>
+                  )}
+                </td>
+                <td className="gold-text"><strong>{formatVND(inv.amount)}</strong></td>
+                <td>
+                  {inv.status === 'PAID' ? (
+                    <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
+                      ✓ Đã Thanh Toán
+                    </span>
+                  ) : (
+                    <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
+                      ⏳ Chờ Thanh Toán
+                    </span>
+                  )}
+                </td>
+                <td>
+                  {inv.status !== 'PAID' && (
+                    <button
+                      className="btn-redapron-gold"
+                      style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                      onClick={() => handlePayInvoice(inv.invoice_id)}
+                    >
+                      <i className="fa-solid fa-money-bill-wave"></i> Thanh Toán
+                    </button>
+                  )}
+                  {inv.status === 'PAID' && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Đã hoàn tất</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }

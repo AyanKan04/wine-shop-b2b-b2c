@@ -1,4 +1,5 @@
 import React from 'react';
+import NotificationCenter from './NotificationCenter.jsx';
 
 export default function Navbar({ currentRoute, setCurrentRoute }) {
   return (
@@ -16,6 +17,9 @@ export default function Navbar({ currentRoute, setCurrentRoute }) {
         <button className={currentRoute === 'auth' ? 'active' : ''} onClick={() => setCurrentRoute('auth')}>4. Portal Đăng Nhập / B2B</button>
         <button className={currentRoute === 'buyer-rfqs' ? 'active' : ''} onClick={() => setCurrentRoute('buyer-rfqs')}>5. Quản Lý RFQ</button>
         <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>6. Đơn Hàng & Nợ</button>
+
+        {/* NOTIFICATION CENTER */}
+        <NotificationCenter />
 
         {/* UNIFIED ADMIN CONSOLE WORKSPACE ROUTE */}
         <button
