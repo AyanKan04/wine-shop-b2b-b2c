@@ -184,10 +184,12 @@ async function loadFromSQLServer() {
         product_name: row.ProductName,
         category: row.CategoryName || 'Fine Wine',
         country_of_origin: row.CountryOfOrigin || '',
+        region: row.Region || '',
+        grape_variety: row.GrapeVariety || '',
         alcohol_content: row.AlcoholContent ? Number(row.AlcoholContent) : 13.0,
         volume_ml: row.VolumeML || 750,
         moq: row.MOQ || 1,
-        image_url: row.image_url || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3',
+        image_url: row.ImageUrl || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400',
         description: row.Description || '',
         tier_prices
       };

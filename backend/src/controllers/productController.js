@@ -1,6 +1,42 @@
 const { getPool } = require('../config/db');
 const sql = require('mssql/msnodesqlv8');
 
+// Helper to map SQL Server PascalCase keys to Frontend camelCase/snake_case keys
+const mapProductToFrontend = (prod) => {
+  if (!prod) return null;
+  
+  let parsedTierPrices = [];
+  if (prod.tier_prices) {
+    parsedTierPrices = typeof prod.tier_prices === 'string' 
+      ? JSON.parse(prod.tier_prices) 
+      : prod.tier_prices;
+  }
+
+  const mappedTierPrices = parsedTierPrices.map(t => ({
+    tier_level: t.TierLevel || t.tier_level,
+    min_quantity: t.MinQuantity || t.min_quantity,
+    price_per_unit: Number(t.PricePerUnit || t.price_per_unit || 0)
+  }));
+
+  return {
+    product_id: Number(prod.ProductID || prod.product_id),
+    sku: prod.SKU || prod.sku || '',
+    product_name: prod.ProductName || prod.product_name || '',
+    category: prod.Category || prod.category || '',
+    country_of_origin: prod.CountryOfOrigin || prod.country_of_origin || '',
+    region: prod.Region || prod.region || '',
+    grape_variety: prod.GrapeVariety || prod.grape_variety || '',
+    vintage_year: Number(prod.VintageYear || prod.vintage_year || 0),
+    alcohol_content: Number(prod.AlcoholContent || prod.alcohol_content || 0),
+    volume_ml: Number(prod.VolumeML || prod.volume_ml || 750),
+    moq: Number(prod.MOQ || prod.moq || 1),
+    image_url: prod.ImageUrl || prod.image_url || '',
+    description: prod.Description || prod.description || '',
+    status: prod.Status || prod.status || 'ACTIVE',
+    tier_prices: mappedTierPrices
+  };
+};
+
 // GET /api/products
 const getProducts = async (req, res) => {
   try {
@@ -9,7 +45,7 @@ const getProducts = async (req, res) => {
     
     let query = `
       SELECT p.*, 
-             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID FOR JSON PATH) as tier_prices
+             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
       FROM Products p
       WHERE 1=1
     `;
@@ -27,11 +63,8 @@ const getProducts = async (req, res) => {
 
     const result = await request.query(query);
 
-    // Format tier_prices JSON string back to object
-    const products = result.recordset.map(prod => ({
-      ...prod,
-      tier_prices: prod.tier_prices ? JSON.parse(prod.tier_prices) : []
-    }));
+    // Map database results to frontend format
+    const products = result.recordset.map(prod => mapProductToFrontend(prod));
 
     res.json({ success: true, count: products.length, data: products });
   } catch (err) {
@@ -57,8 +90,7 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
     }
 
-    const prod = result.recordset[0];
-    prod.tier_prices = prod.tier_prices ? JSON.parse(prod.tier_prices) : [];
+    const prod = mapProductToFrontend(result.recordset[0]);
 
     res.json({ success: true, data: prod });
   } catch (err) {
@@ -246,7 +278,6 @@ const updateProductPrices = async (req, res) => {
       } else if (priceType === 'CONTRACT') {
         await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ContractPrices WHERE ProductID = @ProductID');
         for (const ctp of prices) {
-          // Check if contract exists
           let contractResult = await transaction.request()
             .input('ContractNumber', sql.NVarChar, ctp.contract_number)
             .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
@@ -254,7 +285,6 @@ const updateProductPrices = async (req, res) => {
           
           let contractId;
           if (contractResult.recordset.length === 0) {
-            // Insert Contract
             const insertResult = await transaction.request()
               .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
               .input('ContractNumber', sql.NVarChar, ctp.contract_number)

@@ -192,7 +192,9 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Giá từ Tier 5</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--accent-gold)' }}>
-                    {(p.tier_prices[p.tier_prices.length - 1].price_per_unit / 1000000).toFixed(0)} Tr ₫
+                    {p.tier_prices && p.tier_prices.length > 0
+                      ? `${(p.tier_prices[p.tier_prices.length - 1].price_per_unit / 1000000).toFixed(0)} Tr ₫`
+                      : 'Liên hệ'}
                   </div>
                 </div>
               </div>
