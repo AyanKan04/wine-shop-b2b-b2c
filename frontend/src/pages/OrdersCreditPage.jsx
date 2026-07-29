@@ -1,10 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatVND } from '../utils/formatters.js';
+import apiService from '../services/api.js';
 
 export default function OrdersCreditPage({ orders, credit, invoices, showToast }) {
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'invoices' | 'credit'
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'invoices' | 'credit' | 'lc'
   const [invoiceList, setInvoiceList] = useState(invoices || []);
   const [creditState, setCreditState] = useState(credit || { total_limit: 0, used_amount: 0, available_balance: 0 });
+  const [lcDocs, setLcDocs] = useState([]);
+  const [lcNumber, setLcNumber] = useState('');
+  const [lcBank, setLcBank] = useState('');
+  const [lcAmount, setLcAmount] = useState('');
+  const [lcExpiry, setLcExpiry] = useState('');
+  const [loadingLc, setLoadingLc] = useState(false);
+
+  useEffect(() => {
+    fetchLcDocs();
+  }, []);
+
+  const fetchLcDocs = async () => {
+    try {
+      const res = await apiService.getLCDocuments();
+      if (res.success && res.data) {
+        setLcDocs(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching L/C docs:', err);
+    }
+  };
+
+  const handleSubmitLc = async (e) => {
+    e.preventDefault();
+    if (!lcNumber || !lcBank || !lcAmount || !lcExpiry) {
+      showToast('Vui lòng điền đầy đủ thông tin Thư tín dụng L/C.');
+      return;
+    }
+
+    setLoadingLc(true);
+    try {
+      const res = await apiService.submitLCDocument({
+        lc_number: lcNumber,
+        issuing_bank: lcBank,
+        amount: parseFloat(lcAmount),
+        expiry_date: lcExpiry,
+        document_url: `/uploads/lc_${lcNumber.toLowerCase()}.pdf`
+      });
+
+      if (res.success) {
+        showToast(res.message || 'Đã nộp L/C thành công!');
+        setLcNumber('');
+        setLcBank('');
+        setLcAmount('');
+        setLcExpiry('');
+        fetchLcDocs();
+        
+        // Refresh credit state to match local updates
+        const creditRes = await apiService.getCreditLimit();
+        if (creditRes.success && creditRes.credit) {
+          setCreditState(creditRes.credit);
+        }
+      }
+    } catch (err) {
+      showToast('Lỗi khi gửi tài liệu L/C. Vui lòng thử lại.');
+    } finally {
+      setLoadingLc(false);
+    }
+  };
 
   const [ordersList] = useState([
     {
@@ -108,7 +168,8 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
         {[
           { id: 'orders', label: 'Đơn Hàng', icon: 'fa-boxes-stacked' },
           { id: 'invoices', label: 'Hóa Đơn & Thanh Toán', icon: 'fa-receipt' },
-          { id: 'credit', label: 'Chi Tiết Hạn Mức', icon: 'fa-credit-card' }
+          { id: 'credit', label: 'Chi Tiết Hạn Mức', icon: 'fa-credit-card' },
+          { id: 'lc', label: 'Bảo Lãnh L/C Ngân Hàng', icon: 'fa-file-shield' }
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
             padding: '12px 22px',
@@ -274,6 +335,133 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
               <li>Hạn mức tín dụng sẽ được khôi phục ngay lập tức khi thanh toán hóa đơn.</li>
               <li>Yêu cầu Giấy phép Rượu hợp lệ theo NĐ 105/2017/NĐ-CP để kích hoạt.</li>
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: LETTER OF CREDIT (L/C) */}
+      {activeTab === 'lc' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '20px', alignItems: 'start' }}>
+          {/* Submit L/C Form */}
+          <div className="card-box">
+            <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fa-solid fa-file-invoice-dollar gold-text"></i> Nộp Thư Tín Dụng L/C
+            </h4>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '15px' }}>
+              Gửi tài liệu L/C do ngân hàng thương mại phát hành để tạm thời hoặc vĩnh viễn gia tăng hạn mức công nợ sỉ B2B.
+            </p>
+            <form onSubmit={handleSubmitLc} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', fontWeight: '500' }}>Số Thư Tín Dụng (L/C Number)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.8rem', background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', borderRadius: '4px' }}
+                  placeholder="Ví dụ: LC-HSBC-2026-9912"
+                  value={lcNumber}
+                  onChange={e => setLcNumber(e.target.value)}
+                  disabled={loadingLc}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', fontWeight: '500' }}>Ngân Hàng Phát Hành</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.8rem', background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', borderRadius: '4px' }}
+                  placeholder="Ví dụ: HSBC Việt Nam, Vietcombank..."
+                  value={lcBank}
+                  onChange={e => setLcBank(e.target.value)}
+                  disabled={loadingLc}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', fontWeight: '500' }}>Giá Trị Bảo Lãnh (VNĐ)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.8rem', background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', borderRadius: '4px' }}
+                  placeholder="Ví dụ: 1000000000"
+                  value={lcAmount}
+                  onChange={e => setLcAmount(e.target.value)}
+                  disabled={loadingLc}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px', fontWeight: '500' }}>Ngày Hết Hạn</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  style={{ width: '100%', padding: '10px', fontSize: '0.8rem', background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', borderRadius: '4px' }}
+                  value={lcExpiry}
+                  onChange={e => setLcExpiry(e.target.value)}
+                  disabled={loadingLc}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn-redapron-gold"
+                style={{ width: '100%', padding: '12px', fontSize: '0.8rem', marginTop: '10px', background: '#111111', color: '#FFFFFF', border: '1px solid #111111' }}
+                disabled={loadingLc}
+              >
+                {loadingLc ? 'Đang gửi...' : 'Gửi Yêu Cầu Phê Duyệt'}
+              </button>
+            </form>
+          </div>
+
+          {/* L/C History Table */}
+          <div className="card-box">
+            <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="fa-solid fa-list-check gold-text"></i> Danh Sách L/C Đã Nộp
+            </h4>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>SỐ L/C</th>
+                  <th>NGÂN HÀNG</th>
+                  <th>GIÁ TRỊ (VNĐ)</th>
+                  <th>HẠN DÙNG</th>
+                  <th>TRẠNG THÁI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lcDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                      Chưa có tài liệu L/C nào được nộp.
+                    </td>
+                  </tr>
+                ) : (
+                  lcDocs.map(doc => {
+                    let statusColor = '#F59E0B';
+                    let statusBg = 'rgba(245,158,11,0.1)';
+                    let statusText = 'Chờ Thẩm Định';
+                    if (doc.status === 'VERIFIED') {
+                      statusColor = '#10B981';
+                      statusBg = 'rgba(16,185,129,0.1)';
+                      statusText = 'Đã Phê Duyệt';
+                    } else if (doc.status === 'REJECTED') {
+                      statusColor = '#EF4444';
+                      statusBg = 'rgba(239,68,68,0.1)';
+                      statusText = 'Từ Chối';
+                    }
+                    return (
+                      <tr key={doc.lc_id}>
+                        <td><strong>{doc.lc_number}</strong></td>
+                        <td>{doc.issuing_bank}</td>
+                        <td className="gold-text"><strong>{formatVND(doc.amount)}</strong></td>
+                        <td>{doc.expiry_date}</td>
+                        <td>
+                          <span style={{ color: statusColor, background: statusBg, padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500' }}>
+                            {statusText}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -98,11 +98,108 @@ const getOverdueInvoices = (req, res) => {
   res.json({ success: true, data: overdue });
 };
 
+const getLCDocuments = (req, res) => {
+  res.json({ success: true, data: dbMock.lc_documents || [] });
+};
+
+const submitLCDocument = (req, res) => {
+  const { lc_number, issuing_bank, amount, expiry_date, document_url } = req.body;
+  if (!lc_number || !issuing_bank || !amount || !expiry_date) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin L/C.' });
+  }
+
+  const newLC = {
+    lc_id: (dbMock.lc_documents || []).length + 1,
+    buyer_company: req.body.buyer_company || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+    lc_number,
+    issuing_bank,
+    amount: parseFloat(amount),
+    expiry_date,
+    document_url: document_url || '/uploads/lc_default.pdf',
+    status: 'SUBMITTED',
+    created_at: new Date().toISOString().slice(0, 10)
+  };
+
+  if (!dbMock.lc_documents) {
+    dbMock.lc_documents = [];
+  }
+  dbMock.lc_documents.push(newLC);
+
+  dbMock.activity_logs.unshift({
+    id: `ACT-${Date.now()}`,
+    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    module: 'Finance',
+    action: `Doanh nghiệp nộp Thư tín dụng L/C mới: ${lc_number} (${(amount / 1000000).toFixed(0)} Tr ₫)`,
+    actor: 'Khách Hàng B2B',
+    icon: 'fa-file-invoice-dollar',
+    color: '#8B5CF6'
+  });
+
+  res.json({ success: true, message: 'Đăng ký L/C thành công! Đang chờ Kế toán trưởng thẩm định.', data: newLC });
+};
+
+const verifyLCDocument = (req, res) => {
+  const lc = (dbMock.lc_documents || []).find(doc => doc.lc_id === parseInt(req.params.id));
+  if (!lc) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C' });
+  }
+
+  if (lc.status !== 'SUBMITTED') {
+    return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý từ trước.' });
+  }
+
+  lc.status = 'VERIFIED';
+  // Increase credit limits
+  dbMock.credit_limit.total_limit += lc.amount;
+  dbMock.credit_limit.available_balance += lc.amount;
+
+  dbMock.activity_logs.unshift({
+    id: `ACT-${Date.now()}`,
+    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    module: 'Finance',
+    action: `Phê duyệt Thư tín dụng L/C: ${lc.lc_number} (+ ${(lc.amount / 1000000000).toFixed(1)} Tỷ hạn mức)`,
+    actor: 'Kế Toán Trưởng',
+    icon: 'fa-shield-check',
+    color: '#10B981'
+  });
+
+  res.json({ success: true, message: 'Phê duyệt L/C thành công! Hạn mức tín dụng của doanh nghiệp đã được nâng cao.', data: lc });
+};
+
+const rejectLCDocument = (req, res) => {
+  const lc = (dbMock.lc_documents || []).find(doc => doc.lc_id === parseInt(req.params.id));
+  if (!lc) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C' });
+  }
+
+  if (lc.status !== 'SUBMITTED') {
+    return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý từ trước.' });
+  }
+
+  lc.status = 'REJECTED';
+
+  dbMock.activity_logs.unshift({
+    id: `ACT-${Date.now()}`,
+    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    module: 'Finance',
+    action: `Từ chối tài liệu L/C bảo lãnh: ${lc.lc_number}`,
+    actor: 'Kế Toán Trưởng',
+    icon: 'fa-circle-xmark',
+    color: '#EF4444'
+  });
+
+  res.json({ success: true, message: 'Đã từ chối tài liệu L/C bảo lãnh thành công.', data: lc });
+};
+
 module.exports = {
   getOrders,
   getCreditLimit,
   payInvoice,
   updateCreditLimit,
   getFinancialSummary,
-  getOverdueInvoices
+  getOverdueInvoices,
+  getLCDocuments,
+  submitLCDocument,
+  verifyLCDocument,
+  rejectLCDocument
 };

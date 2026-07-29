@@ -12,7 +12,7 @@ import HomePage from './pages/HomePage.jsx';
 import CatalogPage from './pages/CatalogPage.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import CompanyRegisterPage from './pages/CompanyRegisterPage.jsx';
-import AuthPage from './pages/AuthPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
 import RFQManagementPage from './pages/RFQManagementPage.jsx';
 import OrdersCreditPage from './pages/OrdersCreditPage.jsx';
 
@@ -239,11 +239,18 @@ export default function App() {
         {currentRoute === 'product-detail' && (
           <ProductDetailPage productId={selectedProductId} products={products} showToast={showToast} />
         )}
-        {currentRoute === 'auth' && (
-          <AuthPage showToast={showToast} onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('master-admin'); }} />
+        {currentRoute === 'login' && (
+          <LoginPage
+            showToast={showToast}
+            onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('master-admin'); }}
+            onNavigateRegister={() => setCurrentRoute('register')}
+          />
         )}
         {currentRoute === 'register' && (
-          <CompanyRegisterPage showToast={showToast} />
+          <CompanyRegisterPage
+            showToast={showToast}
+            onNavigateLogin={() => setCurrentRoute('login')}
+          />
         )}
         {currentRoute === 'buyer-rfqs' && (
           <RFQManagementPage rfqs={rfqs} quotations={quotations} showToast={showToast} />

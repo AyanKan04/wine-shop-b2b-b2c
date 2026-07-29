@@ -81,6 +81,10 @@ export const apiService = {
   getOrders: () => request('/orders'),
   getCreditLimit: () => request('/finance/credit-limit'),
   payInvoice: (id) => request(`/finance/pay-invoice/${id}`, { method: 'POST' }),
+  getLCDocuments: () => request('/finance/lc-documents'),
+  submitLCDocument: (lcData) => request('/finance/lc-documents', { method: 'POST', body: JSON.stringify(lcData) }),
+  verifyLCDocument: (id) => request(`/finance/lc-documents/${id}/verify`, { method: 'POST' }),
+  rejectLCDocument: (id) => request(`/finance/lc-documents/${id}/reject`, { method: 'POST' }),
 
   // Warehouse
   getInventory: () => request('/warehouse/inventory'),

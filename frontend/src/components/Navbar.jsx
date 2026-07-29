@@ -14,18 +14,17 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, onL
         <button className={currentRoute === 'home' ? 'active' : ''} onClick={() => setCurrentRoute('home')}>1. Trang Chủ</button>
         <button className={currentRoute === 'catalog' ? 'active' : ''} onClick={() => setCurrentRoute('catalog')}>2. Catalog & Lọc</button>
         <button className={currentRoute === 'product-detail' ? 'active' : ''} onClick={() => setCurrentRoute('product-detail')}>3. Chi Tiết Rượu</button>
-        
         {currentUser ? (
           <button onClick={onLogout} style={{ color: 'var(--accent-burgundy)', fontWeight: 'bold' }}>
             4. Đăng Xuất ({currentUser.username})
           </button>
         ) : (
-          <button className={currentRoute === 'auth' ? 'active' : ''} onClick={() => setCurrentRoute('auth')}>
-            4. Portal Đăng Nhập / B2B
-          </button>
+          <>
+            <button className={currentRoute === 'login' ? 'active' : ''} onClick={() => setCurrentRoute('login')}>4. Đăng Nhập</button>
+            <button className={currentRoute === 'register' ? 'active' : ''} onClick={() => setCurrentRoute('register')}>5. Đăng Ký B2B</button>
+          </>
         )}
-
-        <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>5. Đơn Hàng & Nợ</button>
+        <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>6. Đơn Hàng & Nợ</button>
 
         {/* NOTIFICATION CENTER */}
         <NotificationCenter />

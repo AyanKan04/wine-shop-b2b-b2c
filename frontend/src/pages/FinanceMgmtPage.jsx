@@ -1,10 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../services/api.js';
 
 export default function FinanceMgmtPage({ credit, invoices, showToast }) {
   const [creditData, setCreditData] = useState(credit || { total_limit: 1000000000, used_amount: 350000000, available_balance: 650000000 });
   const [invoicesList, setInvoicesList] = useState(invoices || []);
   const [newLimitInput, setNewLimitInput] = useState('');
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [lcDocs, setLcDocs] = useState([]);
+
+  useEffect(() => {
+    fetchLcDocs();
+  }, []);
+
+  const fetchLcDocs = async () => {
+    try {
+      const res = await apiService.getLCDocuments();
+      if (res.success && res.data) {
+        setLcDocs(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching L/C docs:', err);
+    }
+  };
+
+  const handleVerifyLc = async (lcId) => {
+    try {
+      const res = await apiService.verifyLCDocument(lcId);
+      if (res.success) {
+        showToast(res.message || 'Phê duyệt Thư tín dụng L/C thành công!');
+        fetchLcDocs();
+        // Refresh credit limit
+        const creditRes = await apiService.getCreditLimit();
+        if (creditRes.success && creditRes.credit) {
+          setCreditData(creditRes.credit);
+        }
+      }
+    } catch (err) {
+      showToast('Lỗi khi phê duyệt tài liệu L/C.');
+    }
+  };
+
+  const handleRejectLc = async (lcId) => {
+    try {
+      const res = await apiService.rejectLCDocument(lcId);
+      if (res.success) {
+        showToast(res.message || 'Đã từ chối Thư tín dụng L/C.');
+        fetchLcDocs();
+      }
+    } catch (err) {
+      showToast('Lỗi khi từ chối tài liệu L/C.');
+    }
+  };
 
   const formatVND = (val) => {
     if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
@@ -279,6 +325,96 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
         </table>
       </div>
 
+      {/* LETTER OF CREDIT (L/C) APPROVAL PANEL */}
+      <div className="card-box" style={{ marginTop: '25px' }}>
+        <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <i className="fa-solid fa-file-shield gold-text"></i> Duyệt Thư Tín Dụng L/C (Chief Accountant Mode)
+        </h4>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+          Thẩm định tài liệu bảo lãnh L/C của khách hàng B2B. Việc phê duyệt sẽ tự động cộng hạn mức L/C vào Hạn Mức Tín Dụng Net-30 hiện tại của doanh nghiệp.
+        </p>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>MÃ L/C</th>
+              <th>DOANH NGHIỆP</th>
+              <th>NGÂN HÀNG PHÁT HÀNH</th>
+              <th>GIÁ TRỊ BẢO LÃNH (VNĐ)</th>
+              <th>NGÀY HẾT HẠN</th>
+              <th>TRẠNG THÁI</th>
+              <th>HÀNH ĐỘNG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lcDocs.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
+                  Không có yêu cầu L/C nào cần phê duyệt.
+                </td>
+              </tr>
+            ) : (
+              lcDocs.map(doc => {
+                let statusColor = '#F59E0B';
+                let statusBg = 'rgba(245,158,11,0.1)';
+                let statusText = 'Chờ Duyệt';
+                if (doc.status === 'VERIFIED') {
+                  statusColor = '#10B981';
+                  statusBg = 'rgba(16,185,129,0.1)';
+                  statusText = 'Đã Phê Duyệt';
+                } else if (doc.status === 'REJECTED') {
+                  statusColor = '#EF4444';
+                  statusBg = 'rgba(239,68,68,0.1)';
+                  statusText = 'Từ Chối';
+                }
+
+                return (
+                  <tr key={doc.lc_id}>
+                    <td><strong>{doc.lc_number}</strong></td>
+                    <td>{doc.buyer_company}</td>
+                    <td>{doc.issuing_bank}</td>
+                    <td className="gold-text"><strong>{formatVND(doc.amount)}</strong></td>
+                    <td>{doc.expiry_date}</td>
+                    <td>
+                      <span style={{ color: statusColor, background: statusBg, padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '500' }}>
+                        {statusText}
+                      </span>
+                    </td>
+                    <td>
+                      {doc.status === 'SUBMITTED' ? (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            className="btn-redapron-gold"
+                            style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#111111', color: '#FFFFFF', border: '1px solid #111111' }}
+                            onClick={() => handleVerifyLc(doc.lc_id)}
+                          >
+                            <i className="fa-solid fa-check"></i> Duyệt L/C
+                          </button>
+                          <button
+                            className="btn-redapron-gold"
+                            style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'transparent', color: '#EF4444', border: '1px solid #EF4444' }}
+                            onClick={() => handleRejectLc(doc.lc_id)}
+                          >
+                            <i className="fa-solid fa-xmark"></i> Từ Chối
+                          </button>
+                        </div>
+                      ) : doc.status === 'VERIFIED' ? (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <i className="fa-solid fa-circle-check" style={{ color: '#10B981', marginRight: '4px' }}></i> Hạn mức tăng +{formatVND(doc.amount)}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          <i className="fa-solid fa-circle-xmark" style={{ color: '#EF4444', marginRight: '4px' }}></i> Đã từ chối bảo lãnh
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
