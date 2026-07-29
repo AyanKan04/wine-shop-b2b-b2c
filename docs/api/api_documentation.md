@@ -602,3 +602,128 @@ Tài liệu quản lý RESTful API chính thức cho Hệ thống Thương mại
 }
 ```
 
+---
+
+## 🏛 11. Module 10: Thư tín dụng Bảo lãnh L/C (Bank Letter of Credit Documents)
+
+### 11.1. Lấy danh sách tài liệu L/C đã nộp
+- **Endpoint:** `GET /api/finance/lc-documents`
+- **Mô tả:** Lấy danh sách hồ sơ Thư tín dụng bảo lãnh L/C của doanh nghiệp.
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "lc_id": 1,
+      "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+      "lc_number": "LC-2026-0001",
+      "issuing_bank": "Vietcombank",
+      "amount": 2000000000,
+      "expiry_date": "2027-07-30",
+      "document_url": "/uploads/lc_lotte_saigon.pdf",
+      "status": "SUBMITTED",
+      "created_at": "2026-07-29"
+    }
+  ]
+}
+```
+
+---
+
+### 11.2. Nộp tài liệu L/C mới để xin nâng hạn mức
+- **Endpoint:** `POST /api/finance/lc-documents`
+- **Request Body:**
+```json
+{
+  "lc_number": "LC-2026-0002",
+  "issuing_bank": "Techcombank",
+  "amount": 1500000000,
+  "expiry_date": "2027-12-31",
+  "document_url": "/uploads/lc_techcombank_signed.pdf"
+}
+```
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đăng ký L/C thành công! Đang chờ Kế toán trưởng thẩm định.",
+  "data": {
+    "lc_id": 2,
+    "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+    "lc_number": "LC-2026-0002",
+    "issuing_bank": "Techcombank",
+    "amount": 1500000000,
+    "expiry_date": "2027-12-31",
+    "document_url": "/uploads/lc_techcombank_signed.pdf",
+    "status": "SUBMITTED",
+    "created_at": "2026-07-29"
+  }
+}
+```
+
+---
+
+### 11.3. Phê duyệt Thư tín dụng L/C (Kế Toán Trưởng)
+- **Endpoint:** `POST /api/finance/lc-documents/:id/verify`
+- **Mô tả:** Phê duyệt Thư tín dụng hợp lệ, tăng hạn mức tín dụng Net-30 và số dư khả dụng tương ứng.
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Phê duyệt L/C thành công! Hạn mức tín dụng của doanh nghiệp đã được nâng cao.",
+  "data": {
+    "lc_id": 1,
+    "status": "VERIFIED"
+  }
+}
+```
+
+---
+
+### 11.4. Từ chối Thư tín dụng L/C (Kế Toán Trưởng)
+- **Endpoint:** `POST /api/finance/lc-documents/:id/reject`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đã từ chối tài liệu L/C bảo lãnh thành công.",
+  "data": {
+    "lc_id": 1,
+    "status": "REJECTED"
+  }
+}
+```
+
+---
+
+## 🔄 12. Quy trình Nghiệp vụ Hệ thống B2B (End-to-End B2B Workflow)
+
+Hệ thống **RuuBusiness B2B** vận hành theo một chuỗi quy trình khép kín, tối ưu hóa giao dịch bán buôn rượu nhập khẩu chính ngạch:
+
+### Bước 1: Đăng ký & Thẩm định Pháp lý (Onboarding & Compliance)
+1. Đại diện mua hàng (`BUYER_REP`) đăng ký tài khoản qua Form Đăng ký B2B, cung cấp ĐKKD & Giấy phép bán lẻ rượu (Nghị định 105/2017/NĐ-CP).
+2. Quản trị viên (`PLATFORM_ADMIN`) thẩm định hồ sơ qua Admin Dashboard, phê duyệt hoặc từ chối trạng thái hoạt động của tài khoản.
+
+### Bước 2: Duyệt Hạn Mức Tín Dụng ban đầu (Initial Credit Limit)
+1. Sau khi giấy phép rượu được duyệt, bộ phận Tài chính cấp hạn mức mua hàng trả sau Net-30 ban đầu (ví dụ: 1 Tỷ VNĐ) cho doanh nghiệp.
+
+### Bước 3: Thương lượng & Đàm phán RFQ sỉ (B2B RFQ Negotiation & AI Sommelier)
+1. Buyer xem danh mục giá sỉ 5 tầng (Tier Pricing) dựa trên số lượng mua.
+2. Nếu muốn thỏa thuận giá tốt hơn hoặc đặt số lượng lớn vượt khung, Buyer tạo yêu cầu báo giá (RFQ).
+3. Đội ngũ Kinh doanh (`SALES_REP`) và Buyer thảo luận qua ô chat thời gian thực. Sommelier AI hỗ trợ cung cấp tư vấn chuyên sâu về niên vụ, nồng độ ABV, MOQ và đề xuất báo giá sỉ tối ưu.
+
+### Bước 4: Chốt Đơn & Tự động giảm hạn mức tín dụng (Order Flow & Credit Control)
+1. Sales phát hành báo giá chính thức (`Quotation`).
+2. Buyer bấm Chấp nhận báo giá (`ACCEPTED`) $\rightarrow$ Hệ thống tự động tạo Đơn hàng chính thức, phát hành Hóa đơn trả sau Net-30, và tự động trừ giá trị đơn hàng vào Hạn mức khả dụng (`available_balance`).
+3. Nếu Dư nợ vượt quá hạn mức hoặc có hóa đơn quá hạn 30 ngày, hệ thống tự động khóa thanh toán Net-30, chuyển Buyer sang hình thức Trả trước (Pre-payment).
+
+### Bước 5: Bảo lãnh Thư tín dụng L/C để gia tăng hạn mức (Letter of Credit)
+1. Để tăng hạn mức mua nợ trả sau Net-30 cho các đơn hàng lớn tiếp theo, Buyer nộp bản bảo lãnh Thư tín dụng Ngân hàng (L/C).
+2. Kế toán trưởng (`FINANCE_OFFICER`) duyệt L/C $\rightarrow$ Tổng hạn mức (`total_limit`) và Số dư khả dụng của Buyer lập tức được cộng thêm giá trị của Thư tín dụng L/C.
+
+### Bước 6: Quản lý Kho & Vận chuyển (Warehouse & Logistics)
+1. Đơn hàng được chuyển thông tin sang kho. Thủ kho (`WAREHOUSE_STAFF`) kiểm kho, đóng gói, xuất kho (`EXPORT`) và tạo vận đơn vận chuyển (`Shipments`).
+2. Trạng thái vận đơn được cập nhật liên tục từ `PICKING` $\rightarrow$ `IN_TRANSIT` $\rightarrow$ `DELIVERED`.
+
+
