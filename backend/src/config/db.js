@@ -227,6 +227,20 @@ const dbMock = {
     }
   ],
 
+  lc_documents: [
+    {
+      lc_id: 1,
+      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+      lc_number: 'LC-HSBC-2026-0001',
+      issuing_bank: 'HSBC Việt Nam',
+      amount: 1500000000,
+      expiry_date: '2026-12-31',
+      document_url: '/uploads/lc_lotte_hsbc.pdf',
+      status: 'VERIFIED',
+      created_at: '2026-07-25'
+    }
+  ],
+
   inventory: [
     { product_id: 101, sku: 'SKU-SCOT-MAC18', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', stock_on_hand: 450, reserved: 150, min_stock_level: 50, location: 'Kho A1 - Quận 7' },
     { product_id: 102, sku: 'SKU-FR-MARGAUX2018', product_name: 'Château Margaux Premier Grand Cru Classé 2018', stock_on_hand: 280, reserved: 50, min_stock_level: 30, location: 'Kho A1 - Quận 7' },
