@@ -86,11 +86,11 @@ export default function ProductDetailPage({ productId, products, showToast }) {
               { label: 'Chiết khấu tối đa', value: `-${maxTierDiscount}%` }
             ].map((attr, i) => (
               <div key={i} style={{
-                background: '#0D0A0B', border: '1px solid var(--border-subtle)',
+                background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)',
                 padding: '6px 14px', borderRadius: '20px', fontSize: '0.75rem'
               }}>
                 <span style={{ color: 'var(--text-muted)' }}>{attr.label}: </span>
-                <strong style={{ color: '#FFF' }}>{attr.value}</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{attr.value}</strong>
               </div>
             ))}
           </div>
@@ -110,18 +110,18 @@ export default function ProductDetailPage({ productId, products, showToast }) {
                   const discount = Math.round((1 - t.price_per_unit / prod.tier_prices[0].price_per_unit) * 100);
                   return (
                     <tr key={t.tier_level} style={{
-                      background: isActive ? 'rgba(212,175,55,0.08)' : 'transparent',
-                      borderLeft: isActive ? '3px solid var(--accent-gold)' : '3px solid transparent'
+                      background: isActive ? 'rgba(0, 0, 0, 0.03)' : 'transparent',
+                      borderLeft: isActive ? '3px solid var(--accent-burgundy)' : '3px solid transparent'
                     }}>
                       <td>
-                        <strong style={{ color: isActive ? 'var(--accent-gold)' : '#FFF' }}>Tier {t.tier_level}</strong>
-                        {currentTierLevel === t.tier_level && <span style={{ fontSize: '0.65rem', color: '#10B981', marginLeft: '6px' }}>← Hiện tại</span>}
+                        <strong style={{ color: isActive ? 'var(--text-main)' : 'var(--text-muted)' }}>Tier {t.tier_level}</strong>
+                        {currentTierLevel === t.tier_level && <span style={{ fontSize: '0.65rem', color: '#346538', marginLeft: '6px' }}>← Hiện tại</span>}
                       </td>
                       <td>Từ <strong>{t.min_quantity}</strong> thùng</td>
                       <td className="gold-text"><strong>{formatVND(t.price_per_unit)}</strong></td>
                       <td>
                         {discount > 0 ? (
-                          <span style={{ color: '#10B981', fontWeight: '700' }}>-{discount}%</span>
+                          <span style={{ color: '#346538', fontWeight: '700' }}>-{discount}%</span>
                         ) : (
                           <span style={{ color: 'var(--text-muted)' }}>Giá gốc</span>
                         )}
@@ -138,26 +138,26 @@ export default function ProductDetailPage({ productId, products, showToast }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <span style={{ fontSize: '0.85rem' }}>Chọn Số Lượng <span style={{ color: 'var(--text-muted)' }}>(MOQ: {prod.moq})</span>:</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button onClick={() => setQty(Math.max(prod.moq, qty - 5))} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', color: '#FFF', width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}>−</button>
-                <input type="number" value={qty} onChange={e => setQty(Math.max(prod.moq, parseInt(e.target.value) || prod.moq))} style={{ width: '70px', textAlign: 'center', background: '#0D0A0B', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '6px', borderRadius: '4px', fontSize: '1rem', fontWeight: '700' }} />
-                <button onClick={() => setQty(qty + 5)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', color: '#FFF', width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                <button onClick={() => setQty(Math.max(prod.moq, qty - 5))} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}>−</button>
+                <input type="number" value={qty} onChange={e => setQty(Math.max(prod.moq, parseInt(e.target.value) || prod.moq))} style={{ width: '70px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', padding: '6px', borderRadius: '4px', fontSize: '1rem', fontWeight: '700' }} />
+                <button onClick={() => setQty(qty + 5)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', color: 'var(--text-main)', width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer', fontSize: '1rem' }}>+</button>
               </div>
             </div>
-            <input type="range" min={prod.moq} max="500" value={qty} onChange={e => setQty(parseInt(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent-gold)', marginBottom: '15px' }} />
+            <input type="range" min={prod.moq} max="500" value={qty} onChange={e => setQty(parseInt(e.target.value))} style={{ width: '100%', accentColor: 'var(--text-main)', marginBottom: '15px' }} />
 
             {/* PRICE SUMMARY */}
-            <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px', marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Bậc giá hiện tại:</span>
-                <strong style={{ color: 'var(--accent-gold)' }}>Tier {currentTierLevel} — {formatVND(currentTierPrice)}/thùng</strong>
+                <strong style={{ color: 'var(--text-main)' }}>Tier {currentTierLevel} — {formatVND(currentTierPrice)}/thùng</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '6px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Số lượng:</span>
-                <strong style={{ color: '#FFF' }}>{qty} thùng</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{qty} thùng</strong>
               </div>
               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '10px', marginTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <span style={{ fontSize: '0.9rem', color: '#FFF' }}>Tổng Tiền Tạm Tính:</span>
-                <span style={{ fontFamily: 'var(--font-brand)', fontSize: '1.6rem', color: 'var(--accent-gold)', fontWeight: '700' }}>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Tổng Tiền Tạm Tính:</span>
+                <span style={{ fontFamily: 'var(--font-brand)', fontSize: '1.6rem', color: 'var(--text-main)', fontWeight: '700' }}>
                   {formatVND(currentTierPrice * qty)}
                 </span>
               </div>

@@ -26,7 +26,7 @@ export default function AgeVerificationModal() {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(5, 3, 4, 0.96)',
+      background: 'rgba(247, 246, 243, 0.98)',
       backdropFilter: 'blur(12px)',
       zIndex: 99999,
       display: 'flex',
@@ -35,26 +35,26 @@ export default function AgeVerificationModal() {
       padding: '20px'
     }}>
       <div style={{
-        background: 'linear-gradient(145deg, #1C1417 0%, #0A0708 100%)',
+        background: '#FFFFFF',
         border: '1px solid var(--border-gold)',
         borderRadius: '12px',
         padding: '45px 35px',
         maxWidth: '520px',
         width: '100%',
         textAlign: 'center',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.9)'
+        boxShadow: 'none'
       }}>
         <div style={{
           width: '60px',
           height: '60px',
           borderRadius: '50%',
-          background: 'rgba(212, 175, 55, 0.12)',
+          background: 'rgba(0, 0, 0, 0.03)',
           border: '1px solid var(--border-gold)',
           margin: '0 auto 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--accent-gold)',
+          color: 'var(--text-main)',
           fontSize: '1.8rem'
         }}>
           <i className="fa-solid fa-shield-halved"></i>
@@ -62,16 +62,17 @@ export default function AgeVerificationModal() {
 
         <div style={{
           fontSize: '0.75rem',
-          color: 'var(--accent-gold)',
+          color: 'var(--text-main)',
           textTransform: 'uppercase',
           letterSpacing: '2.5px',
-          fontFamily: 'var(--font-brand)',
+          fontFamily: 'var(--font-body)',
+          fontWeight: '600',
           marginBottom: '10px'
         }}>
           Xác Nhận Quy Định Độ Tuổi Pháp Lý
         </div>
 
-        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.9rem', marginBottom: '15px', color: '#FFF' }}>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.9rem', marginBottom: '15px', color: 'var(--text-main)' }}>
           Bạn Đã Đủ 18 Tuổi?
         </h2>
 

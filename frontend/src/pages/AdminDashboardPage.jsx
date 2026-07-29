@@ -396,8 +396,8 @@ export default function AdminDashboardPage({ showToast }) {
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-            <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '6px' }}>
-              <h4 style={{ color: 'var(--accent-gold)', marginBottom: '10px' }}>Quy Tắc Tự Động Khóa Đơn Hàng</h4>
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '6px' }}>
+              <h4 style={{ color: 'var(--text-main)', marginBottom: '10px' }}>Quy Tắc Tự Động Khóa Đơn Hàng</h4>
               <ul style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '20px', lineHeight: '1.8' }}>
                 <li>Khóa thanh toán Net-30 khi Tổng Dư Nợ vượt $\ge 100\%$ Hạn mức tín dụng được duyệt.</li>
                 <li>Tự động chuyển trạng thái sang <strong>Pre-payment (Trả trước)</strong> nếu có hóa đơn quá hạn quá 30 ngày.</li>
@@ -405,19 +405,19 @@ export default function AdminDashboardPage({ showToast }) {
               </ul>
             </div>
 
-            <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '6px' }}>
-              <h4 style={{ color: '#10B981', marginBottom: '10px' }}>Thống Kê Thanh Toán</h4>
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', padding: '20px', borderRadius: '6px' }}>
+              <h4 style={{ color: '#346538', marginBottom: '10px' }}>Thống Kê Thanh Toán</h4>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
                 <span>Tổng Hóa Đơn Đã Phát Hành:</span>
                 <strong>₫1,250,000,000</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
                 <span>Hóa Đơn Đã Thanh Toán:</span>
-                <strong style={{ color: '#10B981' }}>₫900,000,000 (72%)</strong>
+                <strong style={{ color: '#346538' }}>₫900,000,000 (72%)</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                 <span>Nợ Chưa Thanh Toán:</span>
-                <strong style={{ color: '#F59E0B' }}>₫350,000,000 (28%)</strong>
+                <strong style={{ color: '#B25E00' }}>₫350,000,000 (28%)</strong>
               </div>
             </div>
           </div>

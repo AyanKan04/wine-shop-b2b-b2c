@@ -257,8 +257,8 @@ export default function SalesProductMgmtPage({ products, showToast }) {
               </div>
 
               {/* TIER PRICING SECTION */}
-              <div style={{ background: '#0D0A0B', border: '1px solid var(--border-gold)', borderRadius: '6px', padding: '16px', marginTop: '10px', marginBottom: '15px' }}>
-                <h5 style={{ color: 'var(--accent-gold)', fontFamily: 'var(--font-brand)', fontSize: '0.8rem', marginBottom: '12px' }}>CẤU HÌNH BẬC GIÁ SỈ (TIER 1 → TIER 5)</h5>
+              <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', borderRadius: '6px', padding: '16px', marginTop: '10px', marginBottom: '15px' }}>
+                <h5 style={{ color: 'var(--text-main)', fontFamily: 'var(--font-body)', fontWeight: '600', fontSize: '0.8rem', marginBottom: '12px' }}>CẤU HÌNH BẬC GIÁ SỈ (TIER 1 → TIER 5)</h5>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                   {newProduct.tier_prices.map((tp, idx) => (
                     <div key={tp.tier_level} style={{ textAlign: 'center' }}>

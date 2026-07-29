@@ -138,8 +138,8 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
           </form>
 
           {/* AUTO-LOCK RULES */}
-          <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
-            <h5 style={{ fontSize: '0.8rem', color: '#F59E0B', marginBottom: '10px' }}>
+          <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
+            <h5 style={{ fontSize: '0.8rem', color: '#B25E00', marginBottom: '10px' }}>
               <i className="fa-solid fa-triangle-exclamation"></i> Quy Tắc Tự Động Khóa
             </h5>
             <ul style={{ fontSize: '0.8rem', color: 'var(--text-muted)', paddingLeft: '16px', lineHeight: '1.8', margin: 0 }}>
@@ -152,34 +152,34 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
 
         {/* PAYMENT STATISTICS */}
         <div className="card-box">
-          <h4 style={{ fontFamily: 'var(--font-heading)', color: '#10B981', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h4 style={{ fontFamily: 'var(--font-heading)', color: '#346538', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <i className="fa-solid fa-chart-pie"></i> Thống Kê Thanh Toán
           </h4>
           
           <div style={{ marginBottom: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
               <span style={{ color: 'var(--text-muted)' }}>Tổng phát hành:</span>
-              <strong style={{ color: '#FFF' }}>{formatVND(totalInvoiced)}</strong>
+              <strong style={{ color: 'var(--text-main)' }}>{formatVND(totalInvoiced)}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
               <span style={{ color: 'var(--text-muted)' }}>Đã thanh toán:</span>
-              <strong style={{ color: '#10B981' }}>{formatVND(totalPaid)}</strong>
+              <strong style={{ color: '#346538' }}>{formatVND(totalPaid)}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '12px' }}>
               <span style={{ color: 'var(--text-muted)' }}>Chưa thanh toán:</span>
-              <strong style={{ color: '#F59E0B' }}>{formatVND(totalUnpaid)}</strong>
+              <strong style={{ color: '#B25E00' }}>{formatVND(totalUnpaid)}</strong>
             </div>
           </div>
 
           {/* PAYMENT RATE BAR */}
-          <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
+          <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tỷ lệ thanh toán</span>
-              <strong style={{ color: '#10B981', fontSize: '0.9rem' }}>
+              <strong style={{ color: '#346538', fontSize: '0.9rem' }}>
                 {totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0}%
               </strong>
             </div>
-            <div style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'rgba(255,255,255,0.08)' }}>
+            <div style={{ width: '100%', height: '10px', borderRadius: '5px', background: 'rgba(0,0,0,0.06)' }}>
               <div style={{
                 width: `${totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0}%`,
                 height: '100%',

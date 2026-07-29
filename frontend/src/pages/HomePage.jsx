@@ -92,7 +92,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
         {/* Subtle animated gradient overlay */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'linear-gradient(135deg, rgba(114,21,32,0.3) 0%, rgba(10,7,8,0.9) 40%, rgba(10,7,8,0.95) 100%)',
+          background: 'radial-gradient(circle at center, rgba(247, 246, 243, 0.4) 0%, rgba(255, 255, 255, 0.95) 100%)',
           zIndex: 1
         }}></div>
 
@@ -125,7 +125,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
 
       {/* ═══════════════════ STATS COUNTER BAR ═══════════════════ */}
       <section style={{
-        background: 'linear-gradient(180deg, #120D0F 0%, #0A0708 100%)',
+        background: 'var(--bg-surface)',
         borderTop: '1px solid var(--border-gold)',
         borderBottom: '1px solid var(--border-gold)',
         padding: '30px 5%'
@@ -207,7 +207,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
 
       {/* ═══════════════════ B2B ADVANTAGES ═══════════════════ */}
       <section style={{
-        background: 'linear-gradient(180deg, #0D0A0B 0%, #140E10 100%)',
+        background: 'var(--bg-primary)',
         borderTop: '1px solid var(--border-subtle)',
         padding: '60px 5%'
       }}>
@@ -280,7 +280,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
 
       {/* ═══════════════════ CTA BANNER ═══════════════════ */}
       <section style={{
-        background: 'linear-gradient(135deg, #721520 0%, #0A0708 100%)',
+        background: 'var(--bg-primary)',
         borderTop: '1px solid var(--border-gold)',
         borderBottom: '1px solid var(--border-gold)',
         padding: '60px 5%',

@@ -336,11 +336,11 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                   Đang đàm phán RFQ #{selectedRfqChat.rfq_id} — {selectedRfqChat.product_name} ({selectedRfqChat.quantity} thùng)
                 </div>
               </div>
-              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
             </div>
 
             {/* Chat Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', background: '#0A0708', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
               {chatMessages.map(msg => {
                 const isBuyer = msg.sender_role === 'BUYER';
                 const isSystem = msg.sender_role === 'SYSTEM';
@@ -353,11 +353,11 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                       {msg.sender_name} · {msg.created_at || 'Vừa xong'}
                     </div>
                     <div style={{
-                      background: isSystem ? 'transparent' : (isBuyer ? 'var(--accent-burgundy)' : 'rgba(255,255,255,0.06)'),
-                      border: isSystem ? 'none' : `1px solid ${isBuyer ? 'rgba(212,175,55,0.2)' : 'var(--border-subtle)'}`,
+                      background: isSystem ? 'transparent' : (isBuyer ? '#111111' : '#FFFFFF'),
+                      border: isSystem ? 'none' : '1px solid var(--border-gold)',
                       padding: isSystem ? '2px 10px' : '10px 14px',
                       borderRadius: '8px',
-                      color: isSystem ? 'var(--text-muted)' : '#FFF',
+                      color: isSystem ? 'var(--text-muted)' : (isBuyer ? '#FFFFFF' : 'var(--text-main)'),
                       fontSize: '0.8rem',
                       fontStyle: isSystem ? 'italic' : 'normal'
                     }}>

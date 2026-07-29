@@ -135,7 +135,7 @@ export default function CatalogPage({ products, onSelectProduct }) {
             marginBottom: '20px', flexWrap: 'wrap', gap: '12px'
           }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Hiển thị <strong style={{ color: '#FFF' }}>{filtered.length}</strong> / {products.length} sản phẩm
+              Hiển thị <strong style={{ color: 'var(--text-main)' }}>{filtered.length}</strong> / {products.length} sản phẩm
             </div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -149,12 +149,12 @@ export default function CatalogPage({ products, onSelectProduct }) {
               </select>
 
               {/* VIEW TOGGLE */}
-              <div style={{ display: 'flex', background: '#0D0A0B', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
                 <button
                   onClick={() => setViewMode('grid')}
                   style={{
                     padding: '8px 12px', border: 'none', borderRadius: '6px 0 0 6px',
-                    background: viewMode === 'grid' ? 'var(--accent-burgundy)' : 'transparent',
+                    background: viewMode === 'grid' ? '#111111' : 'transparent',
                     color: viewMode === 'grid' ? '#FFF' : 'var(--text-muted)', cursor: 'pointer'
                   }}
                 >
@@ -164,7 +164,7 @@ export default function CatalogPage({ products, onSelectProduct }) {
                   onClick={() => setViewMode('list')}
                   style={{
                     padding: '8px 12px', border: 'none', borderRadius: '0 6px 6px 0',
-                    background: viewMode === 'list' ? 'var(--accent-burgundy)' : 'transparent',
+                    background: viewMode === 'list' ? '#111111' : 'transparent',
                     color: viewMode === 'list' ? '#FFF' : 'var(--text-muted)', cursor: 'pointer'
                   }}
                 >

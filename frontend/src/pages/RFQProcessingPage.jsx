@@ -254,21 +254,21 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
 
       {/* MODAL: CREATE QUOTATION */}
       {showQuoteModal && selectedRfq && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Phát Hành Báo Giá</h3>
-              <button onClick={() => setShowQuoteModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowQuoteModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
 
             {/* RFQ SUMMARY */}
-            <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '16px', marginBottom: '20px' }}>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                <strong style={{ color: 'var(--accent-gold)' }}>RFQ #{selectedRfq.rfq_id}</strong> — {selectedRfq.buyer_company}
+                <strong style={{ color: 'var(--text-main)' }}>RFQ #{selectedRfq.rfq_id}</strong> — {selectedRfq.buyer_company}
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#FFF', fontWeight: '600' }}>{selectedRfq.product_name}</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: '600' }}>{selectedRfq.product_name}</div>
               <div style={{ display: 'flex', gap: '20px', marginTop: '8px', fontSize: '0.85rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>SL: <strong style={{ color: '#FFF' }}>{selectedRfq.quantity} thùng</strong></span>
+                <span style={{ color: 'var(--text-muted)' }}>SL: <strong style={{ color: 'var(--text-main)' }}>{selectedRfq.quantity} thùng</strong></span>
                 <span style={{ color: 'var(--text-muted)' }}>Giá KH muốn: <strong className="gold-text">{formatVND(selectedRfq.target_price)}</strong></span>
               </div>
             </div>
@@ -288,13 +288,13 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
 
               {/* MARGIN CALCULATION PREVIEW */}
               {quoteForm.offer_price && (
-                <div style={{ background: '#0D0A0B', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '14px', marginBottom: '15px' }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '8px', fontFamily: 'var(--font-brand)' }}>
+                <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '14px', marginBottom: '15px' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', marginBottom: '8px', fontFamily: 'var(--font-body)', fontWeight: '600' }}>
                     <i className="fa-solid fa-calculator"></i> TÍNH TOÁN BIÊN LỢI NHUẬN
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Tổng giá trị đơn:</span>
-                    <strong style={{ color: '#FFF' }}>{formatVND(parseFloat(quoteForm.offer_price) * selectedRfq.quantity)}</strong>
+                    <strong style={{ color: 'var(--text-main)' }}>{formatVND(parseFloat(quoteForm.offer_price) * selectedRfq.quantity)}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Biên LN so với giá KH:</span>
@@ -346,11 +346,11 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                   Đang trao đổi với {selectedRfqChat.buyer_company} về RFQ #{selectedRfqChat.rfq_id}
                 </div>
               </div>
-              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
             </div>
 
             {/* Chat Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', background: '#0A0708', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
               {chatMessages.map(msg => {
                 const isSales = msg.sender_role === 'SALES_REP';
                 const isSystem = msg.sender_role === 'SYSTEM';
@@ -363,11 +363,11 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                       {msg.sender_name} · {msg.created_at || 'Vừa xong'}
                     </div>
                     <div style={{
-                      background: isSystem ? 'transparent' : (isSales ? 'var(--accent-burgundy)' : 'rgba(255,255,255,0.06)'),
-                      border: isSystem ? 'none' : `1px solid ${isSales ? 'rgba(212,175,55,0.2)' : 'var(--border-subtle)'}`,
+                      background: isSystem ? 'transparent' : (isSales ? '#111111' : '#FFFFFF'),
+                      border: isSystem ? 'none' : '1px solid var(--border-gold)',
                       padding: isSystem ? '2px 10px' : '10px 14px',
                       borderRadius: '8px',
-                      color: isSystem ? 'var(--text-muted)' : '#FFF',
+                      color: isSystem ? 'var(--text-muted)' : (isSales ? '#FFFFFF' : 'var(--text-main)'),
                       fontSize: '0.8rem',
                       fontStyle: isSystem ? 'italic' : 'normal'
                     }}>

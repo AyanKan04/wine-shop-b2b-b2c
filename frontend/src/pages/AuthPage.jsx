@@ -66,22 +66,23 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
         
         {/* LEFT COLUMN: BRAND PROMO / B2B TRUST STRIP */}
         <div style={{
-          background: 'linear-gradient(145deg, #1C1417 0%, #0D0A0B 100%)',
+          background: 'var(--bg-surface)',
           border: '1px solid var(--border-gold)',
           borderRadius: '8px',
           padding: '40px',
           display: 'flex',
           flexDirection: 'column',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           minHeight: '520px'
         }}>
           <div>
             <div style={{
               fontSize: '0.75rem',
-              color: 'var(--accent-gold)',
+              color: 'var(--text-main)',
               textTransform: 'uppercase',
               letterSpacing: '3px',
-              fontFamily: 'var(--font-brand)',
+              fontFamily: 'var(--font-body)',
+              fontWeight: '600',
               marginBottom: '15px'
             }}>
               Cổng Cung Cấp Rượu Nhập Khẩu B2B
@@ -103,31 +104,31 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
             {/* TRUST HIGHLIGHTS */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.15)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-gold)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
                   <i className="fa-solid fa-wine-glass"></i>
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '0.9rem', color: '#FFF' }}>500+ Dòng Vang & Rượu Mạnh Nhập Khẩu</h4>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>500+ Dòng Vang & Rượu Mạnh Nhập Khẩu</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Phân phối chính ngạch từ Bordeaux, Scotland, Tuscany, Napa Valley.</p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.15)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-gold)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
                   <i className="fa-solid fa-scale-balanced"></i>
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '0.9rem', color: '#FFF' }}>Bảng Giá Sỉ Phân Tầng (Tier 1 đến Tier 5)</h4>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Bảng Giá Sỉ Phân Tầng (Tier 1 đến Tier 5)</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chiết khấu tối đa lên tới 40% cho đơn hàng số lượng lớn.</p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(212,175,55,0.15)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-gold)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' }}>
                   <i className="fa-solid fa-credit-card"></i>
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '0.9rem', color: '#FFF' }}>Hạn Mức Tín Dụng Trả Sau Net-30</h4>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>Hạn Mức Tín Dụng Trả Sau Net-30</h4>
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Cấp hạn mức lên đến 1 Tỷ VNĐ cho đối tác doanh nghiệp uy tín.</p>
                 </div>
               </div>
@@ -148,16 +149,17 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
           padding: '35px'
         }}>
           {/* TAB SWITCHER */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: '#0D0A0B', borderRadius: '6px', padding: '4px', marginBottom: '30px', border: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--bg-primary)', borderRadius: '6px', padding: '4px', marginBottom: '30px', border: '1px solid var(--border-subtle)' }}>
             <button
               onClick={() => setActiveTab('login')}
               style={{
                 padding: '10px',
                 border: 'none',
                 borderRadius: '4px',
-                background: activeTab === 'login' ? 'var(--accent-burgundy)' : 'transparent',
+                background: activeTab === 'login' ? '#111111' : 'transparent',
                 color: activeTab === 'login' ? '#FFF' : 'var(--text-muted)',
-                fontFamily: 'var(--font-brand)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: '600',
                 fontSize: '0.75rem',
                 letterSpacing: '1px',
                 cursor: 'pointer',

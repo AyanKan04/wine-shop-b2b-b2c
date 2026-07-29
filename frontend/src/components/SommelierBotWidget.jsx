@@ -259,8 +259,8 @@ export default function SommelierBotWidget() {
                 type="text"
                 className="form-control"
                 style={{
-                  flex: 1, padding: '10px 14px', fontSize: '0.8rem', background: '#0A0708',
-                  border: '1px solid var(--border-subtle)', color: '#FFF', borderRadius: '6px'
+                  flex: 1, padding: '10px 14px', fontSize: '0.8rem', background: '#FFFFFF',
+                  border: '1px solid var(--border-subtle)', color: 'var(--text-main)', borderRadius: '6px'
                 }}
                 placeholder="Hỏi Sommelier về sản phẩm, chiết khấu..."
                 value={inputText}

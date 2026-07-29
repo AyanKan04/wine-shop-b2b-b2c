@@ -227,11 +227,11 @@ export default function MasterAdminWorkspacePage({
   ];
 
   return (
-    <div style={{ background: '#090607', minHeight: '90vh', paddingBottom: '50px' }}>
+    <div style={{ background: 'var(--bg-primary)', minHeight: '90vh', paddingBottom: '50px' }}>
       
       {/* UNIFIED ADMIN HEADER BAR */}
       <div style={{
-        background: 'linear-gradient(180deg, #140E10 0%, #0D0A0B 100%)',
+        background: 'var(--bg-surface)',
         borderBottom: '1px solid var(--border-gold)',
         padding: '20px 5%',
         display: 'flex',
@@ -245,21 +245,21 @@ export default function MasterAdminWorkspacePage({
             width: '45px',
             height: '45px',
             borderRadius: '8px',
-            background: 'rgba(229, 77, 96, 0.15)',
-            border: '1px solid rgba(229, 77, 96, 0.4)',
+            background: 'rgba(159, 47, 45, 0.1)',
+            border: '1px solid rgba(159, 47, 45, 0.2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#E54D60',
+            color: '#9F2F2D',
             fontSize: '1.4rem'
           }}>
             <i className="fa-solid fa-crown"></i>
           </div>
           <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'var(--font-brand)' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'var(--font-body)', fontWeight: '600' }}>
               Red Apron Executive Suite
             </div>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, color: '#FFF' }}>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
               Trung Tâm Quản Trị Thống Nhất (Master Admin Console)
             </h1>
           </div>
@@ -267,13 +267,13 @@ export default function MasterAdminWorkspacePage({
 
         {/* SYSTEM STATUS CAPSULE */}
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid var(--border-gold)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
             <span>API Server: <strong>Port 5000 (Active)</strong></span>
           </div>
 
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <i className="fa-solid fa-user-shield burgundy-text"></i>
+          <div style={{ background: '#FFFFFF', border: '1px solid var(--border-gold)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <i className="fa-solid fa-user-shield" style={{ color: '#9F2F2D' }}></i>
             <span>Role: <strong>Master Administrator</strong></span>
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function MasterAdminWorkspacePage({
 
       {/* UNIFIED MODULE NAVIGATION TABS BAR */}
       <div style={{
-        background: '#120D0F',
+        background: 'var(--bg-surface)',
         borderBottom: '1px solid var(--border-subtle)',
         padding: '12px 5%',
         display: 'flex',
@@ -295,24 +295,25 @@ export default function MasterAdminWorkspacePage({
               key={mod.id}
               onClick={() => setActiveAdminModule(mod.id)}
               style={{
-                background: isActive ? 'var(--accent-burgundy)' : '#1A1315',
-                border: isActive ? '1px solid var(--border-gold)' : '1px solid var(--border-subtle)',
-                color: isActive ? '#FFF' : 'var(--text-muted)',
+                background: isActive ? '#111111' : '#FFFFFF',
+                border: isActive ? '1px solid #111111' : '1px solid var(--border-gold)',
+                color: isActive ? '#FFFFFF' : 'var(--text-muted)',
                 padding: '10px 18px',
                 borderRadius: '6px',
-                fontFamily: 'var(--font-brand)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: '600',
                 fontSize: '0.78rem',
-                letterSpacing: '1px',
+                letterSpacing: '0.02em',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
                 whiteSpace: 'nowrap',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: isActive ? '0 4px 15px rgba(114, 21, 32, 0.4)' : 'none'
+                boxShadow: 'none'
               }}
             >
-              <i className={`fa-solid ${mod.icon}`} style={{ color: isActive ? 'var(--accent-gold)' : '#A89F91' }}></i>
+              <i className={`fa-solid ${mod.icon}`} style={{ color: isActive ? '#FFFFFF' : 'var(--text-muted)' }}></i>
               <span>{mod.title}</span>
             </button>
           );
