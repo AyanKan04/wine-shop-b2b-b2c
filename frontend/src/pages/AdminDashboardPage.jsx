@@ -136,7 +136,7 @@ export default function AdminDashboardPage({ showToast }) {
             <span>HỒ SƠ GIẤY PHÉP RƯỢU</span>
             <i className="fa-solid fa-file-contract burgundy-text"></i>
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: '700', color: '#FFF', marginTop: '8px' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-main)', marginTop: '8px' }}>
             {licensesList.filter(l => l.status === 'PENDING_VERIFICATION').length} <span style={{ fontSize: '0.9rem', color: '#F59E0B' }}>chờ duyệt</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
@@ -149,7 +149,7 @@ export default function AdminDashboardPage({ showToast }) {
             <span>DOANH NGHIỆP B2B</span>
             <i className="fa-solid fa-building gold-text"></i>
           </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: '700', color: '#FFF', marginTop: '8px' }}>
+          <div style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-main)', marginTop: '8px' }}>
             {companiesList.length} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>đối tác</span>
           </div>
           <div style={{ fontSize: '0.75rem', color: '#10B981', marginTop: '6px' }}>
@@ -280,7 +280,7 @@ export default function AdminDashboardPage({ showToast }) {
                 <tr key={lic.license_id}>
                   <td><strong>#LIC-{lic.license_id}</strong></td>
                   <td>
-                    <div style={{ fontWeight: '600', color: '#FFF' }}>{lic.company_name}</div>
+                    <div style={{ fontWeight: '600', color: 'var(--text-main)' }}>{lic.company_name}</div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>MST: {lic.tax_code}</div>
                   </td>
                   <td>{lic.license_type}</td>
@@ -355,7 +355,7 @@ export default function AdminDashboardPage({ showToast }) {
               {companiesList.map(comp => (
                 <tr key={comp.company_id}>
                   <td><strong>{comp.company_code}</strong></td>
-                  <td style={{ fontWeight: '600', color: '#FFF' }}>{comp.company_name}</td>
+                  <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{comp.company_name}</td>
                   <td><code>{comp.tax_code}</code></td>
                   <td><span style={{ color: 'var(--accent-gold)' }}>{comp.company_type}</span></td>
                   <td>{formatVND(comp.credit_limit)}</td>

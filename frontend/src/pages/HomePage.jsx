@@ -142,7 +142,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
           ].map((stat, i) => (
             <div key={i}>
               <i className={`fa-solid ${stat.icon}`} style={{ fontSize: '1.5rem', color: stat.color, marginBottom: '8px', display: 'block' }}></i>
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#FFF', fontFamily: 'var(--font-heading)' }}>{stat.value}</div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--text-main)', fontFamily: 'var(--font-heading)' }}>{stat.value}</div>
               <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{stat.label}</div>
             </div>
           ))}
@@ -235,7 +235,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
                   <i className={`fa-solid ${adv.icon}`}></i>
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '0.95rem', color: '#FFF', marginBottom: '6px' }}>{adv.title}</h4>
+                  <h4 style={{ fontSize: '0.95rem', color: 'var(--text-main)', marginBottom: '6px' }}>{adv.title}</h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>{adv.desc}</p>
                 </div>
               </div>

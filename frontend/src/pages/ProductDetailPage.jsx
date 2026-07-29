@@ -26,7 +26,7 @@ export default function ProductDetailPage({ productId, products, showToast }) {
     <div className="page-container" style={{ maxWidth: '1300px' }}>
       {/* BREADCRUMB */}
       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-        <span style={{ cursor: 'pointer' }}>Catalog</span> › <span style={{ cursor: 'pointer' }}>{prod.category}</span> › <span style={{ color: '#FFF' }}>{prod.product_name}</span>
+        <span style={{ cursor: 'pointer' }}>Catalog</span> › <span style={{ cursor: 'pointer' }}>{prod.category}</span> › <span style={{ color: 'var(--text-main)' }}>{prod.product_name}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '35px' }}>
@@ -60,7 +60,7 @@ export default function ProductDetailPage({ productId, products, showToast }) {
                 padding: '14px', textAlign: 'center'
               }}>
                 <i className={`fa-solid ${spec.icon}`} style={{ color: spec.color, fontSize: '1.1rem', marginBottom: '6px', display: 'block' }}></i>
-                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#FFF' }}>{spec.value}</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-main)' }}>{spec.value}</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{spec.label}</div>
               </div>
             ))}

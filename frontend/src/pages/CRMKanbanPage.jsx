@@ -258,7 +258,7 @@ export default function CRMKanbanPage({ showToast }) {
 
           return (
             <div key={col.id} style={{
-              background: '#0F0B0D',
+              background: '#F0EFEA',
               border: '1px solid var(--border-subtle)',
               borderRadius: '8px',
               padding: '15px',
@@ -269,11 +269,11 @@ export default function CRMKanbanPage({ showToast }) {
               {/* COLUMN HEADER */}
               <div style={{ borderBottom: `2px solid ${col.color}`, paddingBottom: '12px', marginBottom: '15px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ fontSize: '0.85rem', color: '#FFF', fontFamily: 'var(--font-brand)', margin: 0 }}>
+                  <h4 style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontFamily: 'var(--font-brand)', margin: 0 }}>
                     {col.title}
                   </h4>
                   <span style={{
-                    background: 'rgba(255,255,255,0.1)',
+                    background: 'rgba(0,0,0,0.05)',
                     color: col.color,
                     fontSize: '0.75rem',
                     fontWeight: '700',
@@ -283,7 +283,7 @@ export default function CRMKanbanPage({ showToast }) {
                     {colDeals.length}
                   </span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--accent-gold)', marginTop: '4px', fontWeight: '600' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '600' }}>
                   {formatVND(colTotal)}
                 </div>
               </div>
@@ -301,7 +301,7 @@ export default function CRMKanbanPage({ showToast }) {
                       border: '1px solid var(--border-gold)',
                       borderRadius: '6px',
                       padding: '14px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.02)',
                       transition: 'all 0.2s',
                       display: 'flex',
                       flexDirection: 'column',
@@ -316,7 +316,7 @@ export default function CRMKanbanPage({ showToast }) {
                         </span>
                       </div>
 
-                      <h5 style={{ fontSize: '0.85rem', color: '#FFF', margin: 0, lineHeight: '1.3' }}>
+                      <h5 style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0, lineHeight: '1.3' }}>
                         {deal.title}
                       </h5>
 
@@ -324,8 +324,8 @@ export default function CRMKanbanPage({ showToast }) {
                         <i className="fa-solid fa-building gold-text"></i> {deal.buyer_company}
                       </div>
 
-                      <div style={{ background: '#090708', borderRadius: '4px', padding: '8px', fontSize: '0.75rem', border: '1px solid var(--border-subtle)' }}>
-                        <div style={{ color: '#FFF', fontWeight: '600' }}>{deal.product_name}</div>
+                      <div style={{ background: 'var(--bg-primary)', borderRadius: '4px', padding: '8px', fontSize: '0.75rem', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ color: 'var(--text-main)', fontWeight: '600' }}>{deal.product_name}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', marginTop: '4px' }}>
                           <span>SL: <strong>{deal.quantity} chai/thùng</strong></span>
                           <span>Đơn giá: {formatVND(deal.unit_price)}</span>
@@ -389,7 +389,7 @@ export default function CRMKanbanPage({ showToast }) {
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '600px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Thêm Cơ Hội Đàm Phán B2B Mới</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
             </div>
 
             <form onSubmit={handleCreateDeal}>

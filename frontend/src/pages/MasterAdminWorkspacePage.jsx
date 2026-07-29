@@ -126,10 +126,10 @@ function OverviewDashboard() {
             {topProducts.map((prod, idx) => (
               <div key={idx}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '0.8rem', color: '#FFF' }}>{prod.name}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>{prod.name}</span>
                   <strong style={{ fontSize: '0.8rem', color: prod.color }}>{prod.percentage}%</strong>
                 </div>
-                <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)' }}>
+                <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(0,0,0,0.1)' }}>
                   <div style={{
                     width: `${prod.percentage}%`,
                     height: '100%',
@@ -193,7 +193,7 @@ function OverviewDashboard() {
                   </div>
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{log.timestamp}</span>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: '#FFF', margin: '4px 0 2px 0' }}>{log.action}</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: '4px 0 2px 0' }}>{log.action}</p>
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Bởi: {log.actor}</span>
               </div>
             </div>

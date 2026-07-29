@@ -244,7 +244,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
                 return (
                   <tr key={inv.product_id}>
                     <td><code style={{ color: 'var(--accent-gold)' }}>{inv.sku}</code></td>
-                    <td style={{ fontWeight: '600', color: '#FFF', maxWidth: '250px' }}>{inv.product_name}</td>
+                    <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '250px' }}>{inv.product_name}</td>
                     <td><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{inv.location}</span></td>
                     <td>{inv.stock_on_hand} thùng</td>
                     <td style={{ color: '#F59E0B' }}>{inv.reserved} thùng</td>
@@ -252,7 +252,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
                     <td>{inv.min_stock_level} thùng</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '60px', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}>
+                        <div style={{ width: '60px', height: '6px', borderRadius: '3px', background: 'rgba(0,0,0,0.1)' }}>
                           <div style={{ width: `${stockPercent}%`, height: '100%', borderRadius: '3px', background: isLow ? '#EF4444' : '#10B981' }}></div>
                         </div>
                         <span style={{
@@ -295,7 +295,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
               {shipments.map(s => (
                 <tr key={s.shipment_id}>
                   <td><code style={{ color: 'var(--accent-gold)' }}>{s.tracking_number || 'Chưa cấp'}</code></td>
-                  <td style={{ fontWeight: '600', color: '#FFF', maxWidth: '200px', fontSize: '0.8rem' }}>{s.buyer_company}</td>
+                  <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '200px', fontSize: '0.8rem' }}>{s.buyer_company}</td>
                   <td style={{ fontSize: '0.8rem' }}>{s.carrier || '—'}</td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.items_summary}</td>
                   <td>{s.estimated_delivery || '—'}</td>
@@ -344,7 +344,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '500px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Nhập/Xuất Kho</h3>
-              <button onClick={() => setShowAdjustModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowAdjustModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleAdjustStock}>
               <div className="form-group">
@@ -388,7 +388,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Tạo Phiếu Vận Chuyển</h3>
-              <button onClick={() => setShowShipmentModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowShipmentModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleCreateShipment}>
               <div className="form-group">

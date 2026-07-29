@@ -187,7 +187,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                 <tr key={r.rfq_id}>
                   <td><code style={{ color: 'var(--accent-gold)' }}>#RFQ-{r.rfq_id}</code></td>
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{r.title}</td>
-                  <td style={{ fontWeight: '600', color: '#FFF' }}>{r.product_name}</td>
+                  <td style={{ fontWeight: '600', color: 'var(--text-main)' }}>{r.product_name}</td>
                   <td><strong>{r.quantity}</strong> thùng</td>
                   <td className="gold-text"><strong>{formatVND(r.target_price)}</strong></td>
                   <td>
@@ -285,7 +285,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Gửi Yêu Cầu Báo Giá (RFQ) Mới</h3>
-              <button onClick={() => setShowNewRfqModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowNewRfqModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleCreateRfq}>
               <div className="form-group">

@@ -212,7 +212,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
                     <td>{order.created_at}</td>
                     <td>
                       {order.items.map((item, idx) => (
-                        <div key={idx} style={{ fontSize: '0.85rem', color: '#FFF' }}>
+                        <div key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
                           {item.product_name}
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                             Đơn giá: {formatVND(item.unit_price)}
@@ -310,11 +310,11 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
-                { label: 'Loại hạn mức', value: 'Net-30 (Trả sau 30 ngày)', color: '#FFF' },
+                { label: 'Loại hạn mức', value: 'Net-30 (Trả sau 30 ngày)', color: 'var(--text-main)' },
                 { label: 'Tổng hạn mức được duyệt', value: formatVND(creditState.total_limit), color: 'var(--accent-gold)' },
                 { label: 'Dư nợ đang sử dụng', value: formatVND(creditState.used_amount), color: '#F59E0B' },
                 { label: 'Số dư khả dụng còn lại', value: formatVND(creditState.available_balance), color: '#10B981' },
-                { label: 'Tỷ lệ sử dụng', value: `${usedPercent}%`, color: creditWarning ? '#EF4444' : '#FFF' }
+                { label: 'Tỷ lệ sử dụng', value: `${usedPercent}%`, color: creditWarning ? '#EF4444' : 'var(--text-main)' }
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{item.label}</span>
@@ -330,7 +330,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
             </h4>
             <ul style={{ fontSize: '0.85rem', color: 'var(--text-muted)', paddingLeft: '20px', lineHeight: 2 }}>
               <li>Khóa thanh toán Net-30 khi Dư Nợ ≥ 100% Hạn mức.</li>
-              <li>Tự động chuyển sang <strong style={{ color: '#FFF' }}>Pre-payment (Trả trước)</strong> nếu có hóa đơn quá hạn 30 ngày.</li>
+              <li>Tự động chuyển sang <strong style={{ color: 'var(--text-main)' }}>Pre-payment (Trả trước)</strong> nếu có hóa đơn quá hạn 30 ngày.</li>
               <li>Gửi cảnh báo Email tự động <strong style={{ color: '#F59E0B' }}>trước 5 ngày</strong> đến hạn thanh toán.</li>
               <li>Hạn mức tín dụng sẽ được khôi phục ngay lập tức khi thanh toán hóa đơn.</li>
               <li>Yêu cầu Giấy phép Rượu hợp lệ theo NĐ 105/2017/NĐ-CP để kích hoạt.</li>

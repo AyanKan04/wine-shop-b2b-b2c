@@ -161,7 +161,7 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
             {rfqList.map(r => (
               <tr key={r.rfq_id}>
                 <td><code style={{ color: 'var(--accent-gold)' }}>#RFQ-{r.rfq_id}</code></td>
-                <td style={{ fontWeight: '600', color: '#FFF', fontSize: '0.85rem' }}>{r.buyer_company}</td>
+                <td style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.85rem' }}>{r.buyer_company}</td>
                 <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{r.title}</td>
                 <td>{r.product_name}</td>
                 <td><strong>{r.quantity}</strong> thùng</td>

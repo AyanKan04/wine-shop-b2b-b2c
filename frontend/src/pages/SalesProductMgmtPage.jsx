@@ -149,7 +149,7 @@ export default function SalesProductMgmtPage({ products, showToast }) {
             {filteredProducts.map(prod => (
               <tr key={prod.product_id}>
                 <td><code style={{ color: 'var(--accent-gold)' }}>{prod.sku}</code></td>
-                <td style={{ fontWeight: '600', color: '#FFF', maxWidth: '250px' }}>{prod.product_name}</td>
+                <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '250px' }}>{prod.product_name}</td>
                 <td><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{prod.category}</span></td>
                 <td>{prod.country_of_origin}</td>
                 <td>{prod.alcohol_content}%</td>
@@ -195,7 +195,7 @@ export default function SalesProductMgmtPage({ products, showToast }) {
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Thêm Dòng Rượu Mới</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleAddProduct}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -310,7 +310,7 @@ export default function SalesProductMgmtPage({ products, showToast }) {
                 <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Chỉnh Sửa Bậc Giá Sỉ</h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>{editingProduct.product_name}</p>
               </div>
-              <button onClick={() => setShowEditPriceModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowEditPriceModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleSaveTierPrices}>
               <table className="data-table" style={{ marginBottom: '20px' }}>
