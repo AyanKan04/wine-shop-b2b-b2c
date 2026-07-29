@@ -16,9 +16,8 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
 
   return (
     <nav className="navbar">
-      <a href="#" className="brand-logo" onClick={() => setCurrentRoute('home')}>
-        <h1 className="gold-gradient-text">RED APRON</h1>
-        <span>Fine Wines & Spirits B2B</span>
+      <a href="#" className="brand-logo" onClick={() => setCurrentRoute('home')} style={{ textDecoration: 'none' }}>
+        <h1 className="gold-gradient-text" style={{ margin: 0 }}>RED APRON</h1>
       </a>
 
       <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
