@@ -34,27 +34,7 @@ async function request(endpoint, options = {}) {
     if (endpoint.includes('/approve')) {
       return { success: true, message: 'Đã phê duyệt Giấy phép Rượu (Chế độ xem trước)' };
     }
-    if (endpoint.includes('/auth/login')) {
-      let role = 'BUYER_REP';
-      try {
-        if (options.body) {
-          const bodyObj = JSON.parse(options.body);
-          if (bodyObj.role) role = bodyObj.role;
-        }
-      } catch (e) {}
-
-      return {
-        success: true,
-        token: `mock_token_for_role_${role}`,
-        user: {
-          user_id: role === 'BUYER_REP' ? 1 : 99,
-          username: role === 'BUYER_REP' ? 'lotte_buyer' : 'admin_user',
-          user_type: role,
-          role: role,
-          company_name: role === 'BUYER_REP' ? 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON' : 'MAISON DE L\'ALCOOL RED APRON FACTORY'
-        }
-      };
-    }
+    // Removed the mock fallback for /auth/login so that real authentication errors propagate to the UI
     if (endpoint.includes('/auth/register') || endpoint.includes('/companies/register')) {
       return { success: true, message: 'Đã lưu hồ sơ đăng ký doanh nghiệp thành công!' };
     }

@@ -12,6 +12,7 @@ const warehouseRoutes = require('./routes/warehouseRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
+const userRoutes = require('./routes/userRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
@@ -22,6 +23,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API Modular Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api', companyRoutes);
 app.use('/api', rfqRoutes);

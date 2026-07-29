@@ -1,52 +1,48 @@
+const { getPool } = require('../config/db');
+const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { sql, persistUser } = require('../config/db');
 
-// Login user & return real JWT token
+// 1. Đăng nhập
 const login = async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password } = req.body;
   
   if (!username || !password) {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!' });
   }
 
   try {
-    // If the frontend explicitly specifies a role (like switching workspaces), we can find/create or use that default role
-    const result = await sql.query`
-      SELECT u.*, c.CompanyName 
-      FROM Users u 
-      LEFT JOIN Companies c ON u.CompanyID = c.CompanyID 
-      WHERE u.Username = ${username}
-    `;
-
-    if (result.recordset.length === 0) {
-      return res.status(401).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không chính xác.' });
-    }
+    const pool = await getPool();
+    // Lấy thông tin user
+    const result = await pool.request()
+      .input('Username', sql.NVarChar, username)
+      .query(`
+        SELECT u.UserID, u.Username, u.Email, u.PasswordHash, u.UserType, u.CompanyID, c.CompanyName
+        FROM Users u
+        LEFT JOIN Companies c ON u.CompanyID = c.CompanyID
+        WHERE u.Username = @Username AND u.Status = 'ACTIVE'
+      `);
 
     const user = result.recordset[0];
-    
-    // Validate password using bcrypt
-    const passwordMatch = bcrypt.compareSync(password, user.PasswordHash);
-    if (!passwordMatch) {
-      return res.status(401).json({ success: false, message: 'Tên đăng nhập hoặc mật khẩu không chính xác.' });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Tên đăng nhập không tồn tại hoặc tài khoản bị khóa.' });
     }
 
-    // Force user type update if role parameter is explicitly provided (for testing/demo workspace switching)
-    if (role && role !== user.UserType) {
-      await sql.query`UPDATE Users SET UserType = ${role} WHERE UserID = ${user.UserID}`;
-      user.UserType = role;
+    // Kiểm tra mật khẩu
+    const isMatch = await bcrypt.compare(password, user.PasswordHash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu không chính xác.' });
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'super_secret_key_redapron_b2b';
+    // Tạo token thật (sử dụng JWT_SECRET)
     const token = jwt.sign(
-      {
-        userId: Number(user.UserID),
-        username: user.Username,
-        userType: user.UserType,
-        companyId: Number(user.CompanyID),
-        companyName: user.CompanyName
-      },
-      jwtSecret,
+      { 
+        user_id: user.UserID, 
+        username: user.Username, 
+        user_type: user.UserType,
+        company_id: user.CompanyID 
+      }, 
+      process.env.JWT_SECRET || 'fallback_secret_key_if_env_missing',
       { expiresIn: '24h' }
     );
 
@@ -55,135 +51,148 @@ const login = async (req, res) => {
       message: 'Đăng nhập thành công!',
       token: token,
       user: {
-        user_id: Number(user.UserID),
+        user_id: user.UserID,
         username: user.Username,
         email: user.Email,
         user_type: user.UserType,
-        role: user.UserType,
-        company_name: user.CompanyName
+        company_name: user.CompanyName || 'B2B Admin System'
       }
     });
+
   } catch (err) {
-    console.error('Login error:', err.message);
-    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi hệ thống khi đăng nhập.' });
+    console.error('Login Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi đăng nhập.' });
   }
 };
 
+// 2. Đăng ký doanh nghiệp B2B
 const registerUser = async (req, res) => {
   const { username, email, password, company_name, tax_code } = req.body;
-  
-  if (!username || !email || !password) {
-    return res.status(400).json({ success: false, message: 'Tên đăng nhập, email và mật khẩu là bắt buộc' });
+
+  if (!username || !email || !password || !company_name || !tax_code) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
   }
 
   try {
-    const checkUser = await sql.query`SELECT UserID FROM Users WHERE Username = ${username} OR Email = ${email}`;
+    const pool = await getPool();
+
+    // Kiểm tra username/email đã tồn tại chưa
+    const checkUser = await pool.request()
+      .input('Email', sql.NVarChar, email)
+      .input('Username', sql.NVarChar, username)
+      .query('SELECT UserID FROM Users WHERE Email = @Email OR Username = @Username');
+
     if (checkUser.recordset.length > 0) {
-      return res.status(400).json({ success: false, message: 'Tên đăng nhập hoặc Email đã tồn tại trong hệ thống.' });
+      return res.status(400).json({ success: false, message: 'Email hoặc Tên đăng nhập đã tồn tại trên hệ thống.' });
     }
 
-    // Hash password with Bcrypt
-    const hashed = bcrypt.hashSync(password, 10);
+    // Hash mật khẩu
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Auto-create or find company
-    let companyId = 1;
-    if (company_name) {
-      const compCheck = await sql.query`SELECT CompanyID FROM Companies WHERE CompanyName = ${company_name}`;
-      if (compCheck.recordset.length > 0) {
-        companyId = compCheck.recordset[0].CompanyID;
-      } else {
-        const compCode = 'COMP-' + username.toUpperCase();
-        const newComp = await sql.query`
-          INSERT INTO Companies (CompanyCode, CompanyName, TaxCode, CompanyType, Status, Website, CreatedAt, UpdatedAt)
+    // Tạo mã công ty ngẫu nhiên để không bị trùng (vd: COMP-XXXX)
+    const companyCode = 'COMP-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+    // Transaction để đảm bảo tính toàn vẹn dữ liệu
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      // 1. Tạo Company
+      const companyResult = await transaction.request()
+        .input('CompanyCode', sql.NVarChar, companyCode)
+        .input('CompanyName', sql.NVarChar, company_name)
+        .input('TaxCode', sql.NVarChar, tax_code)
+        .input('CompanyType', sql.NVarChar, 'BUYER')
+        .input('Status', sql.NVarChar, 'ACTIVE')
+        .query(`
+          INSERT INTO Companies (CompanyCode, CompanyName, TaxCode, CompanyType, Status)
           OUTPUT INSERTED.CompanyID
-          VALUES (${compCode}, ${company_name}, ${tax_code || '0309999111'}, 'BUYER', 'ACTIVE', '', GETDATE(), GETDATE())
-        `;
-        companyId = newComp.recordset[0].CompanyID;
-      }
+          VALUES (@CompanyCode, @CompanyName, @TaxCode, @CompanyType, @Status)
+        `);
+      
+      const newCompanyId = companyResult.recordset[0].CompanyID;
+
+      // 2. Tạo User
+      const userResult = await transaction.request()
+        .input('CompanyID', sql.BigInt, newCompanyId)
+        .input('Email', sql.NVarChar, email)
+        .input('Username', sql.NVarChar, username)
+        .input('PasswordHash', sql.NVarChar, hashedPassword)
+        .input('UserType', sql.NVarChar, 'BUYER_REP')
+        .input('Status', sql.NVarChar, 'ACTIVE')
+        .query(`
+          INSERT INTO Users (CompanyID, Email, Username, PasswordHash, UserType, Status)
+          OUTPUT INSERTED.UserID
+          VALUES (@CompanyID, @Email, @Username, @PasswordHash, @UserType, @Status)
+        `);
+
+      const newUserId = userResult.recordset[0].UserID;
+
+      await transaction.commit();
+
+      res.status(201).json({
+        success: true,
+        message: 'Đăng ký tài khoản doanh nghiệp thành công!',
+        data: {
+          user_id: newUserId,
+          username,
+          email,
+          company_name: company_name,
+          tax_code: tax_code,
+          user_type: 'BUYER_REP'
+        }
+      });
+    } catch (txErr) {
+      await transaction.rollback();
+      throw txErr;
     }
 
-    const newUser = {
-      username,
-      email,
-      password_hash: hashed,
-      company_id: companyId
-    };
-
-    await persistUser(newUser);
-
-    res.status(201).json({
-      success: true,
-      message: 'Đăng ký tài khoản doanh nghiệp thành công!',
-      data: {
-        username,
-        email,
-        company_name: company_name || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-        user_type: 'BUYER_REP'
-      }
-    });
   } catch (err) {
-    console.error('Registration error:', err.message);
-    res.status(500).json({ success: false, message: 'Đã xảy ra lỗi hệ thống khi đăng ký.' });
+    console.error('Register Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi đăng ký.' });
   }
 };
 
+// 3. Lấy thông tin user hiện tại (Get Me)
 const getMe = async (req, res) => {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '').trim();
-  
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Token xác thực không hợp lệ.' });
-  }
-
   try {
-    let userId = null;
-    let fallbackRole = null;
-
-    if (token.startsWith('mock_token_for_role_')) {
-      fallbackRole = token.replace('mock_token_for_role_', '');
-      userId = fallbackRole === 'BUYER_REP' ? 1 : 2;
-    } else {
-      const jwtSecret = process.env.JWT_SECRET || 'super_secret_key_redapron_b2b';
-      const decoded = jwt.verify(token, jwtSecret);
-      userId = decoded.userId;
-    }
-
-    const result = await sql.query`
-      SELECT u.*, c.CompanyName, c.TaxCode, c.Status as CompanyStatus 
-      FROM Users u 
-      LEFT JOIN Companies c ON u.CompanyID = c.CompanyID 
-      WHERE u.UserID = ${userId}
-    `;
-
-    if (result.recordset.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản người dùng.' });
-    }
+    const userId = req.user.user_id; // Đã được extract từ JWT ở Middleware
+    
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('UserID', sql.BigInt, userId)
+      .query(`
+        SELECT u.UserID, u.Username, u.UserType, u.Email, c.CompanyID, c.CompanyName, c.TaxCode, c.Status as CompanyStatus
+        FROM Users u
+        LEFT JOIN Companies c ON u.CompanyID = c.CompanyID
+        WHERE u.UserID = @UserID
+      `);
 
     const user = result.recordset[0];
-    
-    // Override user type if fallback token was used (backward compatibility)
-    if (fallbackRole && fallbackRole !== user.UserType) {
-      user.UserType = fallbackRole;
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
     }
 
     res.json({
       success: true,
       data: {
-        user_id: Number(user.UserID),
+        user_id: user.UserID,
         username: user.Username,
         user_type: user.UserType,
-        role: user.UserType,
-        company: {
-          company_id: Number(user.CompanyID),
+        email: user.Email,
+        company: user.CompanyID ? {
+          company_id: user.CompanyID,
           company_name: user.CompanyName,
           tax_code: user.TaxCode,
-          status: user.CompanyStatus || 'ACTIVE'
-        }
+          status: user.CompanyStatus
+        } : null
       }
     });
+
   } catch (err) {
-    console.error('getMe error:', err.message);
-    res.status(401).json({ success: false, message: 'Phiên làm việc đã hết hạn hoặc không hợp lệ.' });
+    console.error('GetMe Error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi lấy thông tin.' });
   }
 };
 

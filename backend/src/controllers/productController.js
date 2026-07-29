@@ -1,141 +1,288 @@
-const { dbMock, persistProduct } = require('../config/db');
+const { getPool } = require('../config/db');
+const sql = require('mssql');
 
-// Get Products with Deep Filters
-const getProducts = (req, res) => {
-  let list = dbMock.products;
-  const { category, country, grape, search } = req.query;
+// GET /api/products
+const getProducts = async (req, res) => {
+  try {
+    const { category, country, grape, search } = req.query;
+    const pool = await getPool();
+    
+    let query = `
+      SELECT p.*, 
+             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID FOR JSON PATH) as tier_prices
+      FROM Products p
+      WHERE 1=1
+    `;
+    
+    if (category) query += ` AND Category LIKE @Category`;
+    if (country) query += ` AND CountryOfOrigin LIKE @Country`;
+    if (grape) query += ` AND GrapeVariety LIKE @Grape`;
+    if (search) query += ` AND ProductName LIKE @Search`;
+    
+    const request = pool.request();
+    if (category) request.input('Category', sql.NVarChar, `%${category}%`);
+    if (country) request.input('Country', sql.NVarChar, `%${country}%`);
+    if (grape) request.input('Grape', sql.NVarChar, `%${grape}%`);
+    if (search) request.input('Search', sql.NVarChar, `%${search}%`);
 
-  if (category) list = list.filter(p => p.category.toLowerCase().includes(category.toLowerCase()));
-  if (country) list = list.filter(p => p.country_of_origin.toLowerCase().includes(country.toLowerCase()));
-  if (grape) list = list.filter(p => p.grape_variety.toLowerCase().includes(grape.toLowerCase()));
-  if (search) list = list.filter(p => p.product_name.toLowerCase().includes(search.toLowerCase()));
+    const result = await request.query(query);
 
-  res.json({ success: true, count: list.length, data: list });
+    // Format tier_prices JSON string back to object
+    const products = result.recordset.map(prod => ({
+      ...prod,
+      tier_prices: prod.tier_prices ? JSON.parse(prod.tier_prices) : []
+    }));
+
+    res.json({ success: true, count: products.length, data: products });
+  } catch (err) {
+    console.error('Error fetching products:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách sản phẩm' });
+  }
 };
 
-// Get Product Detail by ID
-const getProductById = (req, res) => {
-  const prod = dbMock.products.find(p => p.product_id === parseInt(req.params.id));
-  if (!prod) return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
-  res.json({ success: true, data: prod });
-};
+// GET /api/products/:id
+const getProductById = async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('ProductID', sql.BigInt, req.params.id)
+      .query(`
+        SELECT p.*, 
+               (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
+        FROM Products p
+        WHERE p.ProductID = @ProductID
+      `);
 
-// Create new product with tier pricing
-const createProduct = async (req, res) => {
-  const { product_name, sku, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description, tier_prices } = req.body;
-
-  if (!product_name || !sku) {
-    return res.status(400).json({ success: false, message: 'Tên sản phẩm và SKU là bắt buộc' });
-  }
-
-  // Check duplicate SKU
-  if (dbMock.products.find(p => p.sku === sku)) {
-    return res.status(400).json({ success: false, message: `SKU "${sku}" đã tồn tại trong hệ thống` });
-  }
-
-  const newProduct = {
-    product_id: Math.max(...dbMock.products.map(p => p.product_id)) + 1,
-    sku,
-    product_name,
-    category: category || 'Fine Wine',
-    country_of_origin: country_of_origin || 'France',
-    region: region || '',
-    grape_variety: grape_variety || '',
-    vintage_year: parseInt(vintage_year) || new Date().getFullYear(),
-    alcohol_content: parseFloat(alcohol_content) || 13.0,
-    volume_ml: parseInt(volume_ml) || 750,
-    moq: parseInt(moq) || 5,
-    image_url: image_url || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80',
-    description: description || '',
-    tier_prices: tier_prices || [
-      { tier_level: 1, min_quantity: parseInt(moq) || 5, price_per_unit: 50000000 },
-      { tier_level: 2, min_quantity: 20, price_per_unit: 45000000 },
-      { tier_level: 3, min_quantity: 50, price_per_unit: 40000000 },
-      { tier_level: 4, min_quantity: 100, price_per_unit: 36000000 },
-      { tier_level: 5, min_quantity: 200, price_per_unit: 32000000 }
-    ]
-  };
-
-  dbMock.products.push(newProduct);
-
-  // Persist product and tier prices to SQL Server
-  await persistProduct(newProduct);
-
-  // Also add to inventory
-  dbMock.inventory.push({
-    product_id: newProduct.product_id,
-    sku: newProduct.sku,
-    product_name: newProduct.product_name,
-    stock_on_hand: 0,
-    reserved: 0,
-    min_stock_level: 10,
-    location: 'Kho A1 - Quận 7'
-  });
-
-  dbMock.activity_logs.unshift({
-    id: `ACT-${Date.now()}`,
-    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-    module: 'Sales',
-    action: `Thêm sản phẩm mới: ${newProduct.product_name} (${newProduct.sku})`,
-    actor: 'Sales Manager',
-    icon: 'fa-plus',
-    color: '#D4AF37'
-  });
-
-  res.status(201).json({ success: true, message: `Đã thêm sản phẩm "${newProduct.product_name}" thành công!`, data: newProduct });
-};
-
-// Update existing product
-const updateProduct = (req, res) => {
-  const product = dbMock.products.find(p => p.product_id === parseInt(req.params.id));
-  if (!product) {
-    return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
-  }
-
-  const updates = req.body;
-  Object.keys(updates).forEach(key => {
-    if (key !== 'product_id') {
-      product[key] = updates[key];
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
     }
-  });
 
-  dbMock.activity_logs.unshift({
-    id: `ACT-${Date.now()}`,
-    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-    module: 'Sales',
-    action: `Cập nhật sản phẩm: ${product.product_name}`,
-    actor: 'Sales Manager',
-    icon: 'fa-pen',
-    color: '#D4AF37'
-  });
+    const prod = result.recordset[0];
+    prod.tier_prices = prod.tier_prices ? JSON.parse(prod.tier_prices) : [];
 
-  res.json({ success: true, message: `Đã cập nhật sản phẩm "${product.product_name}"!`, data: product });
+    res.json({ success: true, data: prod });
+  } catch (err) {
+    console.error('Error fetching product by ID:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải chi tiết sản phẩm' });
+  }
 };
 
-// Delete product
-const deleteProduct = (req, res) => {
-  const index = dbMock.products.findIndex(p => p.product_id === parseInt(req.params.id));
-  if (index === -1) {
-    return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
+// POST /api/products
+const createProduct = async (req, res) => {
+  const { 
+    sku, product_name, category, country_of_origin, region, grape_variety, 
+    vintage_year, alcohol_content, volume_ml, moq, image_url, description, tier_prices 
+  } = req.body;
+
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      const result = await transaction.request()
+        .input('SKU', sql.NVarChar, sku)
+        .input('ProductName', sql.NVarChar, product_name)
+        .input('Category', sql.NVarChar, category)
+        .input('CountryOfOrigin', sql.NVarChar, country_of_origin)
+        .input('Region', sql.NVarChar, region)
+        .input('GrapeVariety', sql.NVarChar, grape_variety)
+        .input('VintageYear', sql.Int, vintage_year)
+        .input('AlcoholContent', sql.Decimal(5,2), alcohol_content)
+        .input('VolumeML', sql.Int, volume_ml)
+        .input('MOQ', sql.Int, moq)
+        .input('ImageUrl', sql.NVarChar, image_url)
+        .input('Description', sql.NVarChar, description)
+        .query(`
+          INSERT INTO Products (SKU, ProductName, Category, CountryOfOrigin, Region, GrapeVariety, VintageYear, AlcoholContent, VolumeML, MOQ, ImageUrl, Description)
+          OUTPUT INSERTED.ProductID
+          VALUES (@SKU, @ProductName, @Category, @CountryOfOrigin, @Region, @GrapeVariety, @VintageYear, @AlcoholContent, @VolumeML, @MOQ, @ImageUrl, @Description)
+        `);
+
+      const productId = result.recordset[0].ProductID;
+
+      // Insert Tier Prices
+      if (tier_prices && Array.isArray(tier_prices)) {
+        for (const tier of tier_prices) {
+          await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .input('TierLevel', sql.Int, tier.tier_level)
+            .input('MinQuantity', sql.Int, tier.min_quantity)
+            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
+            .query(`
+              INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit)
+              VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)
+            `);
+        }
+      }
+
+      await transaction.commit();
+      res.status(201).json({ success: true, message: 'Thêm sản phẩm thành công', product_id: productId });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error creating product:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi thêm sản phẩm' });
+  }
+};
+
+// PUT /api/products/:id
+const updateProduct = async (req, res) => {
+  const productId = req.params.id;
+  const { 
+    sku, product_name, category, country_of_origin, region, grape_variety, 
+    vintage_year, alcohol_content, volume_ml, moq, image_url, description, tier_prices 
+  } = req.body;
+
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      await transaction.request()
+        .input('ProductID', sql.BigInt, productId)
+        .input('SKU', sql.NVarChar, sku)
+        .input('ProductName', sql.NVarChar, product_name)
+        .input('Category', sql.NVarChar, category)
+        .input('CountryOfOrigin', sql.NVarChar, country_of_origin)
+        .input('Region', sql.NVarChar, region)
+        .input('GrapeVariety', sql.NVarChar, grape_variety)
+        .input('VintageYear', sql.Int, vintage_year)
+        .input('AlcoholContent', sql.Decimal(5,2), alcohol_content)
+        .input('VolumeML', sql.Int, volume_ml)
+        .input('MOQ', sql.Int, moq)
+        .input('ImageUrl', sql.NVarChar, image_url)
+        .input('Description', sql.NVarChar, description)
+        .query(`
+          UPDATE Products SET 
+            SKU = @SKU, ProductName = @ProductName, Category = @Category, 
+            CountryOfOrigin = @CountryOfOrigin, Region = @Region, GrapeVariety = @GrapeVariety, 
+            VintageYear = @VintageYear, AlcoholContent = @AlcoholContent, VolumeML = @VolumeML, 
+            MOQ = @MOQ, ImageUrl = @ImageUrl, Description = @Description
+          WHERE ProductID = @ProductID
+        `);
+
+      await transaction.request()
+        .input('ProductID', sql.BigInt, productId)
+        .query(`DELETE FROM ProductTierPrices WHERE ProductID = @ProductID`);
+
+      if (tier_prices && Array.isArray(tier_prices)) {
+        for (const tier of tier_prices) {
+          await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .input('TierLevel', sql.Int, tier.tier_level)
+            .input('MinQuantity', sql.Int, tier.min_quantity)
+            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
+            .query(`
+              INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit)
+              VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)
+            `);
+        }
+      }
+
+      await transaction.commit();
+      res.json({ success: true, message: 'Cập nhật sản phẩm & giá thành công' });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error updating product:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật sản phẩm' });
+  }
+};
+
+// DELETE /api/products/:id
+const deleteProduct = async (req, res) => {
+  try {
+    const pool = await getPool();
+    await pool.request()
+      .input('ProductID', sql.BigInt, req.params.id)
+      .query(`DELETE FROM Products WHERE ProductID = @ProductID`);
+      
+    res.json({ success: true, message: 'Xóa sản phẩm thành công' });
+  } catch (err) {
+    console.error('Error deleting product:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi xóa sản phẩm. Có thể do ràng buộc dữ liệu.' });
+  }
+};
+
+const updateProductPrices = async (req, res) => {
+  const productId = req.params.id;
+  const { priceType, prices } = req.body;
+  
+  if (!['TIER', 'CUSTOMER', 'CONTRACT'].includes(priceType)) {
+    return res.status(400).json({ success: false, message: 'Loại giá không hợp lệ (TIER, CUSTOMER, CONTRACT)' });
   }
 
-  const removed = dbMock.products.splice(index, 1)[0];
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-  // Also remove from inventory
-  const invIndex = dbMock.inventory.findIndex(i => i.product_id === removed.product_id);
-  if (invIndex !== -1) dbMock.inventory.splice(invIndex, 1);
+    try {
+      if (priceType === 'TIER') {
+        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
+        for (const tier of prices) {
+          await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .input('TierLevel', sql.Int, tier.tier_level)
+            .input('MinQuantity', sql.Int, tier.min_quantity)
+            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
+            .query('INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit) VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)');
+        }
+      } else if (priceType === 'CUSTOMER') {
+        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM CustomerPrices WHERE ProductID = @ProductID');
+        for (const cp of prices) {
+          await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .input('BuyerCompanyID', sql.BigInt, cp.company_id)
+            .input('PricePerUnit', sql.Decimal(18,2), cp.price_per_unit)
+            .query('INSERT INTO CustomerPrices (ProductID, BuyerCompanyID, PricePerUnit) VALUES (@ProductID, @BuyerCompanyID, @PricePerUnit)');
+        }
+      } else if (priceType === 'CONTRACT') {
+        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ContractPrices WHERE ProductID = @ProductID');
+        for (const ctp of prices) {
+          // Check if contract exists
+          let contractResult = await transaction.request()
+            .input('ContractNumber', sql.NVarChar, ctp.contract_number)
+            .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
+            .query('SELECT ContractID FROM Contracts WHERE ContractNumber = @ContractNumber AND BuyerCompanyID = @BuyerCompanyID');
+          
+          let contractId;
+          if (contractResult.recordset.length === 0) {
+            // Insert Contract
+            const insertResult = await transaction.request()
+              .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
+              .input('ContractNumber', sql.NVarChar, ctp.contract_number)
+              .input('EndDate', sql.DateTime, new Date(ctp.valid_until))
+              .query("INSERT INTO Contracts (BuyerCompanyID, ContractNumber, EndDate, Status) OUTPUT INSERTED.ContractID VALUES (@BuyerCompanyID, @ContractNumber, @EndDate, 'ACTIVE')");
+            contractId = insertResult.recordset[0].ContractID;
+          } else {
+            contractId = contractResult.recordset[0].ContractID;
+          }
 
-  dbMock.activity_logs.unshift({
-    id: `ACT-${Date.now()}`,
-    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-    module: 'Sales',
-    action: `Xóa sản phẩm: ${removed.product_name} (${removed.sku})`,
-    actor: 'Sales Manager',
-    icon: 'fa-trash',
-    color: '#EF4444'
-  });
+          await transaction.request()
+            .input('ContractID', sql.BigInt, contractId)
+            .input('ProductID', sql.BigInt, productId)
+            .input('ContractPrice', sql.Decimal(18,2), ctp.price_per_unit)
+            .query('INSERT INTO ContractPrices (ContractID, ProductID, ContractPrice) VALUES (@ContractID, @ProductID, @ContractPrice)');
+        }
+      }
 
-  res.json({ success: true, message: `Đã xóa sản phẩm "${removed.product_name}"` });
+      await transaction.commit();
+      res.json({ success: true, message: 'Cập nhật giá thành công!' });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error updating prices:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật giá' });
+  }
 };
 
 module.exports = {
@@ -143,5 +290,6 @@ module.exports = {
   getProductById,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  updateProductPrices
 };

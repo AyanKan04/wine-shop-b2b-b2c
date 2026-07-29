@@ -13,7 +13,6 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
     setDropdownOpen(false);
     showToast('Đã đăng xuất tài khoản sỉ B2B.');
   };
-
   return (
     <nav className="navbar">
       <a href="#" className="brand-logo" onClick={() => setCurrentRoute('home')} style={{ textDecoration: 'none' }}>

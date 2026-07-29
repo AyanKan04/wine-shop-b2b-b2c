@@ -8,7 +8,12 @@ const config = {
 
 let isConnected = false;
 
-// In-Memory Database Store (Kept in-sync with MS SQL Server)
+const getPool = async () => {
+  if (!isConnected) {
+    await connectDB();
+  }
+  return sql;
+};
 const dbMock = {
   companies: [],
   licenses: [],
@@ -634,6 +639,7 @@ connectDB();
 module.exports = {
   sql,
   dbMock,
+  getPool,
   // Persistence bridges
   persistUser,
   persistProduct,
