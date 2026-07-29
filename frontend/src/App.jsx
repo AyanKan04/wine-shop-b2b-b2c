@@ -89,6 +89,28 @@ export default function App() {
         { tier_level: 4, min_quantity: 150, price_per_unit: 34000000 },
         { tier_level: 5, min_quantity: 300, price_per_unit: 31000000 }
       ]
+    },
+    {
+      product_id: 104,
+      sku: "SKU-FR-HENNESSY-XO",
+      product_name: "Hennessy X.O Cognac Extra Old Edition",
+      category: "Cognac",
+      country_of_origin: "France",
+      region: "Cognac AOC",
+      grape_variety: "Ugni Blanc",
+      vintage_year: 2020,
+      alcohol_content: 40.0,
+      volume_ml: 700,
+      moq: 6,
+      image_url: "https://images.unsplash.com/photo-1614313511387-1436a4480ebb?auto=format&fit=crop&w=800&q=80",
+      description: "Cognac Hennessy X.O huyền thoại, pha trộn từ trên 100 loại eaux-de-vie, ủ trong thùng gỗ sồi Pháp mang hương vị đẳng cấp.",
+      tier_prices: [
+        { tier_level: 1, min_quantity: 6, price_per_unit: 58000000 },
+        { tier_level: 2, min_quantity: 20, price_per_unit: 54000000 },
+        { tier_level: 3, min_quantity: 50, price_per_unit: 50000000 },
+        { tier_level: 4, min_quantity: 100, price_per_unit: 46000000 },
+        { tier_level: 5, min_quantity: 200, price_per_unit: 42000000 }
+      ]
     }
   ]);
 
@@ -110,8 +132,10 @@ export default function App() {
     { license_id: 1, company_id: 1, license_type: 'Giấy phép Bán buôn Rượu', license_number: '108/GP-BCT', status: 'VERIFIED' }
   ]);
   const [inventory, setInventory] = useState([
-    { product_id: 101, sku: 'SKU-SCOT-MAC18', stock_on_hand: 450, reserved: 150 },
-    { product_id: 102, sku: 'SKU-FR-MARGAUX2018', stock_on_hand: 280, reserved: 50 }
+    { product_id: 101, sku: 'SKU-SCOT-MAC18', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', stock_on_hand: 450, reserved: 150, min_stock_level: 50, location: 'Kho A1 - Quận 7' },
+    { product_id: 102, sku: 'SKU-FR-MARGAUX2018', product_name: 'Château Margaux Premier Grand Cru Classé 2018', stock_on_hand: 280, reserved: 50, min_stock_level: 30, location: 'Kho A1 - Quận 7' },
+    { product_id: 103, sku: 'SKU-FR-DOM2012', product_name: 'Dom Pérignon Vintage Brut Champagne 2012', stock_on_hand: 600, reserved: 80, min_stock_level: 60, location: 'Kho B2 - Quận 2' },
+    { product_id: 104, sku: 'SKU-FR-HENNESSY-XO', product_name: 'Hennessy X.O Cognac Extra Old Edition', stock_on_hand: 320, reserved: 40, min_stock_level: 40, location: 'Kho B2 - Quận 2' }
   ]);
 
   const [toastMessage, setToastMessage] = useState(null);

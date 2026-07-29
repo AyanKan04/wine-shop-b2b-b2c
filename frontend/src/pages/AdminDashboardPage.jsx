@@ -246,7 +246,7 @@ export default function AdminDashboardPage({ showToast }) {
             transition: 'all 0.2s'
           }}
         >
-          <i className="fa-solid fa-[#10B981] fa-list-check" style={{ marginRight: '6px' }}></i> Nhật Ký Tuân Thủ (Audit)
+          <i className="fa-solid fa-list-check" style={{ marginRight: '6px' }}></i> Nhật Ký Tuân Thủ (Audit)
         </button>
       </div>
 

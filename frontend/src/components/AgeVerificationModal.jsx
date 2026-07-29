@@ -31,7 +31,7 @@ export default function AgeVerificationModal() {
       zIndex: 99999,
       display: 'flex',
       alignItems: 'center',
-      justify: 'center',
+      justifyContent: 'center',
       padding: '20px'
     }}>
       <div style={{
@@ -53,11 +53,11 @@ export default function AgeVerificationModal() {
           margin: '0 auto 20px',
           display: 'flex',
           alignItems: 'center',
-          justify: 'center',
+          justifyContent: 'center',
           color: 'var(--accent-gold)',
           fontSize: '1.8rem'
         }}>
-          <i className="fa-solid fa-[#D4AF37] fa-shield-halved"></i>
+          <i className="fa-solid fa-shield-halved"></i>
         </div>
 
         <div style={{
