@@ -40,6 +40,58 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
     setNewRfq({ product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 50, target_price: 68000000, notes: '' });
   };
 
+  const [selectedRfqChat, setSelectedRfqChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const openChatForRfq = (rfq) => {
+    setSelectedRfqChat(rfq);
+    setChatLoading(true);
+    apiService.getChatMessages(rfq.rfq_id)
+      .then(res => {
+        if (res.success && res.data) {
+          setChatMessages(res.data);
+        }
+      })
+      .catch(() => {
+        setChatMessages([
+          { message_id: 1, rfq_id: rfq.rfq_id, sender_name: 'Platform Sales Bot', sender_role: 'SYSTEM', message_text: `Đã kết nối phòng thương lượng cho RFQ #${rfq.rfq_id}. Quý khách có thể nhập tin nhắn đàm phán giá sỉ hoặc tag @ai để trợ lý Sommelier hỗ trợ.`, created_at: 'Vừa xong' }
+        ]);
+      })
+      .finally(() => setChatLoading(false));
+  };
+
+  const handleSendChatMessage = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedRfqChat) return;
+
+    const userMsg = {
+      sender_name: 'Khách hàng',
+      sender_role: 'BUYER',
+      message_text: chatInput.trim()
+    };
+
+    const tempMessages = [...chatMessages, {
+      message_id: Date.now(),
+      rfq_id: selectedRfqChat.rfq_id,
+      sender_name: 'Khách hàng',
+      sender_role: 'BUYER',
+      message_text: userMsg.message_text,
+      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }];
+    setChatMessages(tempMessages);
+    setChatInput('');
+
+    apiService.sendChatMessage(selectedRfqChat.rfq_id, userMsg)
+      .then(res => {
+        if (res.success && res.data) {
+          setChatMessages(res.data);
+        }
+      })
+      .catch(() => {});
+  };
+
   const handleAcceptQuotation = (quotationId) => {
     apiService.updateQuotationStatus(quotationId, 'ACCEPTED')
       .then(res => {
@@ -125,6 +177,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
               <th>SỐ LƯỢNG</th>
               <th>GIÁ ĐỀ XUẤT</th>
               <th>TRẠNG THÁI</th>
+              <th>THƯƠNG LƯỢNG</th>
             </tr>
           </thead>
           <tbody>
@@ -141,6 +194,15 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                     <span style={{ color: sc.color, background: sc.bg, padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
                       {sc.label}
                     </span>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-redapron-gold"
+                      style={{ padding: '5px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      onClick={() => openChatForRfq(r)}
+                    >
+                      <i className="fa-solid fa-comments"></i> Trò Chuyện
+                    </button>
                   </td>
                 </tr>
               );
@@ -255,6 +317,71 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                   <i className="fa-solid fa-paper-plane"></i> GỬI RFQ
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NEGOTIATION CHAT */}
+      {selectedRfqChat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', height: '80%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-comments gold-text"></i> Phòng Thương Lượng B2B
+                </h3>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Đang đàm phán RFQ #{selectedRfqChat.rfq_id} — {selectedRfqChat.product_name} ({selectedRfqChat.quantity} thùng)
+                </div>
+              </div>
+              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+            </div>
+
+            {/* Chat Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', background: '#0A0708', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
+              {chatMessages.map(msg => {
+                const isBuyer = msg.sender_role === 'BUYER';
+                const isSystem = msg.sender_role === 'SYSTEM';
+                return (
+                  <div key={msg.message_id} style={{
+                    alignSelf: isSystem ? 'center' : (isBuyer ? 'flex-end' : 'flex-start'),
+                    maxWidth: '80%'
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: isSystem ? 'center' : (isBuyer ? 'right' : 'left'), marginBottom: '2px' }}>
+                      {msg.sender_name} · {msg.created_at || 'Vừa xong'}
+                    </div>
+                    <div style={{
+                      background: isSystem ? 'transparent' : (isBuyer ? 'var(--accent-burgundy)' : 'rgba(255,255,255,0.06)'),
+                      border: isSystem ? 'none' : `1px solid ${isBuyer ? 'rgba(212,175,55,0.2)' : 'var(--border-subtle)'}`,
+                      padding: isSystem ? '2px 10px' : '10px 14px',
+                      borderRadius: '8px',
+                      color: isSystem ? 'var(--text-muted)' : '#FFF',
+                      fontSize: '0.8rem',
+                      fontStyle: isSystem ? 'italic' : 'normal'
+                    }}>
+                      {msg.message_text}
+                    </div>
+                  </div>
+                );
+              })}
+              {chatLoading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Đang tải lịch sử...</div>}
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={handleSendChatMessage} style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nhập tin nhắn thương thảo giá hoặc tag @ai để tư vấn..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button type="submit" className="btn-redapron-gold" style={{ padding: '0 20px' }}>
+                Gửi
+              </button>
             </form>
           </div>
         </div>

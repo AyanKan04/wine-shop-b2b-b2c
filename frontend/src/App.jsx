@@ -5,6 +5,7 @@ import TopBar from './components/TopBar.jsx';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import AgeVerificationModal from './components/AgeVerificationModal.jsx';
+import SommelierBotWidget from './components/SommelierBotWidget.jsx';
 
 // Page Components
 import HomePage from './pages/HomePage.jsx';
@@ -247,6 +248,7 @@ export default function App() {
         </div>
       )}
 
+      <SommelierBotWidget />
       <Footer />
     </div>
   );

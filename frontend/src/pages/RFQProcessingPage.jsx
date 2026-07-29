@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatVND } from '../utils/formatters.js';
+import apiService from '../services/api.js';
 
 export default function RFQProcessingPage({ rfqs, showToast }) {
   const [rfqList, setRfqList] = useState(rfqs || []);
@@ -48,6 +49,58 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
     showToast(`Đã phát hành Báo giá Quotation #${quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
     setShowQuoteModal(false);
     setSelectedRfq(null);
+  };
+
+  const [selectedRfqChat, setSelectedRfqChat] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const openChatForRfq = (rfq) => {
+    setSelectedRfqChat(rfq);
+    setChatLoading(true);
+    apiService.getChatMessages(rfq.rfq_id)
+      .then(res => {
+        if (res.success && res.data) {
+          setChatMessages(res.data);
+        }
+      })
+      .catch(() => {
+        setChatMessages([
+          { message_id: 1, rfq_id: rfq.rfq_id, sender_name: 'Platform Sales Bot', sender_role: 'SYSTEM', message_text: `Đã kết nối phòng thương lượng cho RFQ #${rfq.rfq_id}. Bạn đang trò chuyện với Buyer Rep của đối tác.`, created_at: 'Vừa xong' }
+        ]);
+      })
+      .finally(() => setChatLoading(false));
+  };
+
+  const handleSendChatMessage = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedRfqChat) return;
+
+    const repMsg = {
+      sender_name: 'Sales Rep',
+      sender_role: 'SALES_REP',
+      message_text: chatInput.trim()
+    };
+
+    const tempMessages = [...chatMessages, {
+      message_id: Date.now(),
+      rfq_id: selectedRfqChat.rfq_id,
+      sender_name: 'Sales Rep',
+      sender_role: 'SALES_REP',
+      message_text: repMsg.message_text,
+      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }];
+    setChatMessages(tempMessages);
+    setChatInput('');
+
+    apiService.sendChatMessage(selectedRfqChat.rfq_id, repMsg)
+      .then(res => {
+        if (res.success && res.data) {
+          setChatMessages(res.data);
+        }
+      })
+      .catch(() => {});
   };
 
   return (
@@ -101,6 +154,7 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
               <th>GIÁ KHÁCH ĐỀ XUẤT</th>
               <th>TRẠNG THÁI</th>
               <th>HÀNH ĐỘNG SALES</th>
+              <th>THƯƠNG LƯỢNG</th>
             </tr>
           </thead>
           <tbody>
@@ -115,12 +169,12 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                 <td>
                   {r.status === 'SUBMITTED' && (
                     <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
-                      ⏳ Chờ Xử Lý
+                      Chờ Xử Lý
                     </span>
                   )}
                   {r.status === 'QUOTATION_SENT' && (
                     <span style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
-                      📄 Đã Gửi Báo Giá
+                      Đã Gửi Báo Giá
                     </span>
                   )}
                 </td>
@@ -136,6 +190,15 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                   ) : (
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Đã xử lý</span>
                   )}
+                </td>
+                <td>
+                  <button
+                    className="btn-redapron-gold"
+                    style={{ padding: '6px 14px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => openChatForRfq(r)}
+                  >
+                    <i className="fa-solid fa-comments"></i> Chat
+                  </button>
                 </td>
               </tr>
             ))}
@@ -269,6 +332,70 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
         </div>
       )}
 
+      {/* MODAL: NEGOTIATION CHAT */}
+      {selectedRfqChat && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', height: '80%', display: 'flex', flexDirection: 'column' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fa-solid fa-comments gold-text"></i> Thương Lượng Giá B2B (Staff View)
+                </h3>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Đang trao đổi với {selectedRfqChat.buyer_company} về RFQ #{selectedRfqChat.rfq_id}
+                </div>
+              </div>
+              <button onClick={() => setSelectedRfqChat(null)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+            </div>
+
+            {/* Chat Messages */}
+            <div style={{ flex: 1, overflowY: 'auto', background: '#0A0708', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '15px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
+              {chatMessages.map(msg => {
+                const isSales = msg.sender_role === 'SALES_REP';
+                const isSystem = msg.sender_role === 'SYSTEM';
+                return (
+                  <div key={msg.message_id} style={{
+                    alignSelf: isSystem ? 'center' : (isSales ? 'flex-end' : 'flex-start'),
+                    maxWidth: '80%'
+                  }}>
+                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textAlign: isSystem ? 'center' : (isSales ? 'right' : 'left'), marginBottom: '2px' }}>
+                      {msg.sender_name} · {msg.created_at || 'Vừa xong'}
+                    </div>
+                    <div style={{
+                      background: isSystem ? 'transparent' : (isSales ? 'var(--accent-burgundy)' : 'rgba(255,255,255,0.06)'),
+                      border: isSystem ? 'none' : `1px solid ${isSales ? 'rgba(212,175,55,0.2)' : 'var(--border-subtle)'}`,
+                      padding: isSystem ? '2px 10px' : '10px 14px',
+                      borderRadius: '8px',
+                      color: isSystem ? 'var(--text-muted)' : '#FFF',
+                      fontSize: '0.8rem',
+                      fontStyle: isSystem ? 'italic' : 'normal'
+                    }}>
+                      {msg.message_text}
+                    </div>
+                  </div>
+                );
+              })}
+              {chatLoading && <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Đang tải lịch sử...</div>}
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={handleSendChatMessage} style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Nhập tin nhắn phản hồi đối tác..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button type="submit" className="btn-redapron-gold" style={{ padding: '0 20px' }}>
+                Gửi
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

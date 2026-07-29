@@ -9,6 +9,8 @@ const warehouseRoutes = require('./routes/warehouseRoutes');
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 
+const chatRoutes = require('./routes/chatRoutes');
+
 const app = express();
 
 app.use(cors());
@@ -22,6 +24,7 @@ app.use('/api', rfqRoutes);
 app.use('/api', financeRoutes);
 app.use('/api', warehouseRoutes);
 app.use('/api', dashboardRoutes);
+app.use('/api', chatRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -316,7 +316,18 @@ const dbMock = {
       { name: 'Hennessy X.O', revenue: 2700000000, percentage: 14 },
       { name: 'Khác', revenue: 1750000000, percentage: 10 }
     ]
-  }
+  },
+
+  rfq_messages: [
+    {
+      message_id: 1,
+      rfq_id: 8842,
+      sender_name: 'Platform Sales Bot',
+      sender_role: 'SYSTEM',
+      message_text: 'Hệ thống đã nhận RFQ. Sommelier AI & Sales Rep đang kiểm tra thông tin hàng hóa.',
+      created_at: '2026-07-28 20:30'
+    }
+  ]
 };
 
 module.exports = {

@@ -94,7 +94,11 @@ export const apiService = {
   payInvoice: (id) => request(`/finance/pay-invoice/${id}`, { method: 'POST' }),
 
   // Warehouse
-  getInventory: () => request('/warehouse/inventory')
+  getInventory: () => request('/warehouse/inventory'),
+
+  // Negotiation & AI Sommelier Chat
+  getChatMessages: (rfqId) => request(`/rfqs/${rfqId}/messages`),
+  sendChatMessage: (rfqId, msgData) => request(`/rfqs/${rfqId}/messages`, { method: 'POST', body: JSON.stringify(msgData) })
 };
 
 export default apiService;
