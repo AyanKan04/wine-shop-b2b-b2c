@@ -325,7 +325,280 @@ Tài liệu quản lý RESTful API chính thức cho Hệ thống Thương mại
 {
   "success": true,
   "inventory": [
-    { "product_id": 101, "sku": "SKU-SCOT-MAC18", "stock_on_hand": 450, "reserved": 150 }
+    {
+      "product_id": 101,
+      "sku": "SKU-SCOT-MAC18",
+      "product_name": "Macallan 18 Year Old Sherry Oak Single Malt",
+      "stock_on_hand": 450,
+      "reserved": 150,
+      "available": 300,
+      "min_stock_level": 50,
+      "location": "Kho A1 - Quận 7",
+      "stock_status": "OK"
+    }
   ]
 }
 ```
+
+---
+
+### 7.2. Điều chỉnh Tồn kho (Nhập/Xuất kho)
+- **Endpoint:** `POST /api/warehouse/inventory/adjust`
+- **Request Body:**
+```json
+{
+  "product_id": 101,
+  "adjustment_type": "IMPORT", // 'IMPORT' hoặc 'EXPORT'
+  "quantity": 50,
+  "reason": "Lô hàng nhập khẩu mới từ Scotland"
+}
+```
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đã nhập kho thêm 50 thùng cho SKU-SCOT-MAC18. Tồn kho mới: 500",
+  "inventory_item": {
+    "product_id": 101,
+    "sku": "SKU-SCOT-MAC18",
+    "stock_on_hand": 500,
+    "reserved": 150
+  }
+}
+```
+
+---
+
+### 7.3. Truy vấn Danh sách Phiếu giao hàng (Shipments)
+- **Endpoint:** `GET /api/warehouse/shipments`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "shipment_id": 1,
+      "order_number": "ORD-2026-8821",
+      "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+      "tracking_number": "VN-SHIP-20260728-001",
+      "carrier": "Giao Hàng Nhanh (GHN)",
+      "shipment_status": "DELIVERED",
+      "items_summary": "Macallan 18 x 20 thùng"
+    }
+  ]
+}
+```
+
+---
+
+### 7.4. Tạo Phiếu giao hàng Mới
+- **Endpoint:** `POST /api/warehouse/shipments`
+- **Request Body:**
+```json
+{
+  "order_number": "ORD-2026-8842",
+  "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+  "carrier": "Viettel Post",
+  "items_summary": "Dom Pérignon 2012 x 8 thùng"
+}
+```
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đã tạo phiếu xuất kho/vận chuyển mới!",
+  "shipment": {
+    "shipment_id": 2,
+    "tracking_number": "VN-SHIP-20260729-002",
+    "shipment_status": "PICKING",
+    "carrier": "Viettel Post"
+  }
+}
+```
+
+---
+
+### 7.5. Cập nhật Trạng thái Vận chuyển
+- **Endpoint:** `PUT /api/warehouse/shipments/:id/status`
+- **Request Body:**
+```json
+{
+  "status": "IN_TRANSIT" // 'PICKING' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'
+}
+```
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Trạng thái vận đơn đã được chuyển sang: IN_TRANSIT",
+  "shipment": {
+    "shipment_id": 1,
+    "shipment_status": "IN_TRANSIT"
+  }
+}
+```
+
+---
+
+## 📈 8. Module 7: Quản trị Giá sỉ & CRUD Sản phẩm (Products & Catalog Management)
+
+### 8.1. Thêm Sản phẩm & Thiết lập 5 Bậc Giá Sỉ
+- **Endpoint:** `POST /api/products`
+- **Request Body:**
+```json
+{
+  "product_name": "Vang Montes Alpha Cabernet Sauvignon",
+  "sku": "SKU-CL-MONTES2021",
+  "category": "Fine Wine",
+  "country_of_origin": "Chile",
+  "vintage_year": 2021,
+  "alcohol_content": 14.5,
+  "volume_ml": 750,
+  "moq": 6,
+  "tier_prices": [
+    { "tier_level": 1, "min_quantity": 6, "price_per_unit": 50000000 },
+    { "tier_level": 2, "min_quantity": 20, "price_per_unit": 45000000 },
+    { "tier_level": 3, "min_quantity": 50, "price_per_unit": 40000000 },
+    { "tier_level": 4, "min_quantity": 100, "price_per_unit": 36000000 },
+    { "tier_level": 5, "min_quantity": 200, "price_per_unit": 32000000 }
+  ]
+}
+```
+- **Response (`201 Created`):**
+```json
+{
+  "success": true,
+  "message": "Đã thêm sản phẩm \"Vang Montes Alpha Cabernet Sauvignon\" thành công!",
+  "data": {
+    "product_id": 105,
+    "sku": "SKU-CL-MONTES2021"
+  }
+}
+```
+
+---
+
+### 8.2. Cập nhật Sản phẩm
+- **Endpoint:** `PUT /api/products/:id`
+- **Request Body:**
+```json
+{
+  "alcohol_content": 14.2
+}
+```
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Cập nhật sản phẩm thành công",
+  "data": {
+    "product_id": 101,
+    "alcohol_content": 14.2
+  }
+}
+```
+
+---
+
+### 8.3. Xóa Sản phẩm
+- **Endpoint:** `DELETE /api/products/:id`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đã xóa sản phẩm thành công"
+}
+```
+
+---
+
+## 💬 9. Module 8: Đàm phán Giá & Chấp nhận Báo giá B2B Order Flow
+
+### 9.1. Phê duyệt/Chấp nhận Báo giá (Accept/Reject Quotation)
+- **Endpoint:** `PUT /api/sales/quotations/:id/status`
+- **Request Body:**
+```json
+{
+  "status": "ACCEPTED" // 'ACCEPTED' hoặc 'REJECTED'
+}
+```
+- **Mô tả:** Khi Buyer bấm chấp nhận báo giá, hệ thống sẽ tự động chuyển đổi thành Đơn hàng B2B chính thức, phát hành hóa đơn trả sau Net-30, tự động trừ hạn mức tín dụng còn lại của doanh nghiệp.
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "message": "Đã cập nhật trạng thái báo giá sang: ACCEPTED",
+  "quotation": {
+    "quotation_id": 9910,
+    "status": "ACCEPTED"
+  },
+  "credit": {
+    "total_limit": 1000000000,
+    "used_amount": 10200000000, // Đã cộng dồn tiền đơn hàng mới
+    "available_balance": -9200000000
+  }
+}
+```
+
+---
+
+## 📊 10. Module 9: Analytics Dashboard & Hoạt động Hệ thống
+
+### 10.1. Thống kê KPI Nền tảng
+- **Endpoint:** `GET /api/dashboard/stats`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "stats": {
+    "total_revenue": 18650000000,
+    "orders_count": 30,
+    "b2b_partners_count": 4,
+    "inventory_total_cases": 1650
+  }
+}
+```
+
+---
+
+### 10.2. Nhật ký Hoạt động (Activity Logs Feed)
+- **Endpoint:** `GET /api/dashboard/activity`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "ACT-1",
+      "timestamp": "2026-07-28 20:25",
+      "module": "CRM",
+      "action": "Chuyển DEAL-101 sang Đang Đàm Phán",
+      "actor": "Sales Admin",
+      "icon": "fa-square-kanban",
+      "color": "#F59E0B"
+    }
+  ]
+}
+```
+
+---
+
+### 10.3. Chuông Báo động Hệ thống (Notifications)
+- **Endpoint:** `GET /api/dashboard/notifications`
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "NOTIF-001",
+      "type": "warning",
+      "title": "Hóa đơn sắp đến hạn",
+      "message": "INV-2026-0104 đến hạn ngày 20/08/2026 (còn 23 ngày)",
+      "read": false,
+      "timestamp": "20:00"
+    }
+  ]
+}
+```
+
