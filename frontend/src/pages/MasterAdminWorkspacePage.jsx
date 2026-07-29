@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import CRMKanbanPage from './CRMKanbanPage.jsx';
 import AdminDashboardPage from './AdminDashboardPage.jsx';
 import SalesProductMgmtPage from './SalesProductMgmtPage.jsx';
+import RFQManagementPage from './RFQManagementPage.jsx';
 import RFQProcessingPage from './RFQProcessingPage.jsx';
 import FinanceMgmtPage from './FinanceMgmtPage.jsx';
 import WarehouseLogisticsPage from './WarehouseLogisticsPage.jsx';
@@ -221,9 +222,10 @@ export default function MasterAdminWorkspacePage({
     { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá' },
     { id: 'executive', title: '2. Admin Duyệt Phép', icon: 'fa-shield-halved', desc: 'Thẩm định Giấy Phép Rượu & Doanh Nghiệp' },
     { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm' },
-    { id: 'sales-rfq', title: '4. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation' },
-    { id: 'finance', title: '5. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ' },
-    { id: 'warehouse', title: '6. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển' }
+    { id: 'buyer-rfq-mgmt', title: '4. Quản Lý RFQ', icon: 'fa-file-invoice-dollar', desc: 'Quản Lý RFQ, Đàm Phán & Chấp Nhận Báo Giá' },
+    { id: 'sales-rfq', title: '5. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation' },
+    { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ' },
+    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển' }
   ];
 
   return (
@@ -333,6 +335,9 @@ export default function MasterAdminWorkspacePage({
         )}
         {activeAdminModule === 'sales-products' && (
           <SalesProductMgmtPage products={products} showToast={showToast} />
+        )}
+        {activeAdminModule === 'buyer-rfq-mgmt' && (
+          <RFQManagementPage rfqs={rfqs} quotations={quotations} showToast={showToast} />
         )}
         {activeAdminModule === 'sales-rfq' && (
           <RFQProcessingPage rfqs={rfqs} showToast={showToast} />

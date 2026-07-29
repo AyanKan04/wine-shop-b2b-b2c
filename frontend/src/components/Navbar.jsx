@@ -15,8 +15,7 @@ export default function Navbar({ currentRoute, setCurrentRoute }) {
         <button className={currentRoute === 'catalog' ? 'active' : ''} onClick={() => setCurrentRoute('catalog')}>2. Catalog & Lọc</button>
         <button className={currentRoute === 'product-detail' ? 'active' : ''} onClick={() => setCurrentRoute('product-detail')}>3. Chi Tiết Rượu</button>
         <button className={currentRoute === 'auth' ? 'active' : ''} onClick={() => setCurrentRoute('auth')}>4. Portal Đăng Nhập / B2B</button>
-        <button className={currentRoute === 'buyer-rfqs' ? 'active' : ''} onClick={() => setCurrentRoute('buyer-rfqs')}>5. Quản Lý RFQ</button>
-        <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>6. Đơn Hàng & Nợ</button>
+        <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>5. Đơn Hàng & Nợ</button>
 
         {/* NOTIFICATION CENTER */}
         <NotificationCenter />
