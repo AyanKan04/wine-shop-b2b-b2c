@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql');
+const sql = require('mssql/msnodesqlv8');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 

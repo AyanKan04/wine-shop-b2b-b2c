@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql');
+const sql = require('mssql/msnodesqlv8');
 
 // GET /api/products
 const getProducts = async (req, res) => {

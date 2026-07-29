@@ -7,12 +7,13 @@ const config = {
 };
 
 let isConnected = false;
+let mssqlPool = null;
 
 const getPool = async () => {
-  if (!isConnected) {
+  if (!isConnected || !mssqlPool) {
     await connectDB();
   }
-  return sql;
+  return mssqlPool;
 };
 const dbMock = {
   companies: [],
@@ -74,7 +75,7 @@ const dbMock = {
 async function connectDB() {
   try {
     console.log('Connecting to MS SQL Server database...');
-    await sql.connect(config);
+    mssqlPool = await sql.connect(config);
     isConnected = true;
     console.log('SUCCESSFULLY connected to MS SQL Server (Windows Auth)');
 
