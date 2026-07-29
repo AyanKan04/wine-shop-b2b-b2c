@@ -8,6 +8,7 @@ import RFQManagementPage from './RFQManagementPage.jsx';
 import RFQProcessingPage from './RFQProcessingPage.jsx';
 import FinanceMgmtPage from './FinanceMgmtPage.jsx';
 import WarehouseLogisticsPage from './WarehouseLogisticsPage.jsx';
+import IAMAccountMgmtPage from './IAMAccountMgmtPage.jsx';
 
 // Overview Tab Data
 const revenueMonthly = [
@@ -225,7 +226,8 @@ export default function MasterAdminWorkspacePage({
     { id: 'buyer-rfq-mgmt', title: '4. Quản Lý RFQ', icon: 'fa-file-invoice-dollar', desc: 'Quản Lý RFQ, Đàm Phán & Chấp Nhận Báo Giá' },
     { id: 'sales-rfq', title: '5. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation' },
     { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ' },
-    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển' }
+    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển' },
+    { id: 'iam-account', title: '8. Quản Lý Tài Khoản', icon: 'fa-users-gear', desc: 'Phân Quyền & Tài Khoản (IAM)' }
   ];
 
   return (
@@ -347,6 +349,9 @@ export default function MasterAdminWorkspacePage({
         )}
         {activeAdminModule === 'warehouse' && (
           <WarehouseLogisticsPage inventory={inventory} orders={orders} showToast={showToast} />
+        )}
+        {activeAdminModule === 'iam-account' && (
+          <IAMAccountMgmtPage showToast={showToast} />
         )}
       </div>
 
