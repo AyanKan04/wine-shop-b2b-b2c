@@ -18,6 +18,8 @@ import OrdersCreditPage from './pages/OrdersCreditPage.jsx';
 // Master Unified Admin Workspace Page
 import MasterAdminWorkspacePage from './pages/MasterAdminWorkspacePage.jsx';
 
+import apiService from './services/api.js';
+
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState('master-admin');
   const [selectedProductId, setSelectedProductId] = useState(101);
@@ -141,9 +143,44 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
-      .then(res => res.json())
-      .then(data => { if (data.success) setProducts(data.data); })
+    // Load products
+    apiService.getProducts()
+      .then(res => { if (res.success && res.data && res.data.length > 0) setProducts(res.data); })
+      .catch(() => {});
+
+    // Load RFQs
+    apiService.getRFQs()
+      .then(res => { if (res.success && res.data && res.data.length > 0) setRfqs(res.data); })
+      .catch(() => {});
+
+    // Load Quotations
+    apiService.getQuotations()
+      .then(res => { if (res.success && res.data && res.data.length > 0) setQuotations(res.data); })
+      .catch(() => {});
+
+    // Load Orders
+    apiService.getOrders()
+      .then(res => { if (res.success && res.data && res.data.length > 0) setOrders(res.data); })
+      .catch(() => {});
+
+    // Load Credit Limit & Invoices
+    apiService.getCreditLimit()
+      .then(res => {
+        if (res.success) {
+          if (res.credit) setCredit(res.credit);
+          if (res.invoices && res.invoices.length > 0) setInvoices(res.invoices);
+        }
+      })
+      .catch(() => {});
+
+    // Load Admin Licenses
+    apiService.getAdminLicenses()
+      .then(res => { if (res.success && res.data && res.data.length > 0) setLicenses(res.data); })
+      .catch(() => {});
+
+    // Load Inventory
+    apiService.getInventory()
+      .then(res => { if (res.success && res.inventory && res.inventory.length > 0) setInventory(res.inventory); })
       .catch(() => {});
   }, []);
 

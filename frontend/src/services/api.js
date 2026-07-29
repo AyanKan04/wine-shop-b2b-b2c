@@ -55,6 +55,9 @@ async function request(endpoint, options = {}) {
     if (endpoint.includes('/pay-invoice')) {
       return { success: true, message: 'Đã thanh toán hóa đơn khôi phục hạn mức tín dụng!' };
     }
+    if (endpoint.includes('/status')) {
+      return { success: true, message: 'Đã cập nhật trạng thái báo giá thành công!' };
+    }
 
     return { success: true, data: [] };
   }
@@ -83,6 +86,7 @@ export const apiService = {
   createRFQ: (rfqData) => request('/rfqs', { method: 'POST', body: JSON.stringify(rfqData) }),
   getQuotations: () => request('/sales/quotations'),
   createQuotation: (quotationData) => request('/sales/quotations', { method: 'POST', body: JSON.stringify(quotationData) }),
+  updateQuotationStatus: (id, status) => request(`/sales/quotations/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
 
   // Finance & Orders
   getOrders: () => request('/orders'),

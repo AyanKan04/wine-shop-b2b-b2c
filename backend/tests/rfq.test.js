@@ -44,4 +44,31 @@ describe('API Module 4 & 5: RFQs, Quotations, Finance & Orders', () => {
     assert.match(res.body.message, /Thanh toán hóa đơn thành công/);
   });
 
+  it('POST /api/sales/quotations - Should create new sales quotation', async () => {
+    const res = await request(app)
+      .post('/api/sales/quotations')
+      .send({
+        rfq_id: 8842,
+        offer_unit_price: 68200000,
+        quantity: 150
+      });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.quotation.rfq_id, 8842);
+    assert.equal(res.body.quotation.offer_unit_price, 68200000);
+  });
+
+  it('PUT /api/sales/quotations/:id/status - Should accept quotation and generate order + invoice', async () => {
+    const res = await request(app)
+      .put('/api/sales/quotations/9910/status')
+      .send({ status: 'ACCEPTED' });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.equal(res.body.quotation.status, 'ACCEPTED');
+    assert.ok(res.body.orders.length > 2);
+    assert.ok(res.body.invoices.length > 2);
+  });
+
 });

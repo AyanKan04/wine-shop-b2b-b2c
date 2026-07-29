@@ -39,12 +39,108 @@ const createQuotation = (req, res) => {
     status: 'PENDING'
   };
   dbMock.quotations.push(newQuotation);
+
+  // Update RFQ status to show quotation was sent
+  const rfq = dbMock.rfqs.find(r => r.rfq_id === parseInt(rfq_id));
+  if (rfq) {
+    rfq.status = 'QUOTATION_SENT';
+  }
+
   res.json({ success: true, message: 'Phát hành Bảng Báo Giá (Quotation) thành công!', quotation: newQuotation });
+};
+
+// Update Quotation status (ACCEPT/REJECT) and trigger B2B Order workflow
+const updateQuotationStatus = (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // 'ACCEPTED' | 'REJECTED'
+
+  const quotation = dbMock.quotations.find(q => q.quotation_id === parseInt(id));
+  if (!quotation) {
+    return res.status(404).json({ success: false, message: 'Không tìm thấy báo giá' });
+  }
+
+  quotation.status = status;
+
+  if (status === 'ACCEPTED') {
+    const totalAmount = quotation.offer_unit_price * quotation.quantity;
+    const orderNumber = `ORD-2026-${8800 + quotation.rfq_id}`;
+    
+    // 1. Create a new B2B Order
+    const newOrder = {
+      order_id: 500 + dbMock.orders.length + 1,
+      order_number: orderNumber,
+      buyer_company: quotation.buyer_company,
+      total_amount: totalAmount,
+      order_status: 'PROCESSING',
+      payment_method: 'NET_30_CREDIT',
+      created_at: new Date().toISOString().split('T')[0]
+    };
+    dbMock.orders.push(newOrder);
+
+    // 2. Create invoice
+    const newInvoice = {
+      invoice_id: 100 + dbMock.invoices.length + 1,
+      invoice_number: `INV-2026-0${quotation.quotation_id}`,
+      order_number: orderNumber,
+      issue_date: new Date().toISOString().split('T')[0],
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
+      amount: totalAmount,
+      status: 'UNPAID'
+    };
+    dbMock.invoices.push(newInvoice);
+
+    // 3. Update Credit Limit usage
+    dbMock.credit_limit.used_amount += totalAmount;
+    dbMock.credit_limit.available_balance = dbMock.credit_limit.total_limit - dbMock.credit_limit.used_amount;
+
+    // 4. Update corresponding RFQ status to ACCEPTED
+    const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
+    if (rfq) {
+      rfq.status = 'QUOTATION_SENT';
+    }
+
+    // 5. Add to system activities
+    dbMock.activity_logs.unshift({
+      id: `ACT-${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      module: 'CRM',
+      action: `Chấp nhận báo giá QUOT-${quotation.quotation_id} - Tạo đơn hàng ${orderNumber}`,
+      actor: 'Buyer Rep',
+      icon: 'fa-file-signature',
+      color: '#10B981'
+    });
+  } else {
+    // Rejected
+    const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
+    if (rfq) {
+      rfq.status = 'SUBMITTED'; // Reset RFQ status back to submitted to allow re-quoting
+    }
+
+    dbMock.activity_logs.unshift({
+      id: `ACT-${Date.now()}`,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      module: 'CRM',
+      action: `Từ chối báo giá QUOT-${quotation.quotation_id}`,
+      actor: 'Buyer Rep',
+      icon: 'fa-file-excel',
+      color: '#EF4444'
+    });
+  }
+
+  res.json({
+    success: true,
+    message: `Đã cập nhật trạng thái báo giá sang: ${status}`,
+    quotation,
+    credit: dbMock.credit_limit,
+    orders: dbMock.orders,
+    invoices: dbMock.invoices
+  });
 };
 
 module.exports = {
   getRFQs,
   createRFQ,
   getQuotations,
-  createQuotation
+  createQuotation,
+  updateQuotationStatus
 };
