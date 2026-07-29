@@ -1,4 +1,10 @@
-const { dbMock } = require('../config/db');
+const { 
+  dbMock, 
+  persistLC, 
+  updateLCStatus, 
+  updateCreditLimit: dbUpdateCreditLimit, 
+  updateInvoiceStatus 
+} = require('../config/db');
 
 const getOrders = (req, res) => {
   const mappedOrders = dbMock.orders.map(order => {
@@ -15,7 +21,7 @@ const getCreditLimit = (req, res) => {
   res.json({ success: true, credit: dbMock.credit_limit, invoices: dbMock.invoices });
 };
 
-const payInvoice = (req, res) => {
+const payInvoice = async (req, res) => {
   const inv = dbMock.invoices.find(i => i.invoice_id === parseInt(req.params.id));
   if (inv) {
     if (inv.status === 'PAID') {
@@ -41,13 +47,17 @@ const payInvoice = (req, res) => {
       color: '#10B981'
     });
 
+    // Persist invoice status & credit limit to SQL Server
+    await updateInvoiceStatus(inv.invoice_id, 'PAID');
+    await dbUpdateCreditLimit(dbMock.credit_limit);
+
     return res.json({ success: true, message: 'Thanh toán hóa đơn thành công! Hạn mức khả dụng đã được khôi phục.' });
   }
   res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
 };
 
 // Update credit limit for a company
-const updateCreditLimit = (req, res) => {
+const updateCreditLimit = async (req, res) => {
   const { total_limit } = req.body;
   const newLimit = parseFloat(total_limit);
   if (!newLimit || newLimit <= 0) {
@@ -67,6 +77,9 @@ const updateCreditLimit = (req, res) => {
     icon: 'fa-credit-card',
     color: '#D4AF37'
   });
+
+  // Persist new credit limit to SQL Server
+  await dbUpdateCreditLimit(dbMock.credit_limit);
 
   res.json({ success: true, message: `Đã cập nhật hạn mức tín dụng mới: ${(newLimit / 1000000000).toFixed(1)} Tỷ VNĐ`, credit: dbMock.credit_limit });
 };
@@ -102,11 +115,14 @@ const getLCDocuments = (req, res) => {
   res.json({ success: true, data: dbMock.lc_documents || [] });
 };
 
-const submitLCDocument = (req, res) => {
-  const { lc_number, issuing_bank, amount, expiry_date, document_url } = req.body;
+const submitLCDocument = async (req, res) => {
+  const { lc_number, issuing_bank, amount, expiry_date } = req.body;
   if (!lc_number || !issuing_bank || !amount || !expiry_date) {
     return res.status(400).json({ success: false, message: 'Vui lòng cung cấp đầy đủ thông tin L/C.' });
   }
+
+  // Set document URL from Multer upload or request fallback
+  const docUrl = req.file ? `/uploads/${req.file.filename}` : (req.body.document_url || '/uploads/lc_default.pdf');
 
   const newLC = {
     lc_id: (dbMock.lc_documents || []).length + 1,
@@ -115,7 +131,7 @@ const submitLCDocument = (req, res) => {
     issuing_bank,
     amount: parseFloat(amount),
     expiry_date,
-    document_url: document_url || '/uploads/lc_default.pdf',
+    document_url: docUrl,
     status: 'SUBMITTED',
     created_at: new Date().toISOString().slice(0, 10)
   };
@@ -135,10 +151,13 @@ const submitLCDocument = (req, res) => {
     color: '#8B5CF6'
   });
 
+  // Persist L/C document to SQL Server
+  await persistLC(newLC);
+
   res.json({ success: true, message: 'Đăng ký L/C thành công! Đang chờ Kế toán trưởng thẩm định.', data: newLC });
 };
 
-const verifyLCDocument = (req, res) => {
+const verifyLCDocument = async (req, res) => {
   const lc = (dbMock.lc_documents || []).find(doc => doc.lc_id === parseInt(req.params.id));
   if (!lc) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C' });
@@ -163,10 +182,14 @@ const verifyLCDocument = (req, res) => {
     color: '#10B981'
   });
 
+  // Persist updates to SQL Server
+  await updateLCStatus(lc.lc_id, 'VERIFIED');
+  await dbUpdateCreditLimit(dbMock.credit_limit);
+
   res.json({ success: true, message: 'Phê duyệt L/C thành công! Hạn mức tín dụng của doanh nghiệp đã được nâng cao.', data: lc });
 };
 
-const rejectLCDocument = (req, res) => {
+const rejectLCDocument = async (req, res) => {
   const lc = (dbMock.lc_documents || []).find(doc => doc.lc_id === parseInt(req.params.id));
   if (!lc) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C' });
@@ -187,6 +210,9 @@ const rejectLCDocument = (req, res) => {
     icon: 'fa-circle-xmark',
     color: '#EF4444'
   });
+
+  // Persist status to SQL Server
+  await updateLCStatus(lc.lc_id, 'REJECTED');
 
   res.json({ success: true, message: 'Đã từ chối tài liệu L/C bảo lãnh thành công.', data: lc });
 };

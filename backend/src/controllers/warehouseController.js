@@ -1,4 +1,9 @@
-const { dbMock } = require('../config/db');
+const { 
+  dbMock, 
+  persistInventory, 
+  persistShipment, 
+  updateShipmentStatus: dbUpdateShipmentStatus 
+} = require('../config/db');
 
 // Get full inventory with computed available quantity
 const getInventory = (req, res) => {
@@ -11,7 +16,7 @@ const getInventory = (req, res) => {
 };
 
 // Adjust stock (import/export)
-const adjustStock = (req, res) => {
+const adjustStock = async (req, res) => {
   const { product_id, adjustment_type, quantity, reason } = req.body;
   const item = dbMock.inventory.find(i => i.product_id === parseInt(product_id));
   
@@ -36,6 +41,10 @@ const adjustStock = (req, res) => {
       icon: 'fa-truck-ramp-box',
       color: '#3B82F6'
     });
+
+    // Persist adjustment to SQL Server
+    await persistInventory(item);
+
     return res.json({ success: true, message: `Đã nhập kho thêm ${qty} thùng cho ${item.sku}. Tồn kho mới: ${item.stock_on_hand}`, inventory_item: item });
   } else if (adjustment_type === 'EXPORT') {
     if (qty > (item.stock_on_hand - item.reserved)) {
@@ -51,6 +60,10 @@ const adjustStock = (req, res) => {
       icon: 'fa-boxes-stacked',
       color: '#3B82F6'
     });
+
+    // Persist adjustment to SQL Server
+    await persistInventory(item);
+
     return res.json({ success: true, message: `Đã xuất kho ${qty} thùng cho ${item.sku}. Tồn kho mới: ${item.stock_on_hand}`, inventory_item: item });
   }
 
@@ -63,7 +76,7 @@ const getShipments = (req, res) => {
 };
 
 // Create new shipment
-const createShipment = (req, res) => {
+const createShipment = async (req, res) => {
   const { order_number, buyer_company, carrier, items_summary, estimated_delivery } = req.body;
   const newShipment = {
     shipment_id: dbMock.shipments.length + 1,
@@ -92,11 +105,14 @@ const createShipment = (req, res) => {
     color: '#3B82F6'
   });
 
+  // Persist shipment to SQL Server
+  await persistShipment(newShipment);
+
   res.json({ success: true, message: 'Đã tạo phiếu xuất kho/vận chuyển mới!', shipment: newShipment });
 };
 
 // Update shipment status
-const updateShipmentStatus = (req, res) => {
+const updateShipmentStatus = async (req, res) => {
   const shipment = dbMock.shipments.find(s => s.shipment_id === parseInt(req.params.id));
   if (!shipment) {
     return res.status(404).json({ success: false, message: 'Không tìm thấy phiếu vận chuyển' });
@@ -115,6 +131,9 @@ const updateShipmentStatus = (req, res) => {
   if (status === 'DELIVERED') {
     shipment.actual_delivery = new Date().toISOString().split('T')[0];
   }
+
+  // Persist status change to SQL Server
+  await dbUpdateShipmentStatus(shipment.shipment_id, status);
 
   res.json({ success: true, message: `Đã cập nhật trạng thái vận chuyển thành: ${status}`, shipment });
 };

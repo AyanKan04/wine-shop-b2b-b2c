@@ -1,11 +1,19 @@
-const { dbMock } = require('../config/db');
+const { 
+  dbMock, 
+  persistRFQ, 
+  persistQuotation, 
+  updateQuotationStatus: dbUpdateQuotationStatus, 
+  persistOrder, 
+  persistInvoice, 
+  updateCreditLimit 
+} = require('../config/db');
 
 // RFQs API
 const getRFQs = (req, res) => {
   res.json({ success: true, data: dbMock.rfqs });
 };
 
-const createRFQ = (req, res) => {
+const createRFQ = async (req, res) => {
   const { product_name, quantity, target_price } = req.body;
   const newRfq = {
     rfq_id: 8800 + dbMock.rfqs.length + 1,
@@ -18,6 +26,10 @@ const createRFQ = (req, res) => {
     created_at: new Date().toISOString().split('T')[0]
   };
   dbMock.rfqs.push(newRfq);
+
+  // Persist RFQ to SQL Server database
+  await persistRFQ(newRfq);
+
   res.json({ success: true, message: 'Tạo Yêu cầu Báo giá RFQ thành công!', rfq: newRfq });
 };
 
@@ -26,7 +38,7 @@ const getQuotations = (req, res) => {
   res.json({ success: true, data: dbMock.quotations });
 };
 
-const createQuotation = (req, res) => {
+const createQuotation = async (req, res) => {
   const { rfq_id, offer_unit_price, quantity } = req.body;
   const newQuotation = {
     quotation_id: 9900 + dbMock.quotations.length + 1,
@@ -46,11 +58,14 @@ const createQuotation = (req, res) => {
     rfq.status = 'QUOTATION_SENT';
   }
 
+  // Persist Quotation to SQL Server database
+  await persistQuotation(newQuotation);
+
   res.json({ success: true, message: 'Phát hành Bảng Báo Giá (Quotation) thành công!', quotation: newQuotation });
 };
 
 // Update Quotation status (ACCEPT/REJECT) and trigger B2B Order workflow
-const updateQuotationStatus = (req, res) => {
+const updateQuotationStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'ACCEPTED' | 'REJECTED'
 
@@ -110,6 +125,13 @@ const updateQuotationStatus = (req, res) => {
       icon: 'fa-file-signature',
       color: '#10B981'
     });
+
+    // 6. Persist ACCEPTED Quotation, new Order, Invoice, and Credit Limit to SQL Server
+    await dbUpdateQuotationStatus(quotation.quotation_id, 'ACCEPTED');
+    await persistOrder(newOrder);
+    await persistInvoice(newInvoice);
+    await updateCreditLimit(dbMock.credit_limit);
+
   } else {
     // Rejected
     const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
@@ -126,6 +148,9 @@ const updateQuotationStatus = (req, res) => {
       icon: 'fa-file-excel',
       color: '#EF4444'
     });
+
+    // Persist REJECTED Quotation to SQL Server
+    await dbUpdateQuotationStatus(quotation.quotation_id, 'REJECTED');
   }
 
   res.json({

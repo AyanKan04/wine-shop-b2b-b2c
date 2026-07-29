@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getOrders, getCreditLimit, payInvoice, updateCreditLimit, getFinancialSummary, getOverdueInvoices, getLCDocuments, submitLCDocument, verifyLCDocument, rejectLCDocument } = require('../controllers/financeController');
+const upload = require('../middlewares/upload');
 
 router.get('/orders', getOrders);
 router.get('/finance/credit-limit', getCreditLimit);
@@ -11,7 +12,7 @@ router.get('/finance/overdue-invoices', getOverdueInvoices);
 
 // L/C Documents endpoints
 router.get('/finance/lc-documents', getLCDocuments);
-router.post('/finance/lc-documents', submitLCDocument);
+router.post('/finance/lc-documents', upload.single('lc_document'), submitLCDocument);
 router.post('/finance/lc-documents/:id/verify', verifyLCDocument);
 router.post('/finance/lc-documents/:id/reject', rejectLCDocument);
 

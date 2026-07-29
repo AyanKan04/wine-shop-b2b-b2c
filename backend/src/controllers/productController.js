@@ -1,4 +1,4 @@
-const { dbMock } = require('../config/db');
+const { dbMock, persistProduct } = require('../config/db');
 
 // Get Products with Deep Filters
 const getProducts = (req, res) => {
@@ -21,7 +21,7 @@ const getProductById = (req, res) => {
 };
 
 // Create new product with tier pricing
-const createProduct = (req, res) => {
+const createProduct = async (req, res) => {
   const { product_name, sku, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description, tier_prices } = req.body;
 
   if (!product_name || !sku) {
@@ -57,6 +57,9 @@ const createProduct = (req, res) => {
   };
 
   dbMock.products.push(newProduct);
+
+  // Persist product and tier prices to SQL Server
+  await persistProduct(newProduct);
 
   // Also add to inventory
   dbMock.inventory.push({
