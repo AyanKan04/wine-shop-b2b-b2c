@@ -185,6 +185,7 @@ const dbMock = {
       total_amount: 200000000,
       order_status: 'DELIVERED',
       payment_method: 'NET_30_CREDIT',
+      payment_status: 'PAID',
       created_at: '2026-07-15'
     },
     {
@@ -194,6 +195,7 @@ const dbMock = {
       total_amount: 150000000,
       order_status: 'SHIPPING',
       payment_method: 'NET_30_CREDIT',
+      payment_status: 'UNPAID',
       created_at: '2026-07-20'
     }
   ],

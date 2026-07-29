@@ -69,6 +69,26 @@ describe('API Module 4 & 5: RFQs, Quotations, Finance & Orders', () => {
     assert.equal(res.body.quotation.status, 'ACCEPTED');
     assert.ok(res.body.orders.length > 2);
     assert.ok(res.body.invoices.length > 2);
+
+    // Verify order is created as UNPAID
+    const acceptedOrder = res.body.orders.find(o => o.order_number === 'ORD-2026-17642');
+    assert.ok(acceptedOrder);
+    assert.equal(acceptedOrder.payment_status, 'UNPAID');
+
+    // Pay the corresponding invoice and verify payment status propagates to the order
+    const invoice = res.body.invoices.find(i => i.order_number === 'ORD-2026-17642');
+    assert.ok(invoice);
+
+    const payRes = await request(app).post(`/api/finance/pay-invoice/${invoice.invoice_id}`);
+    assert.equal(payRes.status, 200);
+    assert.equal(payRes.body.success, true);
+
+    const ordersRes = await request(app).get('/api/finance/credit-limit');
+    // Fetch and check mapped orders list
+    const orderListRes = await request(app).get('/api/orders');
+    const updatedOrder = orderListRes.body.data.find(o => o.order_number === 'ORD-2026-17642');
+    assert.ok(updatedOrder);
+    assert.equal(updatedOrder.payment_status, 'PAID');
   });
 
 });

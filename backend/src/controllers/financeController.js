@@ -1,7 +1,14 @@
 const { dbMock } = require('../config/db');
 
 const getOrders = (req, res) => {
-  res.json({ success: true, data: dbMock.orders });
+  const mappedOrders = dbMock.orders.map(order => {
+    const inv = dbMock.invoices.find(i => i.order_number === order.order_number);
+    return {
+      ...order,
+      payment_status: inv ? inv.status : (order.payment_status || 'UNPAID')
+    };
+  });
+  res.json({ success: true, data: mappedOrders });
 };
 
 const getCreditLimit = (req, res) => {
@@ -17,6 +24,12 @@ const payInvoice = (req, res) => {
     inv.status = 'PAID';
     dbMock.credit_limit.used_amount -= inv.amount;
     dbMock.credit_limit.available_balance += inv.amount;
+
+    // Direct update to corresponding order in database mock
+    const order = dbMock.orders.find(o => o.order_number === inv.order_number);
+    if (order) {
+      order.payment_status = 'PAID';
+    }
 
     dbMock.activity_logs.unshift({
       id: `ACT-${Date.now()}`,

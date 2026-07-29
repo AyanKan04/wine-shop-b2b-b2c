@@ -73,6 +73,7 @@ const updateQuotationStatus = (req, res) => {
       total_amount: totalAmount,
       order_status: 'PROCESSING',
       payment_method: 'NET_30_CREDIT',
+      payment_status: 'UNPAID',
       created_at: new Date().toISOString().split('T')[0]
     };
     dbMock.orders.push(newOrder);
@@ -96,7 +97,7 @@ const updateQuotationStatus = (req, res) => {
     // 4. Update corresponding RFQ status to ACCEPTED
     const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
     if (rfq) {
-      rfq.status = 'QUOTATION_SENT';
+      rfq.status = 'ACCEPTED';
     }
 
     // 5. Add to system activities
