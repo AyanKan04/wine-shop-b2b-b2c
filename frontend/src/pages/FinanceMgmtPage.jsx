@@ -87,8 +87,8 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
           </div>
           <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#E54D60', marginTop: '8px' }}>{formatVND(creditData.used_amount)}</div>
           <div style={{ marginTop: '8px' }}>
-            <div style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}>
-              <div style={{ width: `${usagePercent}%`, height: '100%', borderRadius: '3px', background: usagePercent > 80 ? '#EF4444' : usagePercent > 50 ? '#F59E0B' : '#10B981', transition: 'width 0.5s ease' }}></div>
+            <div style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(0,0,0,0.06)' }}>
+              <div style={{ width: `${Math.min(100, usagePercent)}%`, height: '100%', borderRadius: '3px', background: usagePercent > 80 ? '#9F2F2D' : usagePercent > 50 ? '#B25E00' : '#346538', transition: 'width 0.5s ease' }}></div>
             </div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>Đã dùng {usagePercent}% hạn mức</div>
           </div>

@@ -80,10 +80,10 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Công Nợ Đang Dùng</div>
           <div style={{ fontSize: '1.6rem', fontWeight: '700', color: creditWarning ? '#EF4444' : '#F59E0B', marginTop: '6px' }}>{formatVND(creditState.used_amount)}</div>
           {/* Progress bar */}
-          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', marginTop: '8px' }}>
-            <div style={{ width: `${usedPercent}%`, height: '100%', borderRadius: '3px', background: creditWarning ? '#EF4444' : '#F59E0B', transition: 'width 0.5s ease' }}></div>
+          <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.06)', borderRadius: '3px', marginTop: '8px' }}>
+            <div style={{ width: `${Math.min(100, usedPercent)}%`, height: '100%', borderRadius: '3px', background: creditWarning ? '#9F2F2D' : '#B25E00', transition: 'width 0.5s ease' }}></div>
           </div>
-          <div style={{ fontSize: '0.7rem', color: creditWarning ? '#EF4444' : 'var(--text-muted)', marginTop: '4px' }}>
+          <div style={{ fontSize: '0.7rem', color: creditWarning ? '#9F2F2D' : 'var(--text-muted)', marginTop: '4px' }}>
             {usedPercent}% hạn mức đã sử dụng {creditWarning && <i className="fa-solid fa-triangle-exclamation" style={{ marginLeft: '4px' }}></i>}
           </div>
         </div>
