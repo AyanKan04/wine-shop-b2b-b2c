@@ -7,9 +7,8 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
 
   // Login Form State
   const [loginData, setLoginData] = useState({
-    username: 'lotte_buyer',
-    password: 'Password123!',
-    role: 'BUYER_REP'
+    username: 'admin_platform',
+    password: 'Admin@123!'
   });
 
   // Register Form State
@@ -30,7 +29,7 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
       const res = await apiService.login({ username: loginData.username, password: loginData.password });
       if (res.success) {
         localStorage.setItem('token', res.token);
-        showToast(`Đăng nhập thành công! Xin chào ${res.user.company_name || res.user.username}`);
+        showToast(`Đăng nhập thành công! Xin chào ${res.user.username}`);
         if (onLoginSuccess) onLoginSuccess(res.user);
       }
     } catch (err) {
@@ -149,41 +148,46 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
           padding: '35px'
         }}>
           {/* TAB SWITCHER */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', background: 'var(--bg-primary)', borderRadius: '6px', padding: '4px', marginBottom: '30px', border: '1px solid var(--border-subtle)' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid var(--border-subtle)', marginBottom: '30px' }}>
             <button
               onClick={() => setActiveTab('login')}
               style={{
-                padding: '10px',
+                flex: 1,
+                padding: '14px 10px',
                 border: 'none',
-                borderRadius: '4px',
-                background: activeTab === 'login' ? '#111111' : 'transparent',
-                color: activeTab === 'login' ? '#FFF' : 'var(--text-muted)',
-                fontFamily: 'var(--font-body)',
+                background: 'transparent',
+                color: activeTab === 'login' ? 'var(--text-main)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'login' ? '2px solid var(--accent-burgundy)' : '2px solid transparent',
+                marginBottom: '-2px',
+                fontFamily: 'var(--font-heading)',
                 fontWeight: '600',
-                fontSize: '0.75rem',
+                fontSize: '1.1rem',
                 letterSpacing: '1px',
                 cursor: 'pointer',
                 transition: 'all 0.3s'
               }}
             >
-              <i className="fa-solid fa-key" style={{ marginRight: '6px' }}></i> ĐĂNG NHẬP
+              Đăng Nhập
             </button>
             <button
               onClick={() => setActiveTab('register')}
               style={{
-                padding: '10px',
+                flex: 1,
+                padding: '14px 10px',
                 border: 'none',
-                borderRadius: '4px',
-                background: activeTab === 'register' ? 'var(--accent-burgundy)' : 'transparent',
-                color: activeTab === 'register' ? '#FFF' : 'var(--text-muted)',
-                fontFamily: 'var(--font-brand)',
-                fontSize: '0.75rem',
+                background: 'transparent',
+                color: activeTab === 'register' ? 'var(--text-main)' : 'var(--text-muted)',
+                borderBottom: activeTab === 'register' ? '2px solid var(--accent-burgundy)' : '2px solid transparent',
+                marginBottom: '-2px',
+                fontFamily: 'var(--font-heading)',
+                fontWeight: '600',
+                fontSize: '1.1rem',
                 letterSpacing: '1px',
                 cursor: 'pointer',
                 transition: 'all 0.3s'
               }}
             >
-              <i className="fa-solid fa-building" style={{ marginRight: '6px' }}></i> ĐĂNG KÝ B2B
+              Đăng Ký
             </button>
           </div>
 
@@ -221,20 +225,7 @@ export default function AuthPage({ showToast, onLoginSuccess }) {
                 />
               </div>
 
-              <div className="form-group">
-                <label><i className="fa-solid fa-user-gear gold-text"></i> Vai Trò Truy Cập</label>
-                <select
-                  className="form-control"
-                  value={loginData.role}
-                  onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
-                >
-                  <option value="BUYER_REP">Khách Hàng B2B (Đại Diện Mua Hàng)</option>
-                  <option value="SALES_REP">Nhân Viên Sales B2B</option>
-                  <option value="FINANCE_OFFICER">Kế Toán & Hạn Mức Tín Dụng</option>
-                  <option value="WAREHOUSE_STAFF">Quản Lý Kho & Vận Chuyển</option>
-                  <option value="PLATFORM_ADMIN">Quản Trị Viên (Platform Admin)</option>
-                </select>
-              </div>
+              {/* REMOVED VAI TRÒ TRUY CẬP */}
 
               <button type="submit" className="btn-redapron-gold" style={{ width: '100%', marginTop: '10px', padding: '14px' }} disabled={loading}>
                 {loading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP B2B PORTAL</>}

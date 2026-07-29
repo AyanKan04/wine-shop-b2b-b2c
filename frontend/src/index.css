@@ -305,7 +305,7 @@ body {
 
 .toast-container {
   position: fixed;
-  bottom: 30px;
+  top: 90px;
   right: 30px;
   z-index: 3000;
   display: flex;
