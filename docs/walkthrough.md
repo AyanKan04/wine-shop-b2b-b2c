@@ -45,3 +45,17 @@ Dưới đây là báo cáo chi tiết các hạng mục đã hoàn thành.
 ### 2. Build Production
 - Chạy lệnh `npm run build` ở frontend: **Vite đóng gói thành công 100%**, không phát sinh bất kỳ lỗi biên dịch nào.
 - Mã nguồn và tài liệu đi kèm đã được đẩy lên nhánh `main` của remote repository thành công.
+
+---
+
+## 3. Báo Cáo Sửa Lỗi (Debug & Hotfix)
+1. **Lỗi Đồng bộ Trạng thái Thanh toán (Order Payment Status)**:
+   - **Vấn đề**: `dbMock.orders` ban đầu thiếu trường `payment_status`. Khi kế toán bấm thanh toán hóa đơn (`payInvoice`), trạng thái hóa đơn cập nhật thành `PAID` nhưng đơn hàng tương ứng vẫn hiển thị là "Chưa TT" trên UI.
+   - **Giải pháp (Option 1 - Khắc phục nhanh & Đồng bộ động)**:
+     - Tự động map trạng thái `payment_status` của mỗi đơn hàng dựa trên hóa đơn tương ứng tại hàm `getOrders` trong [financeController.js](file:///d:/TMDT/RuuBusiness/backend/src/controllers/financeController.js).
+     - Cập nhật trực tiếp `payment_status` thành `'PAID'` cho Order khi thực hiện `payInvoice`.
+2. **Lỗi Trạng thái RFQ sau khi duyệt Báo Giá**:
+   - **Vấn đề**: Khi khách hàng chấp nhận báo giá, RFQ bị set nhầm trạng thái thành `'QUOTATION_SENT'` thay vì `'ACCEPTED'`.
+   - **Giải pháp**: Sửa đổi logic `updateQuotationStatus` trong [rfqController.js](file:///d:/TMDT/RuuBusiness/backend/src/controllers/rfqController.js) để cập nhật chính xác trạng thái RFQ thành `'ACCEPTED'`.
+3. **Kết quả xác minh**:
+   - Bổ sung test case tích hợp tự động hóa vào [rfq.test.js](file:///d:/TMDT/RuuBusiness/backend/tests/rfq.test.js) kiểm tra toàn bộ luồng tạo đơn sỉ từ RFQ và tự động cập nhật trạng thái thanh toán sang `PAID` khi chi tiền hóa đơn. Toàn bộ 34 bài kiểm thử backend pass thành công.
