@@ -1,14 +1,46 @@
 // Database Configuration & In-Memory Fallback Engine for RuuBusiness B2B/B2C Platform
 const { Pool } = require('pg');
+const sql = require('mssql');
 
-let pool = null;
+let pgPool = null;
 
 if (process.env.DATABASE_URL) {
-  pool = new Pool({
+  pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   });
 }
+
+const sqlConfig = {
+  user: process.env.DB_USER || 'sa',
+  password: process.env.DB_PASSWORD || 'RuuBusiness@2026',
+  database: process.env.DB_NAME || 'RuuBusinessDB',
+  server: process.env.DB_SERVER || 'localhost',
+  options: {
+    encrypt: true, 
+    trustServerCertificate: true
+  }
+};
+
+let mssqlPool = null;
+
+const connectDB = async () => {
+  try {
+    const pool = await sql.connect(sqlConfig);
+    console.log('Connected to SQL Server successfully');
+    return pool;
+  } catch (err) {
+    console.error('Database Connection Failed! Bad Config: ', err);
+    throw err;
+  }
+};
+
+const getPool = async () => {
+  if (!mssqlPool) {
+    mssqlPool = await connectDB();
+  }
+  return mssqlPool;
+};
 
 // In-Memory Fallback Database Store (Used when PostgreSQL is not configured)
 const dbMock = {
@@ -333,6 +365,7 @@ const dbMock = {
 };
 
 module.exports = {
-  pool,
-  dbMock
+  pool: pgPool,
+  dbMock,
+  getPool
 };

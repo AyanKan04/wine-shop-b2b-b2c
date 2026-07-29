@@ -164,7 +164,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
             <div key={p.product_id} className="card-box" style={{ padding: '22px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => onSelectProduct(p.product_id)}>
               {/* Category badge */}
               <div style={{
-                position: 'absolute', top: '12px', right: '12px',
+                position: 'absolute', top: '12px', right: '12px', zIndex: 10,
                 background: 'rgba(212,175,55,0.15)', border: '1px solid var(--border-gold)',
                 padding: '3px 10px', borderRadius: '12px', fontSize: '0.65rem',
                 color: 'var(--accent-gold)', fontFamily: 'var(--font-brand)', letterSpacing: '0.5px'
