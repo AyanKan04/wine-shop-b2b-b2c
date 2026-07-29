@@ -295,9 +295,9 @@ export default function AdminDashboardPage({ showToast }) {
                     </a>
                   </td>
                   <td>
-                    {lic.status === 'VERIFIED' && <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>✓ Đã Phê Duyệt</span>}
-                    {lic.status === 'PENDING_VERIFICATION' && <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>⏳ Chờ Thẩm Định</span>}
-                    {lic.status === 'REJECTED' && <span style={{ color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>✕ Từ Chối</span>}
+                    {lic.status === 'VERIFIED' && <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>Đã Phê Duyệt</span>}
+                    {lic.status === 'PENDING_VERIFICATION' && <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>Chờ Thẩm Định</span>}
+                    {lic.status === 'REJECTED' && <span style={{ color: '#EF4444', background: 'rgba(239,68,68,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>Từ Chiếu</span>}
                   </td>
                   <td>
                     {lic.status === 'PENDING_VERIFICATION' ? (

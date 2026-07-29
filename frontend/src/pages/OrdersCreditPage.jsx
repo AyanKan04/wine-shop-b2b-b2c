@@ -51,10 +51,10 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
   const creditWarning = usedPercent >= 80;
 
   const statusConfig = {
-    DELIVERED: { label: '✓ Đã Giao Hàng', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
-    PROCESSING: { label: '⏳ Đang Xử Lý', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-    SHIPPED: { label: '🚚 Đang Vận Chuyển', color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
-    CANCELLED: { label: '✕ Đã Hủy', color: '#EF4444', bg: 'rgba(239,68,68,0.1)' }
+    DELIVERED: { label: 'Đã Giao Hàng', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
+    PROCESSING: { label: 'Đang Xử Lý', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+    SHIPPED: { label: 'Đang Vận Chuyển', color: '#3B82F6', bg: 'rgba(59,130,246,0.1)' },
+    CANCELLED: { label: 'Đã Hủy', color: '#EF4444', bg: 'rgba(239,68,68,0.1)' }
   };
 
   return (
@@ -84,7 +84,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
             <div style={{ width: `${usedPercent}%`, height: '100%', borderRadius: '3px', background: creditWarning ? '#EF4444' : '#F59E0B', transition: 'width 0.5s ease' }}></div>
           </div>
           <div style={{ fontSize: '0.7rem', color: creditWarning ? '#EF4444' : 'var(--text-muted)', marginTop: '4px' }}>
-            {usedPercent}% hạn mức đã sử dụng {creditWarning && '⚠️'}
+            {usedPercent}% hạn mức đã sử dụng {creditWarning && <i className="fa-solid fa-triangle-exclamation" style={{ marginLeft: '4px' }}></i>}
           </div>
         </div>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
@@ -171,7 +171,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
                         color: order.payment_status === 'PAID' ? '#10B981' : '#F59E0B',
                         fontSize: '0.75rem', fontWeight: '600'
                       }}>
-                        {order.payment_status === 'PAID' ? '✓ Đã TT' : '⏳ Chưa TT'}
+                        {order.payment_status === 'PAID' ? 'Đã TT' : 'Chưa TT'}
                       </span>
                     </td>
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
@@ -212,16 +212,16 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
                     <td>
                       {inv.due_date}
                       {isOverdue && (
-                        <div style={{ fontSize: '0.65rem', color: '#EF4444', fontWeight: '700' }}>⚠️ Quá hạn!</div>
+                        <div style={{ fontSize: '0.65rem', color: '#EF4444', fontWeight: '700' }}>Quá hạn!</div>
                       )}
                     </td>
                     <td style={{ fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(inv.amount)}</td>
                     <td>
                       {inv.status === 'PAID' ? (
-                        <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>✓ Đã Thanh Toán</span>
+                        <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>Đã Thanh Toán</span>
                       ) : (
                         <span style={{ color: isOverdue ? '#EF4444' : '#F59E0B', background: isOverdue ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
-                          {isOverdue ? '⚠️ Quá Hạn' : '⏳ Chờ Thanh Toán'}
+                          {isOverdue ? 'Quá Hạn' : 'Chờ Thanh Toán'}
                         </span>
                       )}
                     </td>

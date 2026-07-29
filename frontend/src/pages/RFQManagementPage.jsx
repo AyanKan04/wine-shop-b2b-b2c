@@ -69,11 +69,11 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
   };
 
   const statusConfig = {
-    SUBMITTED: { label: '⏳ Đã Gửi', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
-    QUOTATION_SENT: { label: '📄 Đã Nhận Báo Giá', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
-    ACCEPTED: { label: '✓ Đã Chấp Nhận', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
-    REJECTED: { label: '✕ Đã Từ Chối', color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
-    PENDING: { label: '⏳ Chờ Phản Hồi', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }
+    SUBMITTED: { label: 'Đã Gửi', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+    QUOTATION_SENT: { label: 'Đã Nhận Báo Giá', color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)' },
+    ACCEPTED: { label: 'Đã Chấp Nhận', color: '#10B981', bg: 'rgba(16,185,129,0.1)' },
+    REJECTED: { label: 'Đã Từ Chối', color: '#EF4444', bg: 'rgba(239,68,68,0.1)' },
+    PENDING: { label: 'Chờ Phản Hồi', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' }
   };
 
   return (

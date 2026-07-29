@@ -216,7 +216,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
             <input
               type="text"
               className="form-control"
-              placeholder="🔍 Tìm kiếm theo SKU hoặc tên sản phẩm..."
+              placeholder="Tìm kiếm theo SKU hoặc tên sản phẩm..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               style={{ maxWidth: '350px' }}

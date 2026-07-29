@@ -69,19 +69,19 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
       company: 'LOTTE HOTEL SAIGON',
       quote: '"Red Apron đã thay đổi hoàn toàn quy trình mua sắm rượu sỉ của chúng tôi. Bảng giá minh bạch, hạn mức tín dụng linh hoạt."',
       role: 'Purchasing Manager',
-      avatar: '🏨'
+      icon: 'fa-hotel'
     },
     {
       company: 'CONTINENTAL HOTEL',
       quote: '"Hệ thống RFQ trực tuyến tiết kiệm 60% thời gian đàm phán so với phương pháp truyền thống."',
       role: 'F&B Director',
-      avatar: '🍷'
+      icon: 'fa-wine-glass'
     },
     {
       company: 'RED CHILI GROUP',
       quote: '"Chất lượng rượu nhập khẩu chính ngạch, đầy đủ CO/CQ. Đối tác tin cậy cho chuỗi nhà hàng cao cấp."',
       role: 'Supply Chain Lead',
-      avatar: '🍽️'
+      icon: 'fa-utensils'
     }
   ];
 
@@ -257,7 +257,14 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
             {testimonials.map((t, i) => (
               <div key={i} className="card-box" style={{ padding: '28px' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '14px' }}>{t.avatar}</div>
+                <div style={{
+                  width: '45px', height: '45px', borderRadius: '50%',
+                  background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--border-gold)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--accent-gold)', fontSize: '1.2rem', marginBottom: '14px'
+                }}>
+                  <i className={`fa-solid ${t.icon}`}></i>
+                </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', lineHeight: 1.7, fontStyle: 'italic', marginBottom: '18px' }}>
                   {t.quote}
                 </p>

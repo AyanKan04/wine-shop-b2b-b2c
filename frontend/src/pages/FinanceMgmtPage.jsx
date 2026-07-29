@@ -251,11 +251,11 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
                 <td>
                   {inv.status === 'PAID' ? (
                     <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
-                      ✓ Đã Thanh Toán
+                      Đã Thanh Toán
                     </span>
                   ) : (
                     <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
-                      ⏳ Chờ Thanh Toán
+                      Chờ Thanh Toán
                     </span>
                   )}
                 </td>

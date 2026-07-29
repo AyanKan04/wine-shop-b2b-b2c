@@ -97,11 +97,11 @@ export default function CRMKanbanPage({ showToast }) {
   });
 
   const columns = [
-    { id: 'new_rfq', title: '📥 Tiếp Nhận RFQ', color: '#3B82F6' },
-    { id: 'in_negotiation', title: '💬 Đang Đàm Phán', color: '#F59E0B' },
-    { id: 'quotation_sent', title: '📄 Đã Gửi Báo Giá', color: '#8B5CF6' },
-    { id: 'closed_won', title: '🤝 Đã Chốt Đơn (Won)', color: '#10B981' },
-    { id: 'fulfillment_credit', title: '🚚 Vận Chuyển & Nợ', color: '#EC4899' }
+    { id: 'new_rfq', title: 'Tiếp Nhận RFQ', color: '#3B82F6' },
+    { id: 'in_negotiation', title: 'Đang Đàm Phán', color: '#F59E0B' },
+    { id: 'quotation_sent', title: 'Đã Gửi Báo Giá', color: '#8B5CF6' },
+    { id: 'closed_won', title: 'Đã Chốt Đơn (Won)', color: '#10B981' },
+    { id: 'fulfillment_credit', title: 'Vận Chuyển & Nợ', color: '#EC4899' }
   ];
 
   // Move deal to next or previous column
@@ -221,7 +221,7 @@ export default function CRMKanbanPage({ showToast }) {
           <input
             type="text"
             className="form-control"
-            placeholder="🔍 Tìm kiếm theo tên hợp đồng, khách sạn, nhà hàng..."
+            placeholder="Tìm kiếm theo tên hợp đồng, khách sạn, nhà hàng..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -389,7 +389,7 @@ export default function CRMKanbanPage({ showToast }) {
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '600px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Thêm Cơ Hội Đàm Phán B2B Mới</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
             </div>
 
             <form onSubmit={handleCreateDeal}>
