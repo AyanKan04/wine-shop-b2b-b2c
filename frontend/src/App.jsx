@@ -144,6 +144,22 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
+    // Check user session
+    const token = localStorage.getItem('token');
+    if (token) {
+      apiService.getMe()
+        .then(res => {
+          if (res.success && res.data) {
+            setCurrentUser(res.data);
+          } else {
+            localStorage.removeItem('token');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+        });
+    }
+
     // Load products
     apiService.getProducts()
       .then(res => { if (res.success && res.data && res.data.length > 0) setProducts(res.data); })
@@ -195,11 +211,23 @@ export default function App() {
     setCurrentRoute('product-detail');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    setCurrentUser(null);
+    setCurrentRoute('home');
+    showToast('Đã đăng xuất thành công.');
+  };
+
   return (
     <div>
       <AgeVerificationModal />
       <TopBar currentUser={currentUser} />
-      <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} />
+      <Navbar 
+        currentRoute={currentRoute} 
+        setCurrentRoute={setCurrentRoute} 
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
 
       <main>
         {currentRoute === 'home' && (

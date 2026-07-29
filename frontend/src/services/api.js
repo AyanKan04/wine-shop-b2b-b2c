@@ -34,18 +34,7 @@ async function request(endpoint, options = {}) {
     if (endpoint.includes('/approve')) {
       return { success: true, message: 'Đã phê duyệt Giấy phép Rượu (Chế độ xem trước)' };
     }
-    if (endpoint.includes('/auth/login')) {
-      return {
-        success: true,
-        token: 'mock_jwt_token_offline',
-        user: {
-          user_id: 1,
-          username: 'lotte_buyer',
-          user_type: 'BUYER_REP',
-          company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON'
-        }
-      };
-    }
+    // Removed the mock fallback for /auth/login so that real authentication errors propagate to the UI
     if (endpoint.includes('/auth/register') || endpoint.includes('/companies/register')) {
       return { success: true, message: 'Đã lưu hồ sơ đăng ký doanh nghiệp thành công!' };
     }

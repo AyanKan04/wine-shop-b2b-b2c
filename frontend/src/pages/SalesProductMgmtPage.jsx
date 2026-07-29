@@ -1,358 +1,454 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../services/api';
 
-export default function SalesProductMgmtPage({ products, showToast }) {
-  const [productList, setProductList] = useState(products || []);
+export default function SalesProductMgmtPage({ showToast }) {
+  const [products, setProducts] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditPriceModal, setShowEditPriceModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editProductId, setEditProductId] = useState(null);
+  const [activeProduct, setActiveProduct] = useState(null);
 
-  const [newProduct, setNewProduct] = useState({
-    product_name: '', sku: '', category: 'Fine Wine', country_of_origin: 'France',
-    region: '', grape_variety: '', vintage_year: 2024, alcohol_content: 13.0,
-    volume_ml: 750, moq: 5, image_url: '', description: '',
-    tier_prices: [
-      { tier_level: 1, min_quantity: 5, price_per_unit: 50000000 },
-      { tier_level: 2, min_quantity: 20, price_per_unit: 45000000 },
-      { tier_level: 3, min_quantity: 50, price_per_unit: 40000000 },
-      { tier_level: 4, min_quantity: 100, price_per_unit: 36000000 },
-      { tier_level: 5, min_quantity: 200, price_per_unit: 32000000 }
-    ]
+  const [formData, setFormData] = useState({
+    sku: '', product_name: '', category: 'Wine / Red', country_of_origin: '', 
+    region: '', grape_variety: '', vintage_year: '', alcohol_content: '', 
+    volume_ml: 750, moq: 1, description: '', image_url: ''
   });
 
-  const formatVND = (val) => {
-    if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
-    if (val >= 1000000) return (val / 1000000).toFixed(0) + ' Tr ₫';
-    return val.toLocaleString('vi-VN') + ' ₫';
+  const [priceType, setPriceType] = useState('ORIGINAL'); // ORIGINAL, TIER, CUSTOMER, CONTRACT
+  const [tierPrices, setTierPrices] = useState([
+    { tier_level: 1, min_quantity: 1, price_per_unit: '' },
+    { tier_level: 2, min_quantity: 6, price_per_unit: '' },
+    { tier_level: 3, min_quantity: 12, price_per_unit: '' },
+    { tier_level: 4, min_quantity: 24, price_per_unit: '' },
+    { tier_level: 5, min_quantity: 60, price_per_unit: '' }
+  ]);
+  const [originalPrice, setOriginalPrice] = useState('');
+  
+  const [customerPrices, setCustomerPrices] = useState([]); // {company_id, price_per_unit}
+  const [newCustomerPrice, setNewCustomerPrice] = useState({ company_id: '', price_per_unit: '' });
+
+  const [contractPrices, setContractPrices] = useState([]); // {contract_number, company_id, price_per_unit, valid_until}
+  const [newContractPrice, setNewContractPrice] = useState({ contract_number: '', company_id: '', price_per_unit: '', valid_until: '' });
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCompanies();
+  }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const res = await apiService.getProducts();
+      if (res.success) setProducts(res.data);
+    } catch (err) {
+      showToast('Lỗi tải danh sách sản phẩm');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredProducts = productList.filter(p =>
-    p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchCompanies = async () => {
+    try {
+      const res = await apiService.getCompanies();
+      if (res.success) setCompanies(res.data);
+    } catch (err) {}
+  };
 
-  const handleAddProduct = (e) => {
-    e.preventDefault();
-    if (!newProduct.product_name || !newProduct.sku) {
-      showToast('Vui lòng điền Tên sản phẩm và SKU!');
-      return;
-    }
-    if (productList.find(p => p.sku === newProduct.sku)) {
-      showToast(`SKU "${newProduct.sku}" đã tồn tại!`);
-      return;
-    }
-
-    const created = {
-      ...newProduct,
-      product_id: Math.max(0, ...productList.map(p => p.product_id)) + 1,
-      vintage_year: parseInt(newProduct.vintage_year),
-      alcohol_content: parseFloat(newProduct.alcohol_content),
-      volume_ml: parseInt(newProduct.volume_ml),
-      moq: parseInt(newProduct.moq),
-      image_url: newProduct.image_url || 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80'
-    };
-
-    setProductList([...productList, created]);
-    showToast(`Đã thêm sản phẩm "${created.product_name}" thành công!`);
-    setShowAddModal(false);
-    setNewProduct({
-      product_name: '', sku: '', category: 'Fine Wine', country_of_origin: 'France',
-      region: '', grape_variety: '', vintage_year: 2024, alcohol_content: 13.0,
-      volume_ml: 750, moq: 5, image_url: '', description: '',
-      tier_prices: [
-        { tier_level: 1, min_quantity: 5, price_per_unit: 50000000 },
-        { tier_level: 2, min_quantity: 20, price_per_unit: 45000000 },
-        { tier_level: 3, min_quantity: 50, price_per_unit: 40000000 },
-        { tier_level: 4, min_quantity: 100, price_per_unit: 36000000 },
-        { tier_level: 5, min_quantity: 200, price_per_unit: 32000000 }
-      ]
+  const resetForm = () => {
+    setFormData({
+      sku: '', product_name: '', category: 'Wine / Red', country_of_origin: '', 
+      region: '', grape_variety: '', vintage_year: '', alcohol_content: '', 
+      volume_ml: 750, moq: 1, description: '', image_url: ''
     });
+    setIsEditMode(false);
+    setEditProductId(null);
   };
 
-  const handleDeleteProduct = (productId) => {
-    const prod = productList.find(p => p.product_id === productId);
-    setProductList(prev => prev.filter(p => p.product_id !== productId));
-    showToast(`Đã xóa sản phẩm "${prod?.product_name}"`);
-  };
-
-  const handleOpenEditPrice = (product) => {
-    setEditingProduct(JSON.parse(JSON.stringify(product)));
-    setShowEditPriceModal(true);
-  };
-
-  const handleSaveTierPrices = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    setProductList(prev => prev.map(p =>
-      p.product_id === editingProduct.product_id ? { ...p, tier_prices: editingProduct.tier_prices } : p
-    ));
-    showToast(`Đã cập nhật bậc giá sỉ cho "${editingProduct.product_name}"!`);
-    setShowEditPriceModal(false);
-    setEditingProduct(null);
+    try {
+      if (isEditMode) {
+        const res = await apiService.updateProduct(editProductId, formData);
+        if (res.success) {
+          showToast('Cập nhật sản phẩm thành công!');
+          setShowAddModal(false);
+          fetchProducts();
+        }
+      } else {
+        const res = await apiService.createProduct({ ...formData, tier_prices: [] });
+        if (res.success) {
+          showToast('Thêm sản phẩm thành công!');
+          setShowAddModal(false);
+          fetchProducts();
+        }
+      }
+    } catch (err) {
+      showToast('Lỗi khi lưu sản phẩm');
+    }
   };
 
-  const updateTierPrice = (tierLevel, field, value) => {
-    setEditingProduct(prev => ({
-      ...prev,
-      tier_prices: prev.tier_prices.map(t =>
-        t.tier_level === tierLevel ? { ...t, [field]: parseInt(value) || 0 } : t
-      )
-    }));
+  const handleEditClick = (product) => {
+    setFormData({
+      sku: product.SKU || '', 
+      product_name: product.ProductName || '', 
+      category: product.Category || 'Wine / Red', 
+      country_of_origin: product.CountryOfOrigin || '', 
+      region: product.Region || '', 
+      grape_variety: product.GrapeVariety || '', 
+      vintage_year: product.VintageYear || '', 
+      alcohol_content: product.AlcoholContent || '', 
+      volume_ml: product.VolumeML || 750, 
+      moq: product.MOQ || 1, 
+      description: product.Description || '', 
+      image_url: product.ImageURL || ''
+    });
+    setEditProductId(product.ProductID);
+    setIsEditMode(true);
+    setShowAddModal(true);
   };
+
+  const handleDeleteClick = async (id) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này không?')) return;
+    try {
+      const res = await apiService.deleteProduct(id);
+      if (res.success) {
+        showToast('Xóa sản phẩm thành công!');
+        fetchProducts();
+      }
+    } catch (err) {
+      showToast('Lỗi khi xóa sản phẩm');
+    }
+  };
+
+  const handleOpenPriceModal = (product) => {
+    setActiveProduct(product);
+    setPriceType('ORIGINAL');
+    
+    // Reset tier prices mapping
+    const baseTiers = [
+      { tier_level: 1, min_quantity: 1, price_per_unit: '' },
+      { tier_level: 2, min_quantity: 6, price_per_unit: '' },
+      { tier_level: 3, min_quantity: 12, price_per_unit: '' },
+      { tier_level: 4, min_quantity: 24, price_per_unit: '' },
+      { tier_level: 5, min_quantity: 60, price_per_unit: '' }
+    ];
+    if (product.tier_prices && Array.isArray(product.tier_prices)) {
+      product.tier_prices.forEach(pt => {
+        const idx = pt.TierLevel - 1;
+        if (baseTiers[idx]) {
+          baseTiers[idx].min_quantity = pt.MinQuantity;
+          baseTiers[idx].price_per_unit = pt.PricePerUnit;
+        }
+      });
+    }
+    setTierPrices(baseTiers);
+    setOriginalPrice(baseTiers[0].price_per_unit);
+
+    setCustomerPrices([]);
+    setContractPrices([]);
+    setShowPriceModal(true);
+  };
+
+  const handlePriceSubmit = async (e) => {
+    e.preventDefault();
+    let payloadPrices = [];
+    let pType = priceType;
+
+    if (priceType === 'ORIGINAL') {
+      pType = 'TIER';
+      payloadPrices = [{ tier_level: 1, min_quantity: 1, price_per_unit: originalPrice }];
+    } else if (priceType === 'TIER') {
+      payloadPrices = tierPrices.filter(t => t.price_per_unit);
+    } else if (priceType === 'CUSTOMER') {
+      payloadPrices = customerPrices;
+    } else if (priceType === 'CONTRACT') {
+      payloadPrices = contractPrices;
+    }
+
+    try {
+      const res = await apiService.updateProductPrices(activeProduct.ProductID, {
+        priceType: pType,
+        prices: payloadPrices
+      });
+      if (res.success) {
+        showToast('Cập nhật cấu hình giá thành công!');
+        setShowPriceModal(false);
+        fetchProducts();
+      }
+    } catch (err) {
+      showToast('Lỗi khi cập nhật cấu hình giá');
+    }
+  };
+
+  const formatVND = (val) => val ? Number(val).toLocaleString('vi-VN') + ' đ' : 'N/A';
 
   return (
-    <div className="page-container" style={{ maxWidth: '1600px' }}>
-      
-      {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
+    <div className="card-box" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-            <i className="fa-solid fa-tags gold-text"></i> Quản Lý Sản Phẩm & Bậc Giá Sỉ
-          </h2>
-          <p className="page-subtitle" style={{ margin: 0 }}>
-            Thêm dòng rượu mới, thiết lập MOQ & cấu hình 5 bậc giá sỉ (Tier 1 đến Tier 5) cho từng sản phẩm.
-          </p>
+          <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, color: '#FFF' }}>
+            <i className="fa-solid fa-tags gold-text"></i> Quản Lý Danh Mục Sản Phẩm & Giá
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Cấu hình Giá theo: Khách hàng, Hợp đồng, Số lượng, Giá gốc.</p>
         </div>
-        <button className="btn-redapron-gold" onClick={() => setShowAddModal(true)}>
-          <i className="fa-solid fa-plus"></i> THÊM SẢN PHẨM MỚI
+        <button className="btn-redapron-gold" onClick={() => { resetForm(); setShowAddModal(true); }}>
+          + Thêm Sản Phẩm Mới
         </button>
       </div>
 
-      {/* SEARCH BAR */}
-      <div style={{ marginBottom: '20px' }}>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="🔍 Tìm kiếm theo tên sản phẩm hoặc SKU..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          style={{ maxWidth: '450px' }}
-        />
-      </div>
-
-      {/* PRODUCT TABLE */}
-      <div className="card-box">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>TÊN SẢN PHẨM</th>
-              <th>LOẠI RƯỢU</th>
-              <th>XUẤT XỨ</th>
-              <th>ABV</th>
-              <th>MOQ</th>
-              <th>GIÁ TIER 1</th>
-              <th>GIÁ TIER 5</th>
-              <th>HÀNH ĐỘNG</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map(prod => (
-              <tr key={prod.product_id}>
-                <td><code style={{ color: 'var(--accent-gold)' }}>{prod.sku}</code></td>
-                <td style={{ fontWeight: '600', color: '#FFF', maxWidth: '250px' }}>{prod.product_name}</td>
-                <td><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{prod.category}</span></td>
-                <td>{prod.country_of_origin}</td>
-                <td>{prod.alcohol_content}%</td>
-                <td><strong>{prod.moq}</strong></td>
-                <td className="gold-text">{prod.tier_prices ? formatVND(prod.tier_prices[0]?.price_per_unit) : '—'}</td>
-                <td style={{ color: '#10B981' }}>{prod.tier_prices ? formatVND(prod.tier_prices[prod.tier_prices.length - 1]?.price_per_unit) : '—'}</td>
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Sản Phẩm</th>
+            <th>Loại & Xuất Xứ</th>
+            <th>MOQ</th>
+            <th>Tier 1 (Lẻ)</th>
+            <th>Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? <tr><td colSpan="6" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
+           products.map(p => {
+             const t1 = p.tier_prices?.find(t => t.TierLevel === 1);
+             return (
+              <tr key={p.ProductID}>
+                <td><code>{p.SKU}</code></td>
+                <td style={{ fontWeight: '600' }}>{p.ProductName}</td>
                 <td>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <button
-                      onClick={() => handleOpenEditPrice(prod)}
-                      style={{
-                        background: 'rgba(212,175,55,0.2)', border: '1px solid var(--accent-gold)', color: 'var(--accent-gold)',
-                        padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer'
-                      }}
-                    >
-                      <i className="fa-solid fa-pen"></i> Tier
+                  <span style={{ color: 'var(--accent-gold)', fontSize: '0.8rem' }}>{p.Category}</span><br/>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.CountryOfOrigin}</span>
+                </td>
+                <td>{p.MOQ}</td>
+                <td style={{ color: '#10B981' }}>{t1 ? formatVND(t1.PricePerUnit) : 'N/A'}</td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => handleEditClick(p)} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Sửa SP
                     </button>
-                    <button
-                      onClick={() => handleDeleteProduct(prod.product_id)}
-                      style={{
-                        background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#EF4444',
-                        padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer'
-                      }}
-                    >
-                      <i className="fa-solid fa-trash"></i>
+                    <button onClick={() => handleOpenPriceModal(p)} style={{ background: '#1C1417', border: '1px solid #10B981', color: '#10B981', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Cấu hình Giá
+                    </button>
+                    <button onClick={() => handleDeleteClick(p.ProductID)} style={{ background: 'transparent', border: '1px solid #E54D60', color: '#E54D60', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Xóa
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredProducts.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            Không tìm thấy sản phẩm nào.
-          </div>
-        )}
-      </div>
+             )
+           })}
+        </tbody>
+      </table>
 
-      {/* MODAL: ADD NEW PRODUCT */}
+      {/* MODAL THÊM / SỬA SẢN PHẨM */}
       {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Thêm Dòng Rượu Mới</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
-            </div>
-            <form onSubmit={handleAddProduct}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Tên Sản Phẩm *</label>
-                  <input type="text" className="form-control" placeholder="Château Lafite Rothschild 2015" value={newProduct.product_name} onChange={e => setNewProduct({ ...newProduct, product_name: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Mã SKU *</label>
-                  <input type="text" className="form-control" placeholder="SKU-FR-LAFITE2015" value={newProduct.sku} onChange={e => setNewProduct({ ...newProduct, sku: e.target.value })} required />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Loại Rượu</label>
-                  <select className="form-control" value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}>
-                    <option value="Fine Wine">Fine Wine</option>
-                    <option value="Spirits / Whisky">Spirits / Whisky</option>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
+              {isEditMode ? 'Cập Nhật Thông Tin Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
+            </h3>
+            <form onSubmit={handleAddSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' }}>
+                <div className="form-group"><label>Mã SKU *</label><input className="form-control" required value={formData.sku} onChange={e=>setFormData({...formData, sku: e.target.value})} /></div>
+                <div className="form-group"><label>Tên Sản Phẩm *</label><input className="form-control" required value={formData.product_name} onChange={e=>setFormData({...formData, product_name: e.target.value})} /></div>
+                <div className="form-group"><label>Phân Loại *</label>
+                  <select className="form-control" value={formData.category} onChange={e=>setFormData({...formData, category: e.target.value})}>
+                    <option value="Wine / Red">Wine / Red</option>
+                    <option value="Wine / White">Wine / White</option>
                     <option value="Champagne">Champagne</option>
-                    <option value="Cognac">Cognac</option>
-                    <option value="Vodka">Vodka</option>
-                    <option value="Sake">Sake</option>
+                    <option value="Spirits / Whisky">Spirits / Whisky</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Quốc Gia</label>
-                  <input type="text" className="form-control" placeholder="France" value={newProduct.country_of_origin} onChange={e => setNewProduct({ ...newProduct, country_of_origin: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Vùng</label>
-                  <input type="text" className="form-control" placeholder="Bordeaux" value={newProduct.region} onChange={e => setNewProduct({ ...newProduct, region: e.target.value })} />
-                </div>
+                <div className="form-group"><label>Quốc Gia</label><input className="form-control" value={formData.country_of_origin} onChange={e=>setFormData({...formData, country_of_origin: e.target.value})} /></div>
+                <div className="form-group"><label>Giống Nho (Grape)</label><input className="form-control" value={formData.grape_variety} onChange={e=>setFormData({...formData, grape_variety: e.target.value})} /></div>
+                <div className="form-group"><label>Hình Ảnh (URL)</label><input className="form-control" value={formData.image_url} onChange={e=>setFormData({...formData, image_url: e.target.value})} /></div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Giống Nho</label>
-                  <input type="text" className="form-control" placeholder="Cabernet Sauvignon" value={newProduct.grape_variety} onChange={e => setNewProduct({ ...newProduct, grape_variety: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Niên Vụ</label>
-                  <input type="number" className="form-control" value={newProduct.vintage_year} onChange={e => setNewProduct({ ...newProduct, vintage_year: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>ABV (%)</label>
-                  <input type="number" step="0.1" className="form-control" value={newProduct.alcohol_content} onChange={e => setNewProduct({ ...newProduct, alcohol_content: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>MOQ (Thùng)</label>
-                  <input type="number" className="form-control" value={newProduct.moq} onChange={e => setNewProduct({ ...newProduct, moq: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>URL Hình Ảnh</label>
-                <input type="text" className="form-control" placeholder="https://images.unsplash.com/..." value={newProduct.image_url} onChange={e => setNewProduct({ ...newProduct, image_url: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Mô Tả Sản Phẩm</label>
-                <input type="text" className="form-control" placeholder="Dòng rượu vang đỏ huyền thoại..." value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} />
-              </div>
-
-              {/* TIER PRICING SECTION */}
-              <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-gold)', borderRadius: '6px', padding: '16px', marginTop: '10px', marginBottom: '15px' }}>
-                <h5 style={{ color: 'var(--text-main)', fontFamily: 'var(--font-body)', fontWeight: '600', fontSize: '0.8rem', marginBottom: '12px' }}>CẤU HÌNH BẬC GIÁ SỈ (TIER 1 → TIER 5)</h5>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                  {newProduct.tier_prices.map((tp, idx) => (
-                    <div key={tp.tier_level} style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '6px' }}>Tier {tp.tier_level}</div>
-                      <input
-                        type="number"
-                        className="form-control"
-                        style={{ fontSize: '0.8rem', padding: '6px', textAlign: 'center' }}
-                        value={tp.min_quantity}
-                        onChange={e => {
-                          const updated = [...newProduct.tier_prices];
-                          updated[idx].min_quantity = parseInt(e.target.value) || 0;
-                          setNewProduct({ ...newProduct, tier_prices: updated });
-                        }}
-                      />
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: '4px 0' }}>thùng ↑</div>
-                      <input
-                        type="number"
-                        className="form-control"
-                        style={{ fontSize: '0.8rem', padding: '6px', textAlign: 'center' }}
-                        value={tp.price_per_unit}
-                        onChange={e => {
-                          const updated = [...newProduct.tier_prices];
-                          updated[idx].price_per_unit = parseInt(e.target.value) || 0;
-                          setNewProduct({ ...newProduct, tier_prices: updated });
-                        }}
-                      />
-                      <div style={{ fontSize: '0.65rem', color: 'var(--accent-gold)', marginTop: '4px' }}>{formatVND(tp.price_per_unit)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
-                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>LƯU & ĐĂNG SẢN PHẨM</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', gap: '10px' }}>
+                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowAddModal(false)}>Hủy</button>
+                <button type="submit" className="btn-redapron-gold">Lưu Thông Tin</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL: EDIT TIER PRICES */}
-      {showEditPriceModal && editingProduct && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '600px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Chỉnh Sửa Bậc Giá Sỉ</h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>{editingProduct.product_name}</p>
-              </div>
-              <button onClick={() => setShowEditPriceModal(false)} style={{ background: 'transparent', border: 'none', color: '#FFF', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+      {/* MODAL CẤU HÌNH GIÁ */}
+      {showPriceModal && activeProduct && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>
+              Cấu Hình Giá: {activeProduct.ProductName} ({activeProduct.SKU})
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Hãy chọn hình thức thiết lập giá theo chuẩn quy trình B2B</p>
+            
+            <div className="form-group" style={{ marginTop: '20px' }}>
+              <label>Hình thức Thiết Lập Giá *</label>
+              <select className="form-control" value={priceType} onChange={e => setPriceType(e.target.value)}>
+                <option value="ORIGINAL">1. Giá sản phẩm gốc (Niêm yết)</option>
+                <option value="CUSTOMER">2. Giá theo khách hàng riêng</option>
+                <option value="CONTRACT">3. Giá theo hợp đồng</option>
+                <option value="TIER">4. Giá theo số lượng (Tier Pricing)</option>
+              </select>
             </div>
-            <form onSubmit={handleSaveTierPrices}>
-              <table className="data-table" style={{ marginBottom: '20px' }}>
-                <thead>
-                  <tr><th>BẬC</th><th>SỐ LƯỢNG TỐI THIỂU</th><th>ĐƠN GIÁ / THÙNG (VNĐ)</th></tr>
-                </thead>
-                <tbody>
-                  {editingProduct.tier_prices && editingProduct.tier_prices.map(tp => (
-                    <tr key={tp.tier_level}>
-                      <td><strong>Tier {tp.tier_level}</strong></td>
-                      <td>
-                        <input
-                          type="number"
-                          className="form-control"
-                          style={{ width: '120px', padding: '6px 10px' }}
-                          value={tp.min_quantity}
-                          onChange={e => updateTierPrice(tp.tier_level, 'min_quantity', e.target.value)}
+
+            <form onSubmit={handlePriceSubmit}>
+              <div style={{ background: '#0D0A0B', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '20px', minHeight: '200px' }}>
+                
+                {priceType === 'ORIGINAL' && (
+                  <div>
+                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Gốc</h4>
+                    <div className="form-group">
+                      <label>Giá bán niêm yết (VNĐ) *</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={originalPrice ? Number(originalPrice).toLocaleString('vi-VN') : ''} 
+                        onChange={e => {
+                          const rawValue = e.target.value.replace(/\D/g, '');
+                          setOriginalPrice(rawValue);
+                        }} 
+                        required 
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {priceType === 'TIER' && (
+                  <div>
+                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Theo Số Lượng</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                      {tierPrices.map((t, idx) => (
+                        <div key={idx} style={{ background: '#1C1417', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '5px' }}>Tier {t.tier_level}</div>
+                          <label style={{ fontSize: '0.7rem' }}>Min Qty</label>
+                          <input type="number" className="form-control" style={{ marginBottom: '5px', padding: '5px' }} value={t.min_quantity} onChange={e=>{
+                            const newTiers = [...tierPrices]; newTiers[idx].min_quantity = e.target.value; setTierPrices(newTiers);
+                          }} required />
+                          <label style={{ fontSize: '0.7rem' }}>Giá / Đơn vị</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            style={{ padding: '5px' }} 
+                            value={t.price_per_unit ? Number(t.price_per_unit).toLocaleString('vi-VN') : ''} 
+                            onChange={e=>{
+                              const rawValue = e.target.value.replace(/\D/g, '');
+                              const newTiers = [...tierPrices]; 
+                              newTiers[idx].price_per_unit = rawValue; 
+                              setTierPrices(newTiers);
+                            }} 
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {priceType === 'CUSTOMER' && (
+                  <div>
+                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Khách Hàng (Customer Pricing)</h4>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', marginBottom: '20px' }}>
+                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                        <label>Khách Hàng (Doanh nghiệp B2B)</label>
+                        <select className="form-control" value={newCustomerPrice.company_id} onChange={e=>setNewCustomerPrice({...newCustomerPrice, company_id: e.target.value})}>
+                          <option value="">-- Chọn Doanh Nghiệp --</option>
+                          {companies.filter(c => c.CompanyType === 'BUYER').map(c => (
+                            <option key={c.CompanyID} value={c.CompanyID}>{c.CompanyName} ({c.TaxCode})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
+                        <label>Giá thỏa thuận (VNĐ)</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={newCustomerPrice.price_per_unit ? Number(newCustomerPrice.price_per_unit).toLocaleString('vi-VN') : ''} 
+                          onChange={e => {
+                            const rawValue = e.target.value.replace(/\D/g, '');
+                            setNewCustomerPrice({...newCustomerPrice, price_per_unit: rawValue});
+                          }} 
                         />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className="form-control"
-                          style={{ width: '180px', padding: '6px 10px' }}
-                          value={tp.price_per_unit}
-                          onChange={e => updateTierPrice(tp.tier_level, 'price_per_unit', e.target.value)}
-                        />
-                        <span style={{ fontSize: '0.7rem', color: 'var(--accent-gold)', marginLeft: '8px' }}>{formatVND(tp.price_per_unit)}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={() => setShowEditPriceModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
-                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>LƯU BẬC GIÁ</button>
+                      </div>
+                      <button type="button" className="btn-redapron-gold" onClick={() => {
+                        if(newCustomerPrice.company_id && newCustomerPrice.price_per_unit) {
+                          setCustomerPrices([...customerPrices, newCustomerPrice]);
+                          setNewCustomerPrice({ company_id: '', price_per_unit: '' });
+                        }
+                      }}>Thêm</button>
+                    </div>
+                    {customerPrices.length > 0 && (
+                      <table className="data-table">
+                        <thead><tr><th>Doanh Nghiệp ID</th><th>Giá Thỏa Thuận</th><th>Hành Động</th></tr></thead>
+                        <tbody>
+                          {customerPrices.map((cp, idx) => (
+                            <tr key={idx}>
+                              <td>{companies.find(c=>c.CompanyID == cp.company_id)?.CompanyName || cp.company_id}</td>
+                              <td style={{ color: '#10B981' }}>{formatVND(cp.price_per_unit)}</td>
+                              <td><button type="button" onClick={() => setCustomerPrices(customerPrices.filter((_, i) => i !== idx))} style={{ color: '#EF4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>Xóa</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+
+                {priceType === 'CONTRACT' && (
+                  <div>
+                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Theo Hợp Đồng (Contract Pricing)</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                      <div className="form-group" style={{ margin: 0 }}><label>Khách Hàng</label>
+                        <select className="form-control" value={newContractPrice.company_id} onChange={e=>setNewContractPrice({...newContractPrice, company_id: e.target.value})}>
+                          <option value="">-- Chọn Doanh Nghiệp --</option>
+                          {companies.filter(c => c.CompanyType === 'BUYER').map(c => (
+                            <option key={c.CompanyID} value={c.CompanyID}>{c.CompanyName}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ margin: 0 }}><label>Mã Hợp Đồng</label><input type="text" className="form-control" value={newContractPrice.contract_number} onChange={e=>setNewContractPrice({...newContractPrice, contract_number: e.target.value})} /></div>
+                      <div className="form-group" style={{ margin: 0 }}><label>Giá trong Hợp đồng (VNĐ)</label><input type="text" className="form-control" value={newContractPrice.price_per_unit ? Number(newContractPrice.price_per_unit).toLocaleString('vi-VN') : ''} onChange={e=>{const rawValue = e.target.value.replace(/\D/g, ''); setNewContractPrice({...newContractPrice, price_per_unit: rawValue});}} /></div>
+                      <div className="form-group" style={{ margin: 0 }}><label>Hiệu lực đến (Valid Until)</label><input type="date" className="form-control" value={newContractPrice.valid_until} onChange={e=>setNewContractPrice({...newContractPrice, valid_until: e.target.value})} /></div>
+                      <div style={{ gridColumn: 'span 2', textAlign: 'right' }}>
+                        <button type="button" className="btn-redapron-gold" onClick={() => {
+                          if(newContractPrice.company_id && newContractPrice.price_per_unit && newContractPrice.contract_number && newContractPrice.valid_until) {
+                            setContractPrices([...contractPrices, newContractPrice]);
+                            setNewContractPrice({ contract_number: '', company_id: '', price_per_unit: '', valid_until: '' });
+                          }
+                        }}>Thêm Hợp Đồng</button>
+                      </div>
+                    </div>
+                    {contractPrices.length > 0 && (
+                      <table className="data-table">
+                        <thead><tr><th>Hợp Đồng</th><th>Khách Hàng</th><th>Giá HĐ</th><th>Hạn</th><th>Xóa</th></tr></thead>
+                        <tbody>
+                          {contractPrices.map((cp, idx) => (
+                            <tr key={idx}>
+                              <td>{cp.contract_number}</td>
+                              <td>{companies.find(c=>c.CompanyID == cp.company_id)?.CompanyName}</td>
+                              <td style={{ color: '#10B981' }}>{formatVND(cp.price_per_unit)}</td>
+                              <td>{cp.valid_until}</td>
+                              <td><button type="button" onClick={() => setContractPrices(contractPrices.filter((_, i) => i !== idx))} style={{ color: '#EF4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>X</button></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', gap: '10px' }}>
+                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowPriceModal(false)}>Hủy</button>
+                <button type="submit" className="btn-redapron-gold">Lưu Cấu Hình Giá</button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -4,8 +4,8 @@ import apiService from '../services/api.js';
 export default function LoginPage({ showToast, onLoginSuccess, onNavigateRegister }) {
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({
-    username: 'lotte_buyer',
-    password: 'Password123!',
+    username: 'admin_platform',
+    password: 'Admin@123!',
     role: 'BUYER_REP'
   });
 
@@ -16,7 +16,7 @@ export default function LoginPage({ showToast, onLoginSuccess, onNavigateRegiste
       const res = await apiService.login({ username: loginData.username, password: loginData.password });
       if (res.success) {
         localStorage.setItem('token', res.token);
-        showToast(`Đăng nhập thành công! Xin chào ${res.user.company_name || res.user.username}`);
+        showToast(`Đăng nhập thành công! Xin chào ${res.user.username}`);
         if (onLoginSuccess) onLoginSuccess(res.user);
       }
     } catch (err) {

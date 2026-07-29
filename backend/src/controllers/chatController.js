@@ -2,10 +2,20 @@ const { dbMock } = require('../config/db');
 
 // Helper to query Gemini API if GEMINI_API_KEY is configured in env
 async function queryGeminiAI(userText) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.AI_API_KEY;
-  if (!apiKey) {
+  const geminiKeys = [
+    process.env.GEMINI_API_KEY_0,
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY,
+    process.env.AI_API_KEY
+  ].filter(Boolean);
+
+  if (geminiKeys.length === 0) {
     return null; // Fallback to local rule-based engine
   }
+  
+  // Pick a random key
+  const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
 
   const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, and wholesale discount tiers.
 Rules:
