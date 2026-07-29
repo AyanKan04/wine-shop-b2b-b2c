@@ -59,3 +59,17 @@ Dưới đây là báo cáo chi tiết các hạng mục đã hoàn thành.
    - **Giải pháp**: Sửa đổi logic `updateQuotationStatus` trong [rfqController.js](file:///d:/TMDT/RuuBusiness/backend/src/controllers/rfqController.js) để cập nhật chính xác trạng thái RFQ thành `'ACCEPTED'`.
 3. **Kết quả xác minh**:
    - Bổ sung test case tích hợp tự động hóa vào [rfq.test.js](file:///d:/TMDT/RuuBusiness/backend/tests/rfq.test.js) kiểm tra toàn bộ luồng tạo đơn sỉ từ RFQ và tự động cập nhật trạng thái thanh toán sang `PAID` khi chi tiền hóa đơn. Toàn bộ 34 bài kiểm thử backend pass thành công.
+
+---
+
+## 4. Redesign: Premium Utilitarian Minimalism & Editorial UI
+1. **Bảng màu Warm Monochrome**:
+   - Chuyển đổi toàn bộ giao diện từ tông màu tối (dark gold/burgundy) sang phong cách sáng cao cấp, màu nền Canvas sử dụng màu Xương Ấm (Warm Bone Off-White `#F7F6F3`), các bề mặt Card/Bảng sử dụng nền trắng tinh khiết (`#FFFFFF`).
+2. **Khung viền siêu phẳng (Flat Architecture)**:
+   - Thay thế toàn bộ viền vàng nhạt bằng viền xám nhạt tinh giản (`1px solid #EAEAEA`), loại bỏ hoàn toàn các bóng đổ (box-shadow) nặng nề và các dải gradient đa sắc.
+3. **Nút bấm phẳng (Solid CTAs)**:
+   - Các nút chức năng chính chuyển thành nền đen nguyên bản (`#111111`) với chữ trắng cùng hiệu ứng thu nhỏ nhẹ khi click (`active: scale(0.98)`).
+4. **Cơ cấu Typography**:
+   - Tiêu đề sử dụng font Serif thanh lịch (`Newsreader`, `Playfair Display`), nội dung bảng biểu sử dụng font chữ hệ thống không chân (`Geist Sans`, `SF Pro Display`).
+5. **Độc lập và Biên dịch**:
+   - Đã biên dịch Vite thành công, toàn bộ trang hiển thị trang nhã, đúng phong cách tối giản.
