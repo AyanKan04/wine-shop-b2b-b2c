@@ -144,21 +144,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
-    // Check user session
-    const token = localStorage.getItem('token');
-    if (token) {
-      apiService.getMe()
-        .then(res => {
-          if (res.success && res.data) {
-            setCurrentUser(res.data);
-          } else {
-            localStorage.removeItem('token');
-          }
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-        });
-    }
+
 
     // Load products
     apiService.getProducts()
