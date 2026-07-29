@@ -7,13 +7,13 @@
   --bg-surface: #FFFFFF;
   --bg-card: #FFFFFF;
 
-  --accent-burgundy: #111111; /* Editorial dark accent instead of burgundy */
-  --accent-gold: #787774;     /* Muted neutral tone */
-  --accent-champagne: #EAEAEA;
+  --accent-burgundy: #5C1D24; /* Deep Wine Red/Burgundy brand color */
+  --accent-gold: #D4AF37;     /* Muted Gold brand color */
+  --accent-champagne: #F2EFE9;
 
   --text-main: #2F3437;       /* Off-black Charcoal */
   --text-muted: #787774;
-  --text-gold: #111111;
+  --text-gold: #D4AF37;
 
   --border-gold: #EAEAEA;
   --border-subtle: rgba(0, 0, 0, 0.06);
@@ -46,12 +46,13 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-main); }
 
-.gold-text { color: var(--text-main) !important; font-weight: 600; }
-.burgundy-text { color: #9F2F2D !important; font-weight: 600; } /* Washed out dark red */
+.gold-text { color: var(--accent-gold) !important; font-weight: 600; }
+.burgundy-text { color: var(--accent-burgundy) !important; font-weight: 600; }
 .gold-gradient-text {
-  color: var(--text-main);
-  background: none;
-  -webkit-text-fill-color: initial;
+  background: linear-gradient(135deg, #D4AF37 0%, #AA7C11 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
 }
 
 .top-bar {
