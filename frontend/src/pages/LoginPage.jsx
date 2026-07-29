@@ -13,7 +13,11 @@ export default function LoginPage({ showToast, onLoginSuccess, onNavigateRegiste
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await apiService.login({ username: loginData.username, password: loginData.password });
+      const res = await apiService.login({
+        username: loginData.username,
+        password: loginData.password,
+        role: loginData.role
+      });
       if (res.success) {
         localStorage.setItem('token', res.token);
         showToast(`Đăng nhập thành công! Xin chào ${res.user.company_name || res.user.username}`);

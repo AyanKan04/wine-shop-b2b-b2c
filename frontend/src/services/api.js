@@ -35,14 +35,23 @@ async function request(endpoint, options = {}) {
       return { success: true, message: 'Đã phê duyệt Giấy phép Rượu (Chế độ xem trước)' };
     }
     if (endpoint.includes('/auth/login')) {
+      let role = 'BUYER_REP';
+      try {
+        if (options.body) {
+          const bodyObj = JSON.parse(options.body);
+          if (bodyObj.role) role = bodyObj.role;
+        }
+      } catch (e) {}
+
       return {
         success: true,
-        token: 'mock_jwt_token_offline',
+        token: `mock_token_for_role_${role}`,
         user: {
-          user_id: 1,
-          username: 'lotte_buyer',
-          user_type: 'BUYER_REP',
-          company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON'
+          user_id: role === 'BUYER_REP' ? 1 : 99,
+          username: role === 'BUYER_REP' ? 'lotte_buyer' : 'admin_user',
+          user_type: role,
+          role: role,
+          company_name: role === 'BUYER_REP' ? 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON' : 'MAISON DE L\'ALCOOL RED APRON FACTORY'
         }
       };
     }

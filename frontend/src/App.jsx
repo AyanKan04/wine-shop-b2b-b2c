@@ -183,6 +183,36 @@ export default function App() {
     apiService.getInventory()
       .then(res => { if (res.success && res.inventory && res.inventory.length > 0) setInventory(res.inventory); })
       .catch(() => {});
+
+    // Restore session if token exists
+    const token = localStorage.getItem('token');
+    if (token) {
+      apiService.getMe()
+        .then(res => {
+          if (res.success && res.data) {
+            const user = res.data;
+            if (!user.role && user.user_type) {
+              user.role = user.user_type;
+            }
+            setCurrentUser(user);
+            // Dynamic redirect if user lands on login/register/unauthorized admin page
+            setCurrentRoute(prevRoute => {
+              if (prevRoute === 'login' || prevRoute === 'register') {
+                return user.role !== 'BUYER_REP' ? 'master-admin' : 'orders-credit';
+              }
+              if (prevRoute === 'master-admin' && user.role === 'BUYER_REP') {
+                return 'orders-credit';
+              }
+              return prevRoute;
+            });
+          } else {
+            localStorage.removeItem('token');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+        });
+    }
   }, []);
 
   const showToast = (msg) => {
@@ -199,7 +229,7 @@ export default function App() {
     <div>
       <AgeVerificationModal />
       <TopBar currentUser={currentUser} />
-      <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} />
+      <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} currentUser={currentUser} setCurrentUser={setCurrentUser} showToast={showToast} />
 
       <main>
         {currentRoute === 'home' && (
@@ -214,7 +244,14 @@ export default function App() {
         {currentRoute === 'login' && (
           <LoginPage
             showToast={showToast}
-            onLoginSuccess={(user) => { setCurrentUser(user); setCurrentRoute('master-admin'); }}
+            onLoginSuccess={(user) => {
+              setCurrentUser(user);
+              if (user.role !== 'BUYER_REP') {
+                setCurrentRoute('master-admin');
+              } else {
+                setCurrentRoute('orders-credit');
+              }
+            }}
             onNavigateRegister={() => setCurrentRoute('register')}
           />
         )}
@@ -233,17 +270,30 @@ export default function App() {
 
         {/* UNIFIED MASTER ADMIN CONSOLE WORKSPACE */}
         {currentRoute === 'master-admin' && (
-          <MasterAdminWorkspacePage
-            showToast={showToast}
-            products={products}
-            rfqs={rfqs}
-            quotations={quotations}
-            orders={orders}
-            credit={credit}
-            invoices={invoices}
-            licenses={licenses}
-            inventory={inventory}
-          />
+          currentUser && currentUser.role !== 'BUYER_REP' ? (
+            <MasterAdminWorkspacePage
+              showToast={showToast}
+              products={products}
+              rfqs={rfqs}
+              quotations={quotations}
+              orders={orders}
+              credit={credit}
+              invoices={invoices}
+              licenses={licenses}
+              inventory={inventory}
+            />
+          ) : (
+            <div className="page-container" style={{ textAlign: 'center', padding: '100px 20px', maxWidth: '600px', margin: '0 auto' }}>
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto', color: 'var(--text-main)' }}>
+                <i className="fa-solid fa-lock" style={{ fontSize: '2rem' }}></i>
+              </div>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', marginBottom: '10px' }}>Yêu Cầu Quyền Quản Trị</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '25px', lineHeight: '1.6' }}>
+                Không tìm thấy quyền truy cập Quản trị. Vui lòng đăng nhập bằng tài khoản có vai trò phù hợp (Kinh doanh, Kế toán, Thủ kho, Quản trị viên).
+              </p>
+              <button className="btn-redapron-gold" onClick={() => setCurrentRoute('login')} style={{ padding: '12px 24px' }}>Đăng Nhập Ngay</button>
+            </div>
+          )
         )}
       </main>
 
