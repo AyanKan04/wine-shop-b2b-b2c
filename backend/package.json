@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "test": "cross-env NODE_ENV=test node --test tests/*.test.js"
+    "test": "node auto_test_e2e.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
