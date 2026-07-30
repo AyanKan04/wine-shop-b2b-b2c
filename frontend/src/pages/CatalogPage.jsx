@@ -8,8 +8,8 @@ export default function CatalogPage({ products, onSelectProduct }) {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
   // Derive unique countries from product data
-  const countries = [...new Set(products.map(p => p.country_of_origin))];
-  const categories = [...new Set(products.map(p => p.category))];
+  const countries = [...new Set((products || []).map(p => p.country_of_origin))];
+  const categories = [...new Set((products || []).map(p => p.category))];
 
   const formatVND = (val) => {
     if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
@@ -17,7 +17,7 @@ export default function CatalogPage({ products, onSelectProduct }) {
     return val.toLocaleString('vi-VN') + ' ₫';
   };
 
-  let filtered = products.filter(p => {
+  let filtered = (products || []).filter(p => {
     const matchSearch = searchTerm === '' ||
       p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -86,12 +86,12 @@ export default function CatalogPage({ products, onSelectProduct }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === 'ALL' ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
                 <input type="radio" name="country" checked={filterCountry === 'ALL'} onChange={() => setFilterCountry('ALL')} />
-                Tất cả ({products.length})
+                Tất cả ({(products || []).length})
               </label>
               {countries.map(c => (
                 <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === c ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
                   <input type="radio" name="country" checked={filterCountry === c} onChange={() => setFilterCountry(c)} />
-                  {c} ({products.filter(p => p.country_of_origin === c).length})
+                  {c} ({(products || []).filter(p => p.country_of_origin === c).length})
                 </label>
               ))}
             </div>

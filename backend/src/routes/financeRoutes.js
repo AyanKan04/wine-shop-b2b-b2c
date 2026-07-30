@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getOrders, getCreditLimit, payInvoice, updateCreditLimit, getFinancialSummary, getOverdueInvoices, getLCDocuments, submitLCDocument, verifyLCDocument, rejectLCDocument } = require('../controllers/financeController');
 const upload = require('../middlewares/upload');
+const { authenticateToken } = require('../middlewares/authMiddleware');
+
+router.use(authenticateToken);
 
 router.get('/orders', getOrders);
 router.get('/finance/credit-limit', getCreditLimit);

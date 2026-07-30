@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
 
+import apiService from '../services/api';
+
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 'NOTIF-001', type: 'warning', title: 'Hóa đơn sắp đến hạn', message: 'INV-2026-0104 đến hạn ngày 20/08/2026 (còn 23 ngày)', read: false, timestamp: '20:00' },
-    { id: 'NOTIF-002', type: 'info', title: 'RFQ mới từ CONTINENTAL', message: 'Yêu cầu báo giá 40 thùng Château Margaux 2018', read: false, timestamp: '19:30' },
-    { id: 'NOTIF-003', type: 'success', title: 'Giao hàng thành công', message: 'ORD-2026-8821 đã giao thành công đến LOTTE SAIGON', read: true, timestamp: '16:00' },
-    { id: 'NOTIF-004', type: 'warning', title: 'Tồn kho thấp', message: 'Château Margaux còn 230 thùng khả dụng', read: false, timestamp: '14:00' },
-    { id: 'NOTIF-005', type: 'info', title: 'Giấy phép chờ duyệt', message: '2 hồ sơ giấy phép rượu B2B đang chờ phê duyệt', read: false, timestamp: '10:00' }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+
+  React.useEffect(() => {
+    const fetchNotifs = async () => {
+      try {
+        const res = await apiService.getNotifications();
+        if (res.success) {
+          setNotifications(res.data);
+        }
+      } catch (err) {
+        console.error("Lỗi fetch thông báo:", err);
+      }
+    };
+    fetchNotifs();
+    // In a real app, we might poll this or use WebSockets
+    const interval = setInterval(fetchNotifs, 60000); // 1 phút check 1 lần
+    return () => clearInterval(interval);
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 

@@ -1,166 +1,338 @@
-const { 
-  dbMock, 
-  persistRFQ, 
-  persistQuotation, 
-  updateQuotationStatus: dbUpdateQuotationStatus, 
-  persistOrder, 
-  persistInvoice, 
-  updateCreditLimit 
-} = require('../config/db');
+const { getPool, sql } = require('../config/db');
 
 // RFQs API
-const getRFQs = (req, res) => {
-  res.json({ success: true, data: dbMock.rfqs });
+const getRFQs = async (req, res) => {
+  try {
+    const pool = await getPool();
+    // Query RFQs along with their items using JSON mapping
+    const result = await pool.request().query(`
+      SELECT r.*, c.CompanyName as buyer_company,
+             (SELECT * FROM RFQItems ri WHERE ri.RFQID = r.RFQID FOR JSON PATH) as items
+      FROM RFQs r
+      LEFT JOIN Companies c ON r.BuyerCompanyID = c.CompanyID
+      ORDER BY r.CreatedAt DESC
+    `);
+    
+    // Map items to top level for frontend compatibility (fallback to default values if items empty)
+    const rfqs = result.recordset.map(row => {
+      let items = [];
+      if (row.items) {
+        items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+      }
+      return {
+        rfq_id: row.RFQID,
+        buyer_company: row.buyer_company,
+        title: row.Title,
+        product_name: row.Description || 'Sản phẩm rượu', // Frontend expects product_name
+        quantity: items.length > 0 ? items[0].Quantity : 50,
+        target_price: items.length > 0 ? items[0].TargetPrice : 70000000,
+        status: row.Status,
+        created_at: row.CreatedAt ? row.CreatedAt.toISOString().split('T')[0] : null
+      };
+    });
+
+    res.json({ success: true, data: rfqs });
+  } catch (err) {
+    console.error('Error fetching RFQs:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách Yêu cầu báo giá' });
+  }
 };
 
 const createRFQ = async (req, res) => {
   const { product_name, quantity, target_price } = req.body;
-  const newRfq = {
-    rfq_id: 8800 + dbMock.rfqs.length + 1,
-    buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-    title: `Yêu cầu báo giá ${product_name}`,
-    product_name,
-    quantity: parseInt(quantity) || 50,
-    target_price: parseFloat(target_price) || 70000000,
-    status: 'SUBMITTED',
-    created_at: new Date().toISOString().split('T')[0]
-  };
-  dbMock.rfqs.push(newRfq);
+  const qty = parseInt(quantity) || 50;
+  const price = parseFloat(target_price) || 70000000;
+  const title = `Yêu cầu báo giá ${product_name}`;
 
-  // Persist RFQ to SQL Server database
-  await persistRFQ(newRfq);
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-  res.json({ success: true, message: 'Tạo Yêu cầu Báo giá RFQ thành công!', rfq: newRfq });
+    try {
+      // Hardcode BuyerCompanyID = 1, CreatedBy = 1 for now (if not using auth properly in this context)
+      // If auth is provided, we'd use req.user.company_id
+      const buyerCompanyId = req.user && req.user.company_id ? req.user.company_id : 1;
+      const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
+
+      const rfqResult = await transaction.request()
+        .input('BuyerCompanyID', sql.BigInt, buyerCompanyId)
+        .input('CreatedBy', sql.BigInt, createdBy)
+        .input('Title', sql.NVarChar, title)
+        .input('Description', sql.NVarChar, product_name)
+        .input('ProductID', sql.BigInt, req.body.product_id || 101)
+        .input('RequestedQuantity', sql.Int, qty)
+        .input('TargetPrice', sql.Decimal(18,2), price)
+        .input('DeliveryDate', sql.Date, req.body.delivery_date ? new Date(req.body.delivery_date) : new Date())
+        .query(`
+          INSERT INTO RFQs (BuyerCompanyID, CreatedBy, Title, Description, Status, CreatedAt, ProductID, RequestedQuantity, TargetPrice, DeliveryDate)
+          OUTPUT INSERTED.RFQID, INSERTED.CreatedAt
+          VALUES (@BuyerCompanyID, @CreatedBy, @Title, @Description, 'SUBMITTED', GETDATE(), @ProductID, @RequestedQuantity, @TargetPrice, @DeliveryDate)
+        `);
+
+      const newId = rfqResult.recordset[0].RFQID;
+      const createdAt = rfqResult.recordset[0].CreatedAt;
+
+      await transaction.request()
+        .input('RFQID', sql.BigInt, newId)
+        .input('ProductID', sql.BigInt, req.body.product_id || 101)
+        .input('Quantity', sql.Int, qty)
+        .query(`
+          INSERT INTO RFQItems (RFQID, ProductID, Quantity)
+          VALUES (@RFQID, @ProductID, @Quantity)
+        `);
+
+      await transaction.commit();
+      
+      const newRfq = {
+        rfq_id: newId,
+        buyer_company: 'Công ty Khách Hàng',
+        title: title,
+        product_name: product_name,
+        quantity: qty,
+        target_price: price,
+        status: 'SUBMITTED',
+        created_at: createdAt.toISOString().split('T')[0]
+      };
+
+      res.status(201).json({ success: true, message: 'Tạo Yêu cầu Báo giá RFQ thành công!', rfq: newRfq });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error creating RFQ:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo RFQ' });
+  }
 };
 
 // Quotations API
-const getQuotations = (req, res) => {
-  res.json({ success: true, data: dbMock.quotations });
+const getQuotations = async (req, res) => {
+  try {
+    const pool = await getPool();
+    const result = await pool.request().query(`
+      SELECT q.*, 
+             bc.CompanyName as buyer_company, 
+             sc.CompanyName as seller_company,
+             (SELECT * FROM QuotationItems qi WHERE qi.QuotationID = q.QuotationID FOR JSON PATH) as items
+      FROM Quotations q
+      LEFT JOIN Companies bc ON q.BuyerCompanyID = bc.CompanyID
+      LEFT JOIN Companies sc ON q.SellerCompanyID = sc.CompanyID
+      ORDER BY q.CreatedAt DESC
+    `);
+    
+    const quotations = result.recordset.map(row => {
+      let items = [];
+      if (row.items) {
+        items = typeof row.items === 'string' ? JSON.parse(row.items) : row.items;
+      }
+      return {
+        quotation_id: row.QuotationID,
+        rfq_id: row.RFQID,
+        buyer_company: row.buyer_company || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+        seller_company: row.seller_company || 'MAISON DE L\'ALCOOL RED APRON FACTORY',
+        offer_unit_price: items.length > 0 ? items[0].OfferUnitPrice : 0,
+        quantity: items.length > 0 ? items[0].Quantity : 0,
+        valid_until: row.ValidUntil ? row.ValidUntil.toISOString().split('T')[0] : '2026-12-31',
+        status: row.Status
+      };
+    });
+
+    res.json({ success: true, data: quotations });
+  } catch (err) {
+    console.error('Error fetching quotations:', err);
+    res.status(500).json({ success: false, message: 'Lỗi tải danh sách Báo giá' });
+  }
 };
 
 const createQuotation = async (req, res) => {
   const { rfq_id, offer_unit_price, quantity } = req.body;
-  const newQuotation = {
-    quotation_id: 9900 + dbMock.quotations.length + 1,
-    rfq_id: parseInt(rfq_id),
-    buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-    seller_company: 'MAISON DE L\'ALCOOL RED APRON FACTORY',
-    offer_unit_price: parseFloat(offer_unit_price),
-    quantity: parseInt(quantity),
-    valid_until: '2026-08-30',
-    status: 'PENDING'
-  };
-  dbMock.quotations.push(newQuotation);
+  const rfqId = parseInt(rfq_id);
+  const price = parseFloat(offer_unit_price);
+  const qty = parseInt(quantity);
 
-  // Update RFQ status to show quotation was sent
-  const rfq = dbMock.rfqs.find(r => r.rfq_id === parseInt(rfq_id));
-  if (rfq) {
-    rfq.status = 'QUOTATION_SENT';
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      // 1. Fetch BuyerCompanyID from RFQ
+      const rfqQuery = await transaction.request()
+        .input('RFQID', sql.BigInt, rfqId)
+        .query(`SELECT BuyerCompanyID, ProductID, RequestedQuantity FROM RFQs WHERE RFQID = @RFQID`);
+      
+      if (rfqQuery.recordset.length === 0) {
+        throw new Error('RFQ không tồn tại');
+      }
+      const rfq = rfqQuery.recordset[0];
+      const buyerCompanyId = rfq.BuyerCompanyID;
+      const productId = req.body.product_id || rfq.ProductID || 101;
+      const actualQty = qty || rfq.RequestedQuantity || 50;
+      const totalAmount = actualQty * price;
+      
+      const sellerCompanyId = req.user && req.user.company_id ? req.user.company_id : 2;
+      const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
+
+      const qResult = await transaction.request()
+        .input('RFQID', sql.BigInt, rfqId)
+        .input('BuyerCompanyID', sql.BigInt, buyerCompanyId)
+        .input('SellerCompanyID', sql.BigInt, sellerCompanyId)
+        .input('CreatedBy', sql.BigInt, createdBy)
+        .input('ValidUntil', sql.DateTime, new Date('2026-12-31'))
+        .query(`
+          INSERT INTO Quotations (RFQID, BuyerCompanyID, SellerCompanyID, CreatedBy, Status, ValidUntil, CreatedAt)
+          OUTPUT INSERTED.QuotationID
+          VALUES (@RFQID, @BuyerCompanyID, @SellerCompanyID, @CreatedBy, 'PENDING', @ValidUntil, GETDATE())
+        `);
+
+      const newId = qResult.recordset[0].QuotationID;
+
+      await transaction.request()
+        .input('QuotationID', sql.BigInt, newId)
+        .input('ProductID', sql.BigInt, productId)
+        .input('Quantity', sql.Int, actualQty)
+        .input('OfferUnitPrice', sql.Decimal(18,2), price)
+        .query(`
+          INSERT INTO QuotationItems (QuotationID, ProductID, Quantity, OfferUnitPrice)
+          VALUES (@QuotationID, @ProductID, @Quantity, @OfferUnitPrice)
+        `);
+
+      await transaction.request()
+        .input('RFQID', sql.BigInt, rfqId)
+        .query(`UPDATE RFQs SET Status = 'QUOTATION_SENT' WHERE RFQID = @RFQID`);
+
+      await transaction.commit();
+      
+      const newQuotation = {
+        quotation_id: newId,
+        rfq_id: rfqId,
+        buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+        seller_company: 'MAISON DE L\'ALCOOL RED APRON FACTORY',
+        offer_unit_price: price,
+        quantity: qty,
+        valid_until: '2026-12-31',
+        status: 'PENDING'
+      };
+
+      res.status(201).json({ success: true, message: 'Phát hành Bảng Báo Giá (Quotation) thành công!', quotation: newQuotation });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  } catch (err) {
+    console.error('Error creating quotation:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo báo giá' });
   }
-
-  // Persist Quotation to SQL Server database
-  await persistQuotation(newQuotation);
-
-  res.json({ success: true, message: 'Phát hành Bảng Báo Giá (Quotation) thành công!', quotation: newQuotation });
 };
 
-// Update Quotation status (ACCEPT/REJECT) and trigger B2B Order workflow
 const updateQuotationStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'ACCEPTED' | 'REJECTED'
+  const quotationId = parseInt(id);
 
-  const quotation = dbMock.quotations.find(q => q.quotation_id === parseInt(id));
-  if (!quotation) {
-    return res.status(404).json({ success: false, message: 'Không tìm thấy báo giá' });
-  }
+  try {
+    const pool = await getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-  quotation.status = status;
+    try {
+        const qCheck = await transaction.request()
+        .input('QuotationID', sql.BigInt, quotationId)
+        .query(`
+          SELECT q.RFQID, q.BuyerCompanyID, q.SellerCompanyID, qi.ProductID, qi.OfferUnitPrice, qi.Quantity 
+          FROM Quotations q
+          LEFT JOIN QuotationItems qi ON q.QuotationID = qi.QuotationID
+          WHERE q.QuotationID = @QuotationID
+        `);
+      
+      if (qCheck.recordset.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy báo giá' });
+      }
 
-  if (status === 'ACCEPTED') {
-    const totalAmount = quotation.offer_unit_price * quotation.quantity;
-    const orderNumber = `ORD-2026-${8800 + quotation.rfq_id}`;
-    
-    // 1. Create a new B2B Order
-    const newOrder = {
-      order_id: 500 + dbMock.orders.length + 1,
-      order_number: orderNumber,
-      buyer_company: quotation.buyer_company,
-      total_amount: totalAmount,
-      order_status: 'PROCESSING',
-      payment_method: 'NET_30_CREDIT',
-      payment_status: 'UNPAID',
-      created_at: new Date().toISOString().split('T')[0]
-    };
-    dbMock.orders.push(newOrder);
+      const qData = qCheck.recordset[0];
+      const rfqId = qData.RFQID;
+      const totalAmount = (qData.OfferUnitPrice || 0) * (qData.Quantity || 0);
 
-    // 2. Create invoice
-    const newInvoice = {
-      invoice_id: 100 + dbMock.invoices.length + 1,
-      invoice_number: `INV-2026-0${quotation.quotation_id}`,
-      order_number: orderNumber,
-      issue_date: new Date().toISOString().split('T')[0],
-      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days
-      amount: totalAmount,
-      status: 'UNPAID'
-    };
-    dbMock.invoices.push(newInvoice);
+      await transaction.request()
+        .input('QuotationID', sql.BigInt, quotationId)
+        .input('Status', sql.NVarChar, status)
+        .query(`UPDATE Quotations SET Status = @Status WHERE QuotationID = @QuotationID`);
 
-    // 3. Update Credit Limit usage
-    dbMock.credit_limit.used_amount += totalAmount;
-    dbMock.credit_limit.available_balance = dbMock.credit_limit.total_limit - dbMock.credit_limit.used_amount;
+      if (status === 'ACCEPTED') {
+        const orderNumber = `ORD-2026-${8800 + quotationId}`;
+        const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
+        
+        const ordRes = await transaction.request()
+          .input('BuyerCompanyID', sql.BigInt, qData.BuyerCompanyID)
+          .input('SellerCompanyID', sql.BigInt, qData.SellerCompanyID)
+          .input('QuotationID', sql.BigInt, quotationId)
+          .input('OrderNumber', sql.NVarChar, orderNumber)
+          .input('TotalAmount', sql.Decimal(18,2), totalAmount)
+          .input('CreatedBy', sql.BigInt, createdBy)
+          .query(`
+            INSERT INTO Orders (BuyerCompanyID, SellerCompanyID, QuotationID, OrderNumber, OrderStatus, PaymentMethod, TotalAmount, CreatedBy, CreatedAt)
+            OUTPUT INSERTED.OrderID
+            VALUES (@BuyerCompanyID, @SellerCompanyID, @QuotationID, @OrderNumber, 'PROCESSING', 'NET_30_CREDIT', @TotalAmount, @CreatedBy, GETDATE())
+          `);
+        
+        const orderId = ordRes.recordset[0].OrderID;
 
-    // 4. Update corresponding RFQ status to ACCEPTED
-    const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
-    if (rfq) {
-      rfq.status = 'ACCEPTED';
+        await transaction.request()
+          .input('OrderID', sql.BigInt, orderId)
+          .input('ProductID', sql.BigInt, qData.ProductID || 101)
+          .input('Quantity', sql.Int, qData.Quantity)
+          .input('UnitPrice', sql.Decimal(18,2), qData.OfferUnitPrice)
+          .query(`
+            INSERT INTO OrderItems (OrderID, ProductID, Quantity, UnitPrice)
+            VALUES (@OrderID, @ProductID, @Quantity, @UnitPrice)
+          `);
+
+        const invoiceNumber = `INV-2026-${8800 + quotationId}`;
+        await transaction.request()
+          .input('OrderID', sql.BigInt, orderId)
+          .input('InvoiceNumber', sql.NVarChar, invoiceNumber)
+          .input('Amount', sql.Decimal(18,2), totalAmount)
+          .query(`
+            INSERT INTO Invoices (OrderID, InvoiceNumber, InvoiceDate, DueDate, Status, Amount)
+            VALUES (@OrderID, @InvoiceNumber, GETDATE(), DATEADD(day, 30, GETDATE()), 'UNPAID', @Amount)
+          `);
+
+        // Update credit limit
+        await transaction.request()
+          .input('CompanyID', sql.BigInt, qData.BuyerCompanyID)
+          .input('Amount', sql.Decimal(18,2), totalAmount)
+          .query(`
+            UPDATE CreditLimits 
+            SET UsedAmount = UsedAmount + @Amount
+            WHERE CompanyID = @CompanyID
+          `);
+
+        // Update RFQ status
+        await transaction.request()
+          .input('RFQID', sql.BigInt, rfqId)
+          .query(`UPDATE RFQs SET Status = 'ACCEPTED' WHERE RFQID = @RFQID`);
+
+      } else {
+        await transaction.request()
+          .input('RFQID', sql.BigInt, rfqId)
+          .query(`UPDATE RFQs SET Status = 'SUBMITTED' WHERE RFQID = @RFQID`);
+      }
+
+      await transaction.commit();
+      res.json({
+        success: true,
+        message: `Đã cập nhật trạng thái báo giá sang: ${status}`
+      });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
     }
-
-    // 5. Add to system activities
-    dbMock.activity_logs.unshift({
-      id: `ACT-${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      module: 'CRM',
-      action: `Chấp nhận báo giá QUOT-${quotation.quotation_id} - Tạo đơn hàng ${orderNumber}`,
-      actor: 'Buyer Rep',
-      icon: 'fa-file-signature',
-      color: '#10B981'
-    });
-
-    // 6. Persist ACCEPTED Quotation, new Order, Invoice, and Credit Limit to SQL Server
-    await dbUpdateQuotationStatus(quotation.quotation_id, 'ACCEPTED');
-    await persistOrder(newOrder);
-    await persistInvoice(newInvoice);
-    await updateCreditLimit(dbMock.credit_limit);
-
-  } else {
-    // Rejected
-    const rfq = dbMock.rfqs.find(r => r.rfq_id === quotation.rfq_id);
-    if (rfq) {
-      rfq.status = 'SUBMITTED'; // Reset RFQ status back to submitted to allow re-quoting
-    }
-
-    dbMock.activity_logs.unshift({
-      id: `ACT-${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      module: 'CRM',
-      action: `Từ chối báo giá QUOT-${quotation.quotation_id}`,
-      actor: 'Buyer Rep',
-      icon: 'fa-file-excel',
-      color: '#EF4444'
-    });
-
-    // Persist REJECTED Quotation to SQL Server
-    await dbUpdateQuotationStatus(quotation.quotation_id, 'REJECTED');
+  } catch (err) {
+    console.error('Error updating quotation status:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
   }
-
-  res.json({
-    success: true,
-    message: `Đã cập nhật trạng thái báo giá sang: ${status}`,
-    quotation,
-    credit: dbMock.credit_limit,
-    orders: dbMock.orders,
-    invoices: dbMock.invoices
-  });
 };
 
 module.exports = {

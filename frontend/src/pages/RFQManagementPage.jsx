@@ -100,9 +100,8 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
           showToast('Đã CHẤP NHẬN Báo giá! Đơn hàng đang được khởi tạo từ Quotation.');
         }
       })
-      .catch(() => {
-        setQuotationList(prev => prev.map(q => q.quotation_id === quotationId ? { ...q, status: 'ACCEPTED' } : q));
-        showToast('Đã CHẤP NHẬN Báo giá! Đơn hàng đang được khởi tạo.');
+      .catch((err) => {
+        showToast(err.message || 'Lỗi khi chấp nhận Báo giá.');
       });
   };
 
@@ -114,9 +113,8 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
           showToast('Đã Từ Chối Báo giá. Bạn có thể gửi RFQ mới với mức giá khác.');
         }
       })
-      .catch(() => {
-        setQuotationList(prev => prev.map(q => q.quotation_id === quotationId ? { ...q, status: 'REJECTED' } : q));
-        showToast('Đã Từ Chối Báo giá.');
+      .catch((err) => {
+        showToast(err.message || 'Lỗi khi từ chối Báo giá.');
       });
   };
 

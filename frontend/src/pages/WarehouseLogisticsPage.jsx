@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../services/api';
 
 export default function WarehouseLogisticsPage({ inventory, orders, showToast }) {
   const [inventoryData, setInventoryData] = useState(
@@ -10,26 +11,26 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
     }))
   );
 
-  const [shipments, setShipments] = useState([
-    {
-      shipment_id: 1, order_number: 'ORD-2026-8821', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      tracking_number: 'VN-SHIP-20260715-001', carrier: 'Giao Hàng Nhanh (GHN)',
-      shipment_status: 'DELIVERED', items_summary: 'Macallan 18 x 20 thùng',
-      estimated_delivery: '2026-07-17', actual_delivery: '2026-07-16', created_at: '2026-07-15'
-    },
-    {
-      shipment_id: 2, order_number: 'ORD-2026-8842', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      tracking_number: 'VN-SHIP-20260720-002', carrier: 'J&T Express',
-      shipment_status: 'IN_TRANSIT', items_summary: 'Château Margaux x 10, Dom Pérignon x 15',
-      estimated_delivery: '2026-07-23', actual_delivery: null, created_at: '2026-07-20'
-    },
-    {
-      shipment_id: 3, order_number: null, buyer_company: 'TẬP ĐOÀN DỊCH VỤ ẨM THỰC RED CHILI',
-      tracking_number: null, carrier: null,
-      shipment_status: 'PICKING', items_summary: 'Dom Pérignon x 80 thùng',
-      estimated_delivery: '2026-07-30', actual_delivery: null, created_at: '2026-07-22'
+  const [shipments, setShipments] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchShipments();
+  }, []);
+
+  const fetchShipments = async () => {
+    setLoading(true);
+    try {
+      const res = await apiService.getShipments();
+      if (res.success && res.data) {
+        setShipments(res.data);
+      }
+    } catch (err) {
+      showToast('Lỗi tải danh sách phiếu xuất kho');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const [activeTab, setActiveTab] = useState('inventory');
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,38 +82,31 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
     setAdjustForm({ product_id: '', adjustment_type: 'IMPORT', quantity: '', reason: '' });
   };
 
-  const handleCreateShipment = (e) => {
+  const handleCreateShipment = async (e) => {
     e.preventDefault();
-    const newShipment = {
-      shipment_id: shipments.length + 1,
-      order_number: null,
-      buyer_company: shipmentForm.buyer_company || 'Doanh nghiệp',
-      tracking_number: `VN-SHIP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(shipments.length + 1).padStart(3, '0')}`,
-      carrier: shipmentForm.carrier,
-      shipment_status: 'PICKING',
-      items_summary: shipmentForm.items_summary,
-      estimated_delivery: shipmentForm.estimated_delivery || null,
-      actual_delivery: null,
-      created_at: new Date().toISOString().split('T')[0]
-    };
-    setShipments([newShipment, ...shipments]);
-    showToast(`Đã tạo phiếu xuất kho ${newShipment.tracking_number}!`);
-    setShowShipmentModal(false);
-    setShipmentForm({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
+    try {
+      await apiService.createShipment({
+        order_id: null,
+        carrier: shipmentForm.carrier,
+        estimated_delivery_date: shipmentForm.estimated_delivery
+      });
+      showToast(`Đã tạo phiếu xuất kho!`);
+      setShowShipmentModal(false);
+      setShipmentForm({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
+      fetchShipments();
+    } catch (err) {
+      showToast('Lỗi khi tạo vận đơn');
+    }
   };
 
-  const updateShipmentStatus = (shipmentId, newStatus) => {
-    setShipments(prev => prev.map(s => {
-      if (s.shipment_id === shipmentId) {
-        showToast(`Đã cập nhật phiếu #${s.tracking_number || shipmentId} → ${newStatus}`);
-        return {
-          ...s,
-          shipment_status: newStatus,
-          actual_delivery: newStatus === 'DELIVERED' ? new Date().toISOString().split('T')[0] : s.actual_delivery
-        };
-      }
-      return s;
-    }));
+  const updateShipmentStatus = async (shipmentId, newStatus) => {
+    try {
+      await apiService.updateShipmentStatus(shipmentId, newStatus);
+      showToast(`Đã cập nhật trạng thái vận đơn thành công`);
+      fetchShipments();
+    } catch (err) {
+      showToast('Lỗi khi cập nhật trạng thái');
+    }
   };
 
   const statusColors = {
@@ -134,6 +128,8 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
       
+      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu...</div>}
+
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
         <div>

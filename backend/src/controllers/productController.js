@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 
 // Helper to map SQL Server PascalCase keys to Frontend camelCase/snake_case keys
 const mapProductToFrontend = (prod) => {
@@ -30,7 +30,7 @@ const mapProductToFrontend = (prod) => {
     alcohol_content: Number(prod.AlcoholContent || prod.alcohol_content || 0),
     volume_ml: Number(prod.VolumeML || prod.volume_ml || 750),
     moq: Number(prod.MOQ || prod.moq || 1),
-    image_url: prod.ImageUrl || prod.image_url || '',
+    image_url: prod.ImageURL || prod.image_url || '',
     description: prod.Description || prod.description || '',
     status: prod.Status || prod.status || 'ACTIVE',
     tier_prices: mappedTierPrices
@@ -44,9 +44,10 @@ const getProducts = async (req, res) => {
     const pool = await getPool();
     
     let query = `
-      SELECT p.*, 
+      SELECT p.*, c.CategoryName as Category,
              (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
       FROM Products p
+      LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
       WHERE 1=1
     `;
     
@@ -80,10 +81,11 @@ const getProductById = async (req, res) => {
     const result = await pool.request()
       .input('ProductID', sql.BigInt, req.params.id)
       .query(`
-        SELECT p.*, 
-               (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
-        FROM Products p
-        WHERE p.ProductID = @ProductID
+        SELECT p.*, c.CategoryName as Category,
+             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
+      FROM Products p
+      LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+      WHERE p.ProductID = @ProductID
       `);
 
     if (result.recordset.length === 0) {

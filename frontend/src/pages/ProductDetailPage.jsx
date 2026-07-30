@@ -164,10 +164,34 @@ export default function ProductDetailPage({ productId, products, showToast }) {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-redapron-gold" style={{ flex: 1, padding: '14px' }} onClick={() => showToast(`Đã thêm ${qty} thùng "${prod.product_name}" vào Đơn Hàng Sỉ!`)}>
+              <button 
+                className="btn-redapron-gold" 
+                style={{ flex: 1, padding: '14px' }} 
+                onClick={async () => {
+                  try {
+                    const res = await apiService.createRFQ({ product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
+                    if(res.success) {
+                      showToast(`Đã thêm ${qty} thùng "${prod.product_name}" vào Đơn Hàng Sỉ (RFQ #${res.rfq.rfq_id})!`);
+                    }
+                  } catch (err) {
+                    showToast(err.message || 'Lỗi đặt hàng sỉ');
+                  }
+                }}>
                 <i className="fa-solid fa-cart-shopping"></i> Đặt Hàng Sỉ
               </button>
-              <button className="btn-redapron-burgundy" style={{ flex: 1, padding: '14px' }} onClick={() => showToast(`Đã khởi tạo RFQ cho ${qty} thùng ${prod.product_name}`)}>
+              <button 
+                className="btn-redapron-burgundy" 
+                style={{ flex: 1, padding: '14px' }} 
+                onClick={async () => {
+                  try {
+                    const res = await apiService.createRFQ({ product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
+                    if(res.success) {
+                      showToast(`Đã khởi tạo RFQ #${res.rfq.rfq_id} cho ${qty} thùng ${prod.product_name}`);
+                    }
+                  } catch (err) {
+                    showToast(err.message || 'Lỗi tạo RFQ');
+                  }
+                }}>
                 <i className="fa-solid fa-paper-plane"></i> Tạo RFQ Đàm Phán
               </button>
             </div>

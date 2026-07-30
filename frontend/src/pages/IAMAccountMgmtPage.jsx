@@ -149,50 +149,14 @@ export default function IAMAccountMgmtPage({ showToast }) {
         </div>
       </div>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Tên Đăng Nhập</th>
-            <th>Email</th>
-            <th>Họ Tên</th>
-            <th>Doanh Nghiệp</th>
-            <th>Vai Trò (Role)</th>
-            <th>Trạng Thái</th>
-            <th>Hành Động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? <tr><td colSpan="8" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
-           users.map(u => (
-            <tr key={u.UserID}>
-              <td>#{u.UserID}</td>
-              <td style={{ fontWeight: '600' }}>{u.Username}</td>
-              <td>{u.Email}</td>
-              <td>{u.FirstName} {u.LastName}</td>
-              <td style={{ color: 'var(--accent-gold)' }}>{u.CompanyName || 'N/A'}</td>
-              <td>{u.UserType}</td>
-              <td>
-                {u.Status === 'ACTIVE' ? <span style={{ color: '#10B981' }}>Hoạt động</span> : <span style={{ color: '#EF4444' }}>Đã khóa</span>}
-              </td>
-              <td>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => handleEditClick(u)} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Sửa</button>
-                  <button onClick={() => handleLock(u.UserID, u.Status)} style={{ background: 'transparent', border: '1px solid #F59E0B', color: '#F59E0B', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
-                    {u.Status === 'LOCKED' ? 'Mở Khóa' : 'Khóa'}
-                  </button>
-                  <button onClick={() => handleDelete(u.UserID)} style={{ background: 'transparent', border: '1px solid #EF4444', color: '#EF4444', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Xóa</button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
+      {/* MODAL: CREATE ACCOUNT */}
       {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '500px' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>Thêm Tài Khoản Mới</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>Thêm Tài Khoản Mới</h3>
+              <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
             <form onSubmit={handleAddSubmit}>
               <div className="form-group">
                 <label>Username *</label>
@@ -222,7 +186,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowModal(false)}>Hủy</button>
+                <button type="button" className="btn-redapron-burgundy" onClick={() => setShowModal(false)}>Hủy</button>
                 <button type="submit" className="btn-redapron-gold">Tạo Tài Khoản</button>
               </div>
             </form>
@@ -230,10 +194,14 @@ export default function IAMAccountMgmtPage({ showToast }) {
         </div>
       )}
 
+      {/* MODAL: EDIT ACCOUNT */}
       {showEditModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '500px' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>Sửa Thông Tin Tài Khoản</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>Sửa Thông Tin Tài Khoản</h3>
+              <button onClick={() => setShowEditModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
             <form onSubmit={handleEditSubmit}>
               <div className="form-group">
                 <label>Username</label>
@@ -266,13 +234,58 @@ export default function IAMAccountMgmtPage({ showToast }) {
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowEditModal(false)}>Hủy</button>
+                <button type="button" className="btn-redapron-burgundy" onClick={() => setShowEditModal(false)}>Hủy</button>
                 <button type="submit" className="btn-redapron-gold">Lưu Thay Đổi</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên Đăng Nhập</th>
+            <th>Email</th>
+            <th>Họ Tên</th>
+            <th>Doanh Nghiệp</th>
+            <th>Vai Trò (Role)</th>
+            <th>Trạng Thái</th>
+            <th>Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? <tr><td colSpan="8" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
+           users.map(u => (
+            <tr key={u.UserID}>
+              <td>#{u.UserID}</td>
+              <td style={{ fontWeight: '600' }}>{u.Username}</td>
+              <td>{u.Email}</td>
+              <td>{u.FirstName} {u.LastName}</td>
+              <td style={{ color: 'var(--accent-gold)' }}>{u.CompanyName || 'N/A'}</td>
+              <td>{u.UserType}</td>
+              <td>
+                {u.Status === 'ACTIVE' ? <span style={{ color: '#10B981' }}>Hoạt động</span> : <span style={{ color: '#EF4444' }}>Đã khóa</span>}
+              </td>
+              <td>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => {
+                    handleEditClick(u);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Sửa</button>
+                  <button onClick={() => handleLock(u.UserID, u.Status)} style={{ background: 'transparent', border: '1px solid #F59E0B', color: '#F59E0B', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                    {u.Status === 'LOCKED' ? 'Mở Khóa' : 'Khóa'}
+                  </button>
+                  <button onClick={() => handleDelete(u.UserID)} style={{ background: 'transparent', border: '1px solid #EF4444', color: '#EF4444', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Xóa</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+
     </div>
   );
 }

@@ -4,7 +4,7 @@ import NotificationCenter from './NotificationCenter.jsx';
 export default function Navbar({ currentRoute, setCurrentRoute, currentUser, setCurrentUser, showToast }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const isAdmin = currentUser && currentUser.role !== 'BUYER_REP';
+  const isAdmin = currentUser && currentUser.role === 'PLATFORM_ADMIN';
 
   const handleLogout = () => {
     localStorage.removeItem('token');

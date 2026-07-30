@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 
 // GET /api/users - Lấy danh sách người dùng (hỗ trợ search và phân quyền)
@@ -132,23 +132,18 @@ const updateUser = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Không có quyền cập nhật User này' });
     }
 
-    await pool.request()
-      .input('UserID', sql.BigInt, userId)
-      .input('FirstName', sql.NVarChar, first_name || null)
-      .input('LastName', sql.NVarChar, last_name || null)
-      .input('PhoneNumber', sql.NVarChar, phone_number || null)
-      .input('UserType', sql.NVarChar, user_type)
-      .input('Status', sql.NVarChar, status)
-      .query(`
-        UPDATE Users 
-        SET FirstName = ISNULL(@FirstName, FirstName),
-            LastName = ISNULL(@LastName, LastName),
-            PhoneNumber = ISNULL(@PhoneNumber, PhoneNumber),
-            UserType = ISNULL(@UserType, UserType),
-            Status = ISNULL(@Status, Status),
-            UpdatedAt = GETDATE()
-        WHERE UserID = @UserID
-      `);
+    const request = pool.request().input('UserID', sql.BigInt, userId);
+    const setClauses = [];
+    if (first_name !== undefined) { setClauses.push("FirstName = @FirstName"); request.input('FirstName', sql.NVarChar(100), first_name); }
+    if (last_name !== undefined) { setClauses.push("LastName = @LastName"); request.input('LastName', sql.NVarChar(100), last_name); }
+    if (phone_number !== undefined) { setClauses.push("PhoneNumber = @PhoneNumber"); request.input('PhoneNumber', sql.NVarChar(50), phone_number); }
+    if (user_type !== undefined) { setClauses.push("UserType = @UserType"); request.input('UserType', sql.NVarChar(50), user_type); }
+    if (status !== undefined) { setClauses.push("Status = @Status"); request.input('Status', sql.NVarChar(50), status); }
+    setClauses.push("UpdatedAt = GETDATE()");
+
+    if (setClauses.length > 1) { // more than just UpdatedAt
+      await request.query(`UPDATE Users SET ${setClauses.join(', ')} WHERE UserID = @UserID`);
+    }
 
     res.json({ success: true, message: 'Cập nhật thành công' });
   } catch (err) {
@@ -177,12 +172,12 @@ const deleteUser = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Không có quyền xóa User này' });
     }
 
-    // Thay vì xóa cứng, ta set Status = 'DELETED'
+    // Xóa cứng (Hard Delete) theo yêu cầu
     await pool.request()
       .input('UserID', sql.BigInt, userId)
-      .query("UPDATE Users SET Status = 'DELETED', UpdatedAt = GETDATE() WHERE UserID = @UserID");
+      .query("DELETE FROM Users WHERE UserID = @UserID");
 
-    res.json({ success: true, message: 'Đã xóa tài khoản thành công (Soft delete)' });
+    res.json({ success: true, message: 'Đã xóa tài khoản thành công (Hard delete)' });
   } catch (err) {
     console.error('Error deleting user:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi xóa tài khoản' });

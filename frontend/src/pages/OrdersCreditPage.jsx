@@ -13,9 +13,41 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
   const [lcExpiry, setLcExpiry] = useState('');
   const [loadingLc, setLoadingLc] = useState(false);
 
+  const [ordersList, setOrdersList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetchLcDocs();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [lcRes, ordersRes, creditRes] = await Promise.all([
+        apiService.getLCDocuments(),
+        apiService.getOrders(),
+        apiService.getCreditLimit()
+      ]);
+
+      if (lcRes.success && lcRes.data) {
+        setLcDocs(lcRes.data);
+      }
+      
+      if (ordersRes.success && ordersRes.data) {
+        setOrdersList(ordersRes.data);
+      }
+      
+      if (creditRes.success) {
+        if (creditRes.credit) setCreditState(creditRes.credit);
+        if (creditRes.invoices) setInvoiceList(creditRes.invoices);
+      }
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      showToast('Lỗi tải dữ liệu Đơn hàng & Công nợ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchLcDocs = async () => {
     try {
@@ -51,13 +83,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
         setLcBank('');
         setLcAmount('');
         setLcExpiry('');
-        fetchLcDocs();
-        
-        // Refresh credit state to match local updates
-        const creditRes = await apiService.getCreditLimit();
-        if (creditRes.success && creditRes.credit) {
-          setCreditState(creditRes.credit);
-        }
+        fetchData();
       }
     } catch (err) {
       showToast('Lỗi khi gửi tài liệu L/C. Vui lòng thử lại.');
@@ -66,45 +92,18 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
     }
   };
 
-  const [ordersList] = useState([
-    {
-      order_id: 501, order_number: 'ORD-2026-8821',
-      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      items: [
-        { product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 20, unit_price: 68000000 }
-      ],
-      total_amount: 1360000000,
-      order_status: 'DELIVERED',
-      payment_status: 'PAID',
-      created_at: '2026-07-10',
-      delivered_at: '2026-07-15'
-    },
-    {
-      order_id: 502, order_number: 'ORD-2026-8842',
-      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      items: [
-        { product_name: 'Château Margaux Premier Grand Cru Classé 2018', quantity: 15, unit_price: 98000000 }
-      ],
-      total_amount: 1470000000,
-      order_status: 'PROCESSING',
-      payment_status: 'UNPAID',
-      created_at: '2026-07-20',
-      delivered_at: null
-    },
-    ...(orders || []).filter(o => o.order_id !== 501 && o.order_id !== 502)
-  ]);
-
-  const handlePayInvoice = (invoiceId) => {
-    const inv = invoiceList.find(i => i.invoice_id === invoiceId);
-    if (!inv) return;
-
-    setInvoiceList(prev => prev.map(i => i.invoice_id === invoiceId ? { ...i, status: 'PAID' } : i));
-    setCreditState(prev => ({
-      ...prev,
-      used_amount: Math.max(0, prev.used_amount - inv.amount),
-      available_balance: prev.available_balance + inv.amount
-    }));
-    showToast(`Đã thanh toán hóa đơn ${inv.invoice_number} thành công! Hạn mức khả dụng đã được khôi phục.`);
+  const handlePayInvoice = async (invoiceId) => {
+    try {
+      const res = await apiService.payInvoice(invoiceId);
+      if (res.success) {
+        showToast(res.message);
+        fetchData(); // Refresh all state
+      } else {
+        showToast(res.message);
+      }
+    } catch (err) {
+      showToast('Lỗi khi thanh toán hóa đơn');
+    }
   };
 
   const usedPercent = creditState.total_limit > 0 ? Math.round((creditState.used_amount / creditState.total_limit) * 100) : 0;
@@ -119,6 +118,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
 
   return (
     <div className="page-container" style={{ maxWidth: '1400px' }}>
+      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu...</div>}
       {/* HEADER */}
       <div style={{ marginBottom: '25px' }}>
         <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
@@ -155,10 +155,10 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '20px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Hóa Đơn Chưa TT</div>
           <div style={{ fontSize: '1.6rem', fontWeight: '700', color: '#8B5CF6', marginTop: '6px' }}>
-            {invoiceList.filter(i => i.status === 'UNPAID').length}
+            {(invoiceList || []).filter(i => i.status === 'UNPAID').length}
           </div>
           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '3px' }}>
-            {formatVND(invoiceList.filter(i => i.status === 'UNPAID').reduce((s, i) => s + i.amount, 0))} tổng giá trị
+            {formatVND((invoiceList || []).filter(i => i.status === 'UNPAID').reduce((s, i) => s + i.amount, 0))} tổng giá trị
           </div>
         </div>
       </div>
@@ -204,23 +204,23 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
               </tr>
             </thead>
             <tbody>
-              {ordersList.map(order => {
+              {(ordersList || []).map(order => {
                 const sc = statusConfig[order.order_status] || statusConfig.PROCESSING;
                 return (
                   <tr key={order.order_id}>
                     <td><code style={{ color: 'var(--accent-gold)' }}>{order.order_number}</code></td>
                     <td>{order.created_at}</td>
                     <td>
-                      {order.items.map((item, idx) => (
+                      {order.items ? order.items.map((item, idx) => (
                         <div key={idx} style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
                           {item.product_name}
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                             Đơn giá: {formatVND(item.unit_price)}
                           </div>
                         </div>
-                      ))}
+                      )) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td><strong>{order.items.reduce((s, i) => s + i.quantity, 0)}</strong> thùng</td>
+                    <td><strong>{order.items ? order.items.reduce((s, i) => s + i.quantity, 0) : '—'}</strong> {order.items ? 'thùng' : ''}</td>
                     <td style={{ fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(order.total_amount)}</td>
                     <td>
                       <span style={{ color: sc.color, background: sc.bg, padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem' }}>
@@ -264,7 +264,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
               </tr>
             </thead>
             <tbody>
-              {invoiceList.map(inv => {
+              {(invoiceList || []).map(inv => {
                 const isOverdue = inv.status === 'UNPAID' && new Date(inv.due_date) < new Date();
                 return (
                   <tr key={inv.invoice_id}>
@@ -425,14 +425,14 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
                 </tr>
               </thead>
               <tbody>
-                {lcDocs.length === 0 ? (
+                {(!lcDocs || lcDocs.length === 0) ? (
                   <tr>
                     <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px' }}>
                       Chưa có tài liệu L/C nào được nộp.
                     </td>
                   </tr>
                 ) : (
-                  lcDocs.map(doc => {
+                  (lcDocs || []).map(doc => {
                     let statusColor = '#F59E0B';
                     let statusBg = 'rgba(245,158,11,0.1)';
                     let statusText = 'Chờ Thẩm Định';

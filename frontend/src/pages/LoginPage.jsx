@@ -4,9 +4,9 @@ import apiService from '../services/api.js';
 export default function LoginPage({ showToast, onLoginSuccess, onNavigateRegister }) {
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({
-    username: 'admin_platform',
-    password: 'Admin@123!',
-    role: 'BUYER_REP'
+    username: 'admin_user',
+    password: 'Password123!',
+    role: 'PLATFORM_ADMIN'
   });
 
   const handleLoginSubmit = async (e) => {
@@ -152,21 +152,6 @@ export default function LoginPage({ showToast, onLoginSuccess, onNavigateRegiste
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 required
               />
-            </div>
-
-            <div className="form-group">
-              <label><i className="fa-solid fa-user-gear gold-text"></i> Vai Trò Truy Cập</label>
-              <select
-                className="form-control"
-                value={loginData.role}
-                onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
-              >
-                <option value="BUYER_REP">Khách Hàng B2B (Đại Diện Mua Hàng)</option>
-                <option value="SALES_REP">Nhân Viên Sales B2B</option>
-                <option value="FINANCE_OFFICER">Kế Toán & Hạn Mức Tín Dụng</option>
-                <option value="WAREHOUSE_STAFF">Quản Lý Kho & Vận Chuyển</option>
-                <option value="PLATFORM_ADMIN">Quản Trị Viên (Platform Admin)</option>
-              </select>
             </div>
 
             <button type="submit" className="btn-redapron-gold" style={{ width: '100%', marginTop: '20px', padding: '14px', background: '#111111', color: '#FFFFFF', border: '1px solid #111111' }} disabled={loading}>

@@ -10,38 +10,42 @@ import FinanceMgmtPage from './FinanceMgmtPage.jsx';
 import WarehouseLogisticsPage from './WarehouseLogisticsPage.jsx';
 import IAMAccountMgmtPage from './IAMAccountMgmtPage.jsx';
 
-// Overview Tab Data
-const revenueMonthly = [
-  { month: 'T1', revenue: 8.2, orders: 12 },
-  { month: 'T2', revenue: 9.5, orders: 15 },
-  { month: 'T3', revenue: 7.8, orders: 11 },
-  { month: 'T4', revenue: 11.2, orders: 18 },
-  { month: 'T5', revenue: 13.5, orders: 22 },
-  { month: 'T6', revenue: 15.8, orders: 25 },
-  { month: 'T7', revenue: 18.65, orders: 30 }
-];
-
-const topProducts = [
-  { name: 'Macallan 18', percentage: 36, color: '#D4AF37' },
-  { name: 'Château Margaux', percentage: 24, color: '#E54D60' },
-  { name: 'Dom Pérignon', percentage: 16, color: '#3B82F6' },
-  { name: 'Hennessy X.O', percentage: 14, color: '#10B981' },
-  { name: 'Khác', percentage: 10, color: '#6B7280' }
-];
-
-const activityLogs = [
-  { id: 1, timestamp: '20:25', module: 'CRM', action: 'Chuyển DEAL-101 sang Đang Đàm Phán', actor: 'Sales Admin', icon: 'fa-square-kanban', color: '#F59E0B' },
-  { id: 2, timestamp: '19:40', module: 'Finance', action: 'Thanh toán hóa đơn INV-2026-0091 thành công', actor: 'Kế Toán', icon: 'fa-receipt', color: '#10B981' },
-  { id: 3, timestamp: '18:15', module: 'Warehouse', action: 'Xuất kho 20 thùng Macallan 18 cho ORD-2026-8821', actor: 'Warehouse Staff', icon: 'fa-boxes-stacked', color: '#3B82F6' },
-  { id: 4, timestamp: '17:00', module: 'Admin', action: 'Phê duyệt giấy phép rượu LIC-001 cho LOTTE SAIGON', actor: 'Platform Admin', icon: 'fa-shield-halved', color: '#E54D60' },
-  { id: 5, timestamp: '15:30', module: 'CRM', action: 'Tạo cơ hội B2B mới DEAL-106 từ CONTINENTAL', actor: 'Sales Rep', icon: 'fa-handshake', color: '#8B5CF6' },
-  { id: 6, timestamp: '14:00', module: 'Sales', action: 'Cập nhật Tier Price Macallan 18 - Giảm 5% Tier 3', actor: 'Sales Manager', icon: 'fa-tags', color: '#D4AF37' },
-  { id: 7, timestamp: 'Hôm qua', module: 'System', action: 'Backup dữ liệu hệ thống tự động hoàn tất', actor: 'System Worker', icon: 'fa-server', color: '#6B7280' },
-  { id: 8, timestamp: 'Hôm qua', module: 'Warehouse', action: 'Nhập kho 100 thùng Hennessy X.O từ nhà cung cấp', actor: 'Warehouse Staff', icon: 'fa-truck-ramp-box', color: '#3B82F6' }
-];
+import apiService from '../services/api';
 
 function OverviewDashboard() {
-  const maxRevenue = Math.max(...revenueMonthly.map(d => d.revenue));
+  const [revenueData, setRevenueData] = useState({ monthly: [], top_products: [] });
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [revRes, actRes] = await Promise.all([
+          apiService.getDashboardRevenue(),
+          apiService.getDashboardActivity()
+        ]);
+        if (revRes.success) setRevenueData(revRes.data);
+        if (actRes.success) setActivityFeed(actRes.data);
+      } catch (err) {
+        console.error("Lỗi fetch dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const revenueMonthly = revenueData.monthly;
+  let topProducts = revenueData.top_products;
+  const activityLogs = activityFeed;
+  
+  // Assign colors to top products since DB doesn't store colors
+  const colors = ['#D4AF37', '#E54D60', '#3B82F6', '#10B981', '#6B7280'];
+  topProducts = topProducts.map((tp, idx) => ({ ...tp, color: colors[idx % colors.length] }));
+
+  const maxRevenue = revenueMonthly.length > 0 ? Math.max(...revenueMonthly.map(d => Number(d.revenue))) : 1;
+  
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải dữ liệu Real-time...</div>;
   
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
@@ -86,7 +90,7 @@ function OverviewDashboard() {
               const heightPercent = (d.revenue / maxRevenue) * 100;
               return (
                 <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{d.revenue}T</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{(Number(d.revenue) / 1000000).toFixed(1)}M</span>
                   <div style={{
                     width: '100%',
                     height: `${heightPercent}%`,

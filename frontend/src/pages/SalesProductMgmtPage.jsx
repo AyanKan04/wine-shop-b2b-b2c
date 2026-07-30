@@ -94,20 +94,20 @@ export default function SalesProductMgmtPage({ showToast }) {
 
   const handleEditClick = (product) => {
     setFormData({
-      sku: product.SKU || '', 
-      product_name: product.ProductName || '', 
-      category: product.Category || 'Wine / Red', 
-      country_of_origin: product.CountryOfOrigin || '', 
-      region: product.Region || '', 
-      grape_variety: product.GrapeVariety || '', 
-      vintage_year: product.VintageYear || '', 
-      alcohol_content: product.AlcoholContent || '', 
-      volume_ml: product.VolumeML || 750, 
-      moq: product.MOQ || 1, 
-      description: product.Description || '', 
-      image_url: product.ImageURL || ''
+      sku: product.sku || '', 
+      product_name: product.product_name || '', 
+      category: product.category || 'Wine / Red', 
+      country_of_origin: product.country_of_origin || '', 
+      region: product.region || '', 
+      grape_variety: product.grape_variety || '', 
+      vintage_year: product.vintage_year || '', 
+      alcohol_content: product.alcohol_content || '', 
+      volume_ml: product.volume_ml || 750, 
+      moq: product.moq || 1, 
+      description: product.description || '', 
+      image_url: product.image_url || ''
     });
-    setEditProductId(product.ProductID);
+    setEditProductId(product.product_id);
     setIsEditMode(true);
     setShowAddModal(true);
   };
@@ -139,10 +139,10 @@ export default function SalesProductMgmtPage({ showToast }) {
     ];
     if (product.tier_prices && Array.isArray(product.tier_prices)) {
       product.tier_prices.forEach(pt => {
-        const idx = pt.TierLevel - 1;
+        const idx = pt.tier_level - 1;
         if (baseTiers[idx]) {
-          baseTiers[idx].min_quantity = pt.MinQuantity;
-          baseTiers[idx].price_per_unit = pt.PricePerUnit;
+          baseTiers[idx].min_quantity = pt.min_quantity;
+          baseTiers[idx].price_per_unit = pt.price_per_unit;
         }
       });
     }
@@ -201,57 +201,16 @@ export default function SalesProductMgmtPage({ showToast }) {
         </button>
       </div>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>SKU</th>
-            <th>Sản Phẩm</th>
-            <th>Loại & Xuất Xứ</th>
-            <th>MOQ</th>
-            <th>Tier 1 (Lẻ)</th>
-            <th>Hành Động</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? <tr><td colSpan="6" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
-           products.map(p => {
-             const t1 = p.tier_prices?.find(t => t.TierLevel === 1);
-             return (
-              <tr key={p.ProductID}>
-                <td><code>{p.SKU}</code></td>
-                <td style={{ fontWeight: '600' }}>{p.ProductName}</td>
-                <td>
-                  <span style={{ color: 'var(--accent-gold)', fontSize: '0.8rem' }}>{p.Category}</span><br/>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.CountryOfOrigin}</span>
-                </td>
-                <td>{p.MOQ}</td>
-                <td style={{ color: '#10B981' }}>{t1 ? formatVND(t1.PricePerUnit) : 'N/A'}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => handleEditClick(p)} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
-                      Sửa SP
-                    </button>
-                    <button onClick={() => handleOpenPriceModal(p)} style={{ background: '#1C1417', border: '1px solid #10B981', color: '#10B981', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
-                      Cấu hình Giá
-                    </button>
-                    <button onClick={() => handleDeleteClick(p.ProductID)} style={{ background: 'transparent', border: '1px solid #E54D60', color: '#E54D60', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
-                      Xóa
-                    </button>
-                  </div>
-                </td>
-              </tr>
-             )
-           })}
-        </tbody>
-      </table>
-
       {/* MODAL THÊM / SỬA SẢN PHẨM */}
       {showAddModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
-              {isEditMode ? 'Cập Nhật Thông Tin Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
-            </h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px' }}>
+              <h3 style={{ marginTop: 0, color: 'var(--accent-gold)', marginBottom: 0 }}>
+                {isEditMode ? 'Cập Nhật Thông Tin Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
+              </h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
             <form onSubmit={handleAddSubmit}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' }}>
                 <div className="form-group"><label>Mã SKU *</label><input className="form-control" required value={formData.sku} onChange={e=>setFormData({...formData, sku: e.target.value})} /></div>
@@ -269,7 +228,7 @@ export default function SalesProductMgmtPage({ showToast }) {
                 <div className="form-group"><label>Hình Ảnh (URL)</label><input className="form-control" value={formData.image_url} onChange={e=>setFormData({...formData, image_url: e.target.value})} /></div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', gap: '10px' }}>
-                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowAddModal(false)}>Hủy</button>
+                <button type="button" className="btn-redapron-burgundy" onClick={() => setShowAddModal(false)}>Hủy</button>
                 <button type="submit" className="btn-redapron-gold">Lưu Thông Tin</button>
               </div>
             </form>
@@ -279,12 +238,17 @@ export default function SalesProductMgmtPage({ showToast }) {
 
       {/* MODAL CẤU HÌNH GIÁ */}
       {showPriceModal && activeProduct && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#1C1417', border: '1px solid var(--border-gold)', padding: '30px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: 'var(--accent-gold)' }}>
-              Cấu Hình Giá: {activeProduct.ProductName} ({activeProduct.SKU})
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Hãy chọn hình thức thiết lập giá theo chuẩn quy trình B2B</p>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '800px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <div>
+                <h3 style={{ marginTop: 0, color: 'var(--accent-gold)', marginBottom: '5px' }}>
+                  Cấu Hình Giá: {activeProduct.product_name} ({activeProduct.sku})
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>Hãy chọn hình thức thiết lập giá theo chuẩn quy trình B2B</p>
+              </div>
+              <button onClick={() => setShowPriceModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--text-muted)' }}>✕</button>
+            </div>
             
             <div className="form-group" style={{ marginTop: '20px' }}>
               <label>Hình thức Thiết Lập Giá *</label>
@@ -297,11 +261,11 @@ export default function SalesProductMgmtPage({ showToast }) {
             </div>
 
             <form onSubmit={handlePriceSubmit}>
-              <div style={{ background: '#0D0A0B', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '20px', minHeight: '200px' }}>
+              <div style={{ background: 'var(--bg-primary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border-subtle)', marginTop: '20px', minHeight: '200px' }}>
                 
                 {priceType === 'ORIGINAL' && (
                   <div>
-                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Gốc</h4>
+                    <h4 style={{ color: 'var(--text-main)', marginTop: 0 }}>Cấu Hình Giá Gốc</h4>
                     <div className="form-group">
                       <label>Giá bán niêm yết (VNĐ) *</label>
                       <input 
@@ -320,10 +284,10 @@ export default function SalesProductMgmtPage({ showToast }) {
 
                 {priceType === 'TIER' && (
                   <div>
-                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Theo Số Lượng</h4>
+                    <h4 style={{ color: 'var(--text-main)', marginTop: 0 }}>Cấu Hình Giá Theo Số Lượng</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                       {tierPrices.map((t, idx) => (
-                        <div key={idx} style={{ background: '#1C1417', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                        <div key={idx} style={{ background: 'var(--bg-surface)', padding: '10px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
                           <div style={{ fontSize: '0.8rem', color: 'var(--accent-gold)', marginBottom: '5px' }}>Tier {t.tier_level}</div>
                           <label style={{ fontSize: '0.7rem' }}>Min Qty</label>
                           <input type="number" className="form-control" style={{ marginBottom: '5px', padding: '5px' }} value={t.min_quantity} onChange={e=>{
@@ -337,10 +301,9 @@ export default function SalesProductMgmtPage({ showToast }) {
                             value={t.price_per_unit ? Number(t.price_per_unit).toLocaleString('vi-VN') : ''} 
                             onChange={e=>{
                               const rawValue = e.target.value.replace(/\D/g, '');
-                              const newTiers = [...tierPrices]; 
-                              newTiers[idx].price_per_unit = rawValue; 
-                              setTierPrices(newTiers);
+                              const newTiers = [...tierPrices]; newTiers[idx].price_per_unit = rawValue; setTierPrices(newTiers);
                             }} 
+                            required 
                           />
                         </div>
                       ))}
@@ -357,21 +320,16 @@ export default function SalesProductMgmtPage({ showToast }) {
                         <select className="form-control" value={newCustomerPrice.company_id} onChange={e=>setNewCustomerPrice({...newCustomerPrice, company_id: e.target.value})}>
                           <option value="">-- Chọn Doanh Nghiệp --</option>
                           {companies.filter(c => c.CompanyType === 'BUYER').map(c => (
-                            <option key={c.CompanyID} value={c.CompanyID}>{c.CompanyName} ({c.TaxCode})</option>
+                            <option key={c.CompanyID} value={c.CompanyID}>{c.CompanyName}</option>
                           ))}
                         </select>
                       </div>
                       <div className="form-group" style={{ flex: 1, margin: 0 }}>
                         <label>Giá thỏa thuận (VNĐ)</label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          value={newCustomerPrice.price_per_unit ? Number(newCustomerPrice.price_per_unit).toLocaleString('vi-VN') : ''} 
-                          onChange={e => {
-                            const rawValue = e.target.value.replace(/\D/g, '');
-                            setNewCustomerPrice({...newCustomerPrice, price_per_unit: rawValue});
-                          }} 
-                        />
+                        <input type="text" className="form-control" value={newCustomerPrice.price_per_unit ? Number(newCustomerPrice.price_per_unit).toLocaleString('vi-VN') : ''} onChange={e=>{
+                          const rawValue = e.target.value.replace(/\D/g, '');
+                          setNewCustomerPrice({...newCustomerPrice, price_per_unit: rawValue});
+                        }} />
                       </div>
                       <button type="button" className="btn-redapron-gold" onClick={() => {
                         if(newCustomerPrice.company_id && newCustomerPrice.price_per_unit) {
@@ -380,12 +338,14 @@ export default function SalesProductMgmtPage({ showToast }) {
                         }
                       }}>Thêm</button>
                     </div>
+                    
                     {customerPrices.length > 0 && (
                       <table className="data-table">
-                        <thead><tr><th>Doanh Nghiệp ID</th><th>Giá Thỏa Thuận</th><th>Hành Động</th></tr></thead>
+                        <thead><tr><th>ID Công ty</th><th>Tên Công Ty</th><th>Giá Thỏa Thuận</th><th>Xóa</th></tr></thead>
                         <tbody>
                           {customerPrices.map((cp, idx) => (
                             <tr key={idx}>
+                              <td><code style={{ color: 'var(--text-muted)' }}>COMP-{cp.company_id}</code></td>
                               <td>{companies.find(c=>c.CompanyID == cp.company_id)?.CompanyName || cp.company_id}</td>
                               <td style={{ color: '#10B981' }}>{formatVND(cp.price_per_unit)}</td>
                               <td><button type="button" onClick={() => setCustomerPrices(customerPrices.filter((_, i) => i !== idx))} style={{ color: '#EF4444', background: 'transparent', border: 'none', cursor: 'pointer' }}>Xóa</button></td>
@@ -399,7 +359,7 @@ export default function SalesProductMgmtPage({ showToast }) {
 
                 {priceType === 'CONTRACT' && (
                   <div>
-                    <h4 style={{ color: '#FFF', marginTop: 0 }}>Cấu Hình Giá Theo Hợp Đồng (Contract Pricing)</h4>
+                    <h4 style={{ color: 'var(--accent-gold)', marginTop: 0 }}>Cấu Hình Giá Theo Hợp Đồng (Contract Pricing)</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
                       <div className="form-group" style={{ margin: 0 }}><label>Khách Hàng</label>
                         <select className="form-control" value={newContractPrice.company_id} onChange={e=>setNewContractPrice({...newContractPrice, company_id: e.target.value})}>
@@ -440,15 +400,66 @@ export default function SalesProductMgmtPage({ showToast }) {
                   </div>
                 )}
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px', gap: '10px' }}>
-                <button type="button" className="btn-redapron-gold" style={{ background: 'transparent', color: '#FFF' }} onClick={() => setShowPriceModal(false)}>Hủy</button>
-                <button type="submit" className="btn-redapron-gold">Lưu Cấu Hình Giá</button>
+              
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                <button type="button" className="btn-redapron-burgundy" onClick={() => setShowPriceModal(false)}>Hủy Thay Đổi</button>
+                <button type="submit" className="btn-redapron-gold">Lưu Bảng Giá</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Sản Phẩm</th>
+            <th>Loại & Xuất Xứ</th>
+            <th>MOQ</th>
+            <th>Tier 1 (Lẻ)</th>
+            <th>Hành Động</th>
+          </tr>
+        </thead>
+        <tbody>
+           {loading ? <tr><td colSpan="6" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
+           products.map(p => {
+             const t1 = p.tier_prices?.find(t => t.tier_level === 1);
+             return (
+              <tr key={p.product_id}>
+                <td><code>{p.sku}</code></td>
+                <td style={{ fontWeight: '600' }}>{p.product_name}</td>
+                <td>
+                  <span style={{ color: 'var(--accent-gold)', fontSize: '0.8rem' }}>{p.category}</span><br/>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.country_of_origin}</span>
+                </td>
+                <td>{p.moq}</td>
+                <td style={{ color: '#10B981' }}>{t1 ? formatVND(t1.price_per_unit) : 'N/A'}</td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => {
+                      handleEditClick(p);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Sửa SP
+                    </button>
+                    <button onClick={() => {
+                      handleOpenPriceModal(p);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }} style={{ background: 'transparent', border: '1px solid #10B981', color: '#10B981', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Cấu hình Giá
+                    </button>
+                    <button onClick={() => handleDeleteClick(p.product_id)} style={{ background: 'transparent', border: '1px solid #E54D60', color: '#E54D60', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
+                      Xóa
+                    </button>
+                  </div>
+                </td>
+              </tr>
+             )
+           })}
+        </tbody>
+      </table>
+
     </div>
   );
 }

@@ -1,93 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import apiService from '../services/api';
 
 export default function AdminDashboardPage({ showToast }) {
   const [activeTab, setActiveTab] = useState('licenses'); // 'licenses' | 'companies' | 'products' | 'credit' | 'audit'
 
-  // State for Licenses Management
-  const [licensesList, setLicensesList] = useState([
-    {
-      license_id: 1,
-      company_id: 1,
-      company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      tax_code: '0301234567',
-      license_type: 'Giấy phép Bán buôn & Phân phối Rượu',
-      license_number: '108/GP-BCT',
-      issue_date: '2022-03-14',
-      expiry_date: '2027-03-14',
-      document_url: '/uploads/license_lotte_saigon.pdf',
-      status: 'VERIFIED',
-      submitted_at: '2026-07-10'
-    },
-    {
-      license_id: 2,
-      company_id: 3,
-      company_name: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL',
-      tax_code: '0309988776',
-      license_type: 'Giấy phép Bán buôn Rượu',
-      license_number: '245/GP-SCT',
-      issue_date: '2024-05-10',
-      expiry_date: '2026-11-10',
-      document_url: '/uploads/license_continental.pdf',
-      status: 'PENDING_VERIFICATION',
-      submitted_at: '2026-07-22'
-    },
-    {
-      license_id: 3,
-      company_id: 4,
-      company_name: 'TẬP ĐOÀN DỊCH VỤ ẨM THỰC RED CHILI',
-      tax_code: '0104433221',
-      license_type: 'Giấy phép Phân phối Rượu Sỉ',
-      license_number: '512/GP-BCT',
-      issue_date: '2023-01-15',
-      expiry_date: '2028-01-15',
-      document_url: '/uploads/license_redchili.pdf',
-      status: 'PENDING_VERIFICATION',
-      submitted_at: '2026-07-23'
+  const [licensesList, setLicensesList] = useState([]);
+  const [companiesList, setCompaniesList] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
+  const [companyFormData, setCompanyFormData] = useState({
+    username: '',
+    password: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    company_name: '',
+    tax_code: '',
+    company_type: 'BUYER'
+  });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [licRes, compRes, auditRes] = await Promise.all([
+        apiService.getAdminLicenses().catch(() => ({ success: false })),
+        apiService.getCompanies().catch(() => ({ success: false })),
+        apiService.getAuditLogs ? apiService.getAuditLogs().catch(() => ({ success: false })) : Promise.resolve({ success: false })
+      ]);
+
+      if (licRes.success) setLicensesList(licRes.data);
+      if (compRes.success) setCompaniesList(compRes.data);
+      if (auditRes && auditRes.success) setAuditLogs(auditRes.data);
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi tải dữ liệu Quản trị');
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  // State for Registered Companies Directory
-  const [companiesList, setCompaniesList] = useState([
-    { company_id: 1, company_code: 'COMP-LOTTE', company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', tax_code: '0301234567', company_type: 'BUYER (HORECA)', credit_limit: 1000000000, used_credit: 350000000, status: 'ACTIVE' },
-    { company_id: 2, company_code: 'COMP-REDAPRON', company_name: 'MAISON DE L\'ALCOOL RED APRON FACTORY', tax_code: '0109876543', company_type: 'SELLER (Distributor)', credit_limit: 5000000000, used_credit: 0, status: 'ACTIVE' },
-    { company_id: 3, company_code: 'COMP-CONTINENTAL', company_name: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL', tax_code: '0309988776', company_type: 'BUYER (HORECA)', credit_limit: 500000000, used_credit: 150000000, status: 'PENDING_APPROVAL' },
-    { company_id: 4, company_code: 'COMP-REDCHILI', company_name: 'TẬP ĐOÀN DỊCH VỤ ẨM THỰC RED CHILI', tax_code: '0104433221', company_type: 'BUYER (Restaurant Chain)', credit_limit: 800000000, used_credit: 0, status: 'PENDING_APPROVAL' }
-  ]);
-
-  // State for System Audit Log
-  const [auditLogs] = useState([
-    { id: 'LOG-9940', timestamp: '2026-07-23 21:40', action: 'Phê duyệt giấy phép rượu B2B', actor: 'Platform Admin', target: 'COMP-LOTTE', detail: 'Hợp lệ theo NĐ 105/2017/NĐ-CP' },
-    { id: 'LOG-9939', timestamp: '2026-07-23 20:15', action: 'Cấp hạn mức tín dụng Net-30', actor: 'Finance Admin', target: 'COMP-LOTTE', detail: 'Hạn mức: ₫1,000,000,000' },
-    { id: 'LOG-9938', timestamp: '2026-07-23 18:30', action: 'Tự động khóa nợ quá hạn', actor: 'System Worker', target: 'COMP-CONTINENTAL', detail: 'Hóa đơn INV-2026-0104 chưa thanh toán' }
-  ]);
+  };
 
   // Actions
   const handleApproveLicense = async (licenseId) => {
     try {
       await apiService.approveLicense(licenseId);
-      setLicensesList(prev => prev.map(l => l.license_id === licenseId ? { ...l, status: 'VERIFIED' } : l));
       showToast('Đã phê duyệt Giấy phép Bán buôn Rượu thành công!');
+      fetchData();
     } catch (err) {
-      showToast('Đã phê duyệt Giấy phép Bán buôn Rượu!');
-      setLicensesList(prev => prev.map(l => l.license_id === licenseId ? { ...l, status: 'VERIFIED' } : l));
+      showToast('Lỗi khi phê duyệt giấy phép!');
     }
   };
 
-  const handleRejectLicense = (licenseId) => {
-    setLicensesList(prev => prev.map(l => l.license_id === licenseId ? { ...l, status: 'REJECTED' } : l));
-    showToast('Đã từ chối Hồ sơ Giấy phép do thiếu chứng thực!');
+  const handleRejectLicense = async (licenseId) => {
+    try {
+      const res = await apiService.rejectLicense(licenseId);
+      if (res.success) {
+        showToast('Đã từ chối Hồ sơ Giấy phép!');
+        fetchData();
+      }
+    } catch (err) {
+      showToast('Lỗi khi từ chối giấy phép!');
+    }
   };
 
-  const toggleCompanyStatus = (companyId) => {
-    setCompaniesList(prev => prev.map(c => {
-      if (c.company_id === companyId) {
-        const nextStatus = c.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-        showToast(`Đã thay đổi trạng thái doanh nghiệp ${c.company_code} thành: ${nextStatus}`);
-        return { ...c, status: nextStatus };
+  const toggleCompanyStatus = async (companyId) => {
+    try {
+      const res = await apiService.toggleCompanyStatus(companyId);
+      if (res.success) {
+        showToast(`Đã thay đổi trạng thái doanh nghiệp`);
+        fetchData();
       }
-      return c;
-    }));
+    } catch (err) {
+      showToast('Lỗi thay đổi trạng thái');
+    }
+  };
+
+  const handleAddCompanySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await apiService.registerCompany(companyFormData);
+      if (res.success) {
+        showToast('Tạo tài khoản và doanh nghiệp thành công!');
+        setShowAddCompanyModal(false);
+        setCompanyFormData({
+          username: '', password: '', email: '', first_name: '', last_name: '',
+          company_name: '', tax_code: '', company_type: 'BUYER'
+        });
+        fetchData();
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi tạo doanh nghiệp');
+    }
   };
 
   const formatVND = (val) => val.toLocaleString('vi-VN') + ' ₫';
@@ -95,6 +103,8 @@ export default function AdminDashboardPage({ showToast }) {
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
       
+      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu...</div>}
+
       {/* HEADER SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
         <div>
@@ -333,7 +343,7 @@ export default function AdminDashboardPage({ showToast }) {
             <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>
               Danh Sách Đối Tác Doanh Nghiệp (Buyer & Seller)
             </h3>
-            <button className="btn-redapron-gold" style={{ padding: '8px 16px', fontSize: '0.75rem' }} onClick={() => showToast('Mở form cấp đối tác B2B')}>
+            <button className="btn-redapron-gold" style={{ padding: '8px 16px', fontSize: '0.75rem' }} onClick={() => setShowAddCompanyModal(true)}>
               + Thêm Doanh Nghiệp
             </button>
           </div>
@@ -455,6 +465,74 @@ export default function AdminDashboardPage({ showToast }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* FIXED OVERLAY MODAL: ADD COMPANY */}
+      {showAddCompanyModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, color: 'var(--accent-gold)' }}>Cấp Mới Đối Tác B2B</h3>
+              <button onClick={() => setShowAddCompanyModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>&times;</button>
+            </div>
+            
+            <form onSubmit={handleAddCompanySubmit}>
+              <h4 style={{ color: '#FFF', borderBottom: '1px solid var(--border-gold)', paddingBottom: '10px' }}>1. Thông Tin Doanh Nghiệp</h4>
+              <div className="form-group">
+                <label>Tên Doanh Nghiệp</label>
+                <input type="text" className="form-control" required value={companyFormData.company_name} onChange={e => setCompanyFormData({...companyFormData, company_name: e.target.value})} />
+              </div>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Mã Số Thuế</label>
+                  <input type="text" className="form-control" required value={companyFormData.tax_code} onChange={e => setCompanyFormData({...companyFormData, tax_code: e.target.value})} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Phân Loại (Vai Trò)</label>
+                  <select className="form-control" value={companyFormData.company_type} onChange={e => setCompanyFormData({...companyFormData, company_type: e.target.value})}>
+                    <option value="BUYER">BUYER (Khách Mua Sỉ)</option>
+                    <option value="SELLER">SELLER (Nhà Phân Phối)</option>
+                  </select>
+                </div>
+              </div>
+
+              <h4 style={{ color: '#FFF', borderBottom: '1px solid var(--border-gold)', paddingBottom: '10px', marginTop: '20px' }}>2. Tài Khoản Quản Trị (Company Admin)</h4>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Tên Đăng Nhập</label>
+                  <input type="text" className="form-control" required value={companyFormData.username} onChange={e => setCompanyFormData({...companyFormData, username: e.target.value})} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Mật Khẩu</label>
+                  <input type="password" className="form-control" required value={companyFormData.password} onChange={e => setCompanyFormData({...companyFormData, password: e.target.value})} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Email Trụ Sở</label>
+                <input type="email" className="form-control" required value={companyFormData.email} onChange={e => setCompanyFormData({...companyFormData, email: e.target.value})} />
+              </div>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Họ (Last Name)</label>
+                  <input type="text" className="form-control" value={companyFormData.last_name} onChange={e => setCompanyFormData({...companyFormData, last_name: e.target.value})} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Tên (First Name)</label>
+                  <input type="text" className="form-control" value={companyFormData.first_name} onChange={e => setCompanyFormData({...companyFormData, first_name: e.target.value})} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '30px' }}>
+                <button type="button" onClick={() => setShowAddCompanyModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px', background: 'transparent', border: '1px solid var(--accent-burgundy)' }}>
+                  Hủy
+                </button>
+                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 25px' }}>
+                  Lưu & Cấp Quyền
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

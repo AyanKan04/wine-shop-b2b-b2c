@@ -1,0 +1,556 @@
+
+> ruubusiness-backend@1.0.0 test
+> cross-env NODE_ENV=test node --test tests/*.test.js --watchAll=false
+
+TAP version 13
+# Database Connection Failed! Bad Config:  ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+# Register Error: ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+# Subtest: API Module 1: Authentication & User Management (Real DB)
+    # Subtest: POST /api/auth/register - Should register a new B2B user into Real DB
+    not ok 1 - POST /api/auth/register - Should register a new B2B user into Real DB
+      ---
+      duration_ms: 50.3999
+      type: 'test'
+      location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:14:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        500 !== 201
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 201
+      actual: 500
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (D:\wine-shop-b2b-b2c-main\wine-shop-b2b-b2c-main\backend\tests\auth.test.js:25:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+# Database Connection Failed! Bad Config:  ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+# Login Error: ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+    # Subtest: POST /api/auth/login - Should successfully authenticate user and return real JWT token
+    not ok 2 - POST /api/auth/login - Should successfully authenticate user and return real JWT token
+      ---
+      duration_ms: 16.9743
+      type: 'test'
+      location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:31:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        500 !== 200
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 200
+      actual: 500
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (D:\wine-shop-b2b-b2c-main\wine-shop-b2b-b2c-main\backend\tests\auth.test.js:39:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: POST /api/auth/login - Should fail if credentials are missing
+    ok 3 - POST /api/auth/login - Should fail if credentials are missing
+      ---
+      duration_ms: 3.2256
+      type: 'test'
+      ...
+# Database Connection Failed! Bad Config:  ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+# Login Error: ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+    # Subtest: POST /api/auth/login - Should fail if password is incorrect
+    not ok 4 - POST /api/auth/login - Should fail if password is incorrect
+      ---
+      duration_ms: 12.9618
+      type: 'test'
+      location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:59:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        500 !== 401
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 401
+      actual: 500
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (D:\wine-shop-b2b-b2c-main\wine-shop-b2b-b2c-main\backend\tests\auth.test.js:67:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+# GetMe Error: TypeError: Cannot read properties of undefined (reading 'user_id')
+#     at getMe (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\src\\controllers\\authController.js:160:29)
+#     at Layer.handle [as handle_request] (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\layer.js:95:5)
+#     at next (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\route.js:149:13)
+#     at Route.dispatch (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\route.js:119:3)
+#     at Layer.handle [as handle_request] (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\layer.js:95:5)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\index.js:284:15
+#     at Function.process_params (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\index.js:346:12)
+#     at next (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\index.js:280:10)
+#     at Function.handle (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\index.js:175:3)
+#     at router (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\express\\lib\\router\\index.js:47:12)
+    # Subtest: GET /api/auth/me - Should return current logged in user details using real JWT
+    not ok 5 - GET /api/auth/me - Should return current logged in user details using real JWT
+      ---
+      duration_ms: 3.7794
+      type: 'test'
+      location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:72:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        500 !== 200
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 200
+      actual: 500
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (D:\wine-shop-b2b-b2c-main\wine-shop-b2b-b2c-main\backend\tests\auth.test.js:77:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+# Database Connection Failed! Bad Config:  ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+# Login Error: ConnectionError: Login failed for user 'sa'.
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\mssql\\lib\\tedious\\connection-pool.js:86:17
+#     at Connection.onConnect (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:883:9)
+#     at Object.onceWrapper (node:events:634:26)
+#     at Connection.emit (node:events:519:28)
+#     at Connection.emit (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:1022:18)
+#     at D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\connection.js:901:14
+#     at process.processTicksAndRejections (node:internal/process/task_queues:85:11) {
+#   code: 'ELOGIN',
+#   originalError: ConnectionError: Login failed for user 'sa'.
+#       at Login7TokenHandler.onErrorMessage (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\handler.js:186:19)
+#       at Readable.<anonymous> (D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\node_modules\\tedious\\lib\\token\\token-stream-parser.js:19:33)
+#       at Readable.emit (node:events:519:28)
+#       at addChunk (node:internal/streams/readable:561:12)
+#       at readableAddChunkPushObjectMode (node:internal/streams/readable:538:3)
+#       at Readable.push (node:internal/streams/readable:393:5)
+#       at nextAsync (node:internal/streams/from:194:22)
+#       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+#     code: 'ELOGIN'
+#   }
+# }
+    # Subtest: POST /api/auth/login - Should successfully authenticate the PLATFORM_ADMIN account
+    not ok 6 - POST /api/auth/login - Should successfully authenticate the PLATFORM_ADMIN account
+      ---
+      duration_ms: 14.1928
+      type: 'test'
+      location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:85:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        500 !== 200
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 200
+      actual: 500
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (D:\wine-shop-b2b-b2c-main\wine-shop-b2b-b2c-main\backend\tests\auth.test.js:93:12)
+        process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..6
+not ok 1 - API Module 1: Authentication & User Management (Real DB)
+  ---
+  duration_ms: 102.5935
+  type: 'suite'
+  location: 'D:\\wine-shop-b2b-b2c-main\\wine-shop-b2b-b2c-main\\backend\\tests\\auth.test.js:6:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: API Module 9: B2B RFQ Chat & AI Sommelier Assistant
+    # Subtest: GET /api/rfqs/:id/messages - Should return chat history for an RFQ
+    ok 1 - GET /api/rfqs/:id/messages - Should return chat history for an RFQ
+      ---
+      duration_ms: 16.5311
+      type: 'test'
+      ...
+    # Subtest: POST /api/rfqs/:id/messages - Should send a buyer message
+    ok 2 - POST /api/rfqs/:id/messages - Should send a buyer message
+      ---
+      duration_ms: 9.7283
+      type: 'test'
+      ...
+    # Subtest: POST /api/rfqs/:id/messages - Should trigger AI Sommelier response when tagged
+    ok 3 - POST /api/rfqs/:id/messages - Should trigger AI Sommelier response when tagged
+      ---
+      duration_ms: 16.009
+      type: 'test'
+      ...
+    1..3
+ok 2 - API Module 9: B2B RFQ Chat & AI Sommelier Assistant
+  ---
+  duration_ms: 43.3416
+  type: 'suite'
+  ...
+# Subtest: API Module 3: Company & Alcohol License Verification
+    # Subtest: POST /api/companies/register - Should register company and license for approval
+    ok 1 - POST /api/companies/register - Should register company and license for approval
+      ---
+      duration_ms: 20.8945
+      type: 'test'
+      ...
+    # Subtest: GET /api/admin/licenses - Should list licenses for admin review
+    ok 2 - GET /api/admin/licenses - Should list licenses for admin review
+      ---
+      duration_ms: 3.3902
+      type: 'test'
+      ...
+    # Subtest: POST /api/admin/licenses/:id/approve - Should approve valid license
+    ok 3 - POST /api/admin/licenses/:id/approve - Should approve valid license
+      ---
+      duration_ms: 3.3871
+      type: 'test'
+      ...
+    1..3
+ok 3 - API Module 3: Company & Alcohol License Verification
+  ---
+  duration_ms: 28.4232
+  type: 'suite'
+  ...
+# Subtest: API Module 2: Products Catalog & Tier Pricing
+    # Subtest: GET /api/products - Should return all active alcohol products
+    ok 1 - GET /api/products - Should return all active alcohol products
+      ---
+      duration_ms: 13.4044
+      type: 'test'
+      ...
+    # Subtest: GET /api/products - Should filter products by category
+    ok 2 - GET /api/products - Should filter products by category
+      ---
+      duration_ms: 3.5101
+      type: 'test'
+      ...
+    # Subtest: GET /api/products/:id - Should return product detail with 5 tier prices
+    ok 3 - GET /api/products/:id - Should return product detail with 5 tier prices
+      ---
+      duration_ms: 2.4342
+      type: 'test'
+      ...
+    # Subtest: GET /api/products/:id - Should return 404 for non-existent product
+    ok 4 - GET /api/products/:id - Should return 404 for non-existent product
+      ---
+      duration_ms: 2.2849
+      type: 'test'
+      ...
+    # Subtest: POST /api/products - Should create a new product with tier prices
+    ok 5 - POST /api/products - Should create a new product with tier prices
+      ---
+      duration_ms: 8.1057
+      type: 'test'
+      ...
+    # Subtest: PUT /api/products/:id - Should update product fields successfully
+    ok 6 - PUT /api/products/:id - Should update product fields successfully
+      ---
+      duration_ms: 3.3398
+      type: 'test'
+      ...
+    # Subtest: DELETE /api/products/:id - Should delete product successfully
+    ok 7 - DELETE /api/products/:id - Should delete product successfully
+      ---
+      duration_ms: 2.5587
+      type: 'test'
+      ...
+    1..7
+ok 4 - API Module 2: Products Catalog & Tier Pricing
+  ---
+  duration_ms: 36.6538
+  type: 'suite'
+  ...
+# Subtest: API Module 4 & 5: RFQs, Quotations, Finance & Orders
+    # Subtest: GET /api/rfqs - Should return list of submitted RFQs
+    ok 1 - GET /api/rfqs - Should return list of submitted RFQs
+      ---
+      duration_ms: 14.1019
+      type: 'test'
+      ...
+    # Subtest: POST /api/rfqs - Should create a new buyer RFQ
+    ok 2 - POST /api/rfqs - Should create a new buyer RFQ
+      ---
+      duration_ms: 8.8237
+      type: 'test'
+      ...
+    # Subtest: GET /api/finance/credit-limit - Should return Net-30 credit limit and invoices
+    ok 3 - GET /api/finance/credit-limit - Should return Net-30 credit limit and invoices
+      ---
+      duration_ms: 2.8163
+      type: 'test'
+      ...
+    # Subtest: POST /api/finance/pay-invoice/:id - Should process invoice payment and restore credit
+    ok 4 - POST /api/finance/pay-invoice/:id - Should process invoice payment and restore credit
+      ---
+      duration_ms: 3.4255
+      type: 'test'
+      ...
+    # Subtest: POST /api/sales/quotations - Should create new sales quotation
+    ok 5 - POST /api/sales/quotations - Should create new sales quotation
+      ---
+      duration_ms: 3.1899
+      type: 'test'
+      ...
+    # Subtest: PUT /api/sales/quotations/:id/status - Should accept quotation and generate order + invoice
+    ok 6 - PUT /api/sales/quotations/:id/status - Should accept quotation and generate order + invoice
+      ---
+      duration_ms: 9.6417
+      type: 'test'
+      ...
+    1..6
+ok 5 - API Module 4 & 5: RFQs, Quotations, Finance & Orders
+  ---
+  duration_ms: 42.9546
+  type: 'suite'
+  ...
+# Subtest: API Module 6: Warehouse Stock Adjustments & Shipment Tracking
+    # Subtest: GET /api/warehouse/inventory - Should return inventory lists
+    ok 1 - GET /api/warehouse/inventory - Should return inventory lists
+      ---
+      duration_ms: 14.1899
+      type: 'test'
+      ...
+    # Subtest: POST /api/warehouse/inventory/adjust - Should adjust inventory (IMPORT)
+    ok 2 - POST /api/warehouse/inventory/adjust - Should adjust inventory (IMPORT)
+      ---
+      duration_ms: 9.0602
+      type: 'test'
+      ...
+    # Subtest: POST /api/warehouse/inventory/adjust - Should adjust inventory (EXPORT)
+    ok 3 - POST /api/warehouse/inventory/adjust - Should adjust inventory (EXPORT)
+      ---
+      duration_ms: 3.181
+      type: 'test'
+      ...
+    # Subtest: GET /api/warehouse/shipments - Should return all shipments
+    ok 4 - GET /api/warehouse/shipments - Should return all shipments
+      ---
+      duration_ms: 2.8357
+      type: 'test'
+      ...
+    # Subtest: POST /api/warehouse/shipments - Should create shipment
+    ok 5 - POST /api/warehouse/shipments - Should create shipment
+      ---
+      duration_ms: 3.5228
+      type: 'test'
+      ...
+    # Subtest: PUT /api/warehouse/shipments/:id/status - Should update status
+    ok 6 - PUT /api/warehouse/shipments/:id/status - Should update status
+      ---
+      duration_ms: 2.6875
+      type: 'test'
+      ...
+    1..6
+ok 6 - API Module 6: Warehouse Stock Adjustments & Shipment Tracking
+  ---
+  duration_ms: 36.3141
+  type: 'suite'
+  ...
+# Subtest: API Module 7: Finance & Credit Control Updates
+    # Subtest: PUT /api/finance/credit-limit - Should update credit limit for buyer company
+    ok 1 - PUT /api/finance/credit-limit - Should update credit limit for buyer company
+      ---
+      duration_ms: 2.2975
+      type: 'test'
+      ...
+    # Subtest: GET /api/finance/summary - Should return financial summary report
+    ok 2 - GET /api/finance/summary - Should return financial summary report
+      ---
+      duration_ms: 2.1007
+      type: 'test'
+      ...
+    1..2
+ok 7 - API Module 7: Finance & Credit Control Updates
+  ---
+  duration_ms: 4.583
+  type: 'suite'
+  ...
+# Subtest: API Module 8: Unified Dashboard Analytics, Notifications & Activity Trail
+    # Subtest: GET /api/dashboard/stats - Should return platform-wide KPI stats
+    ok 1 - GET /api/dashboard/stats - Should return platform-wide KPI stats
+      ---
+      duration_ms: 3.3663
+      type: 'test'
+      ...
+    # Subtest: GET /api/dashboard/activity - Should return system activities feed
+    ok 2 - GET /api/dashboard/activity - Should return system activities feed
+      ---
+      duration_ms: 2.9257
+      type: 'test'
+      ...
+    # Subtest: GET /api/dashboard/notifications - Should return notification listings
+    ok 3 - GET /api/dashboard/notifications - Should return notification listings
+      ---
+      duration_ms: 2.2137
+      type: 'test'
+      ...
+    1..3
+ok 8 - API Module 8: Unified Dashboard Analytics, Notifications & Activity Trail
+  ---
+  duration_ms: 8.755
+  type: 'suite'
+  ...
+1..8
+# tests 36
+# suites 8
+# pass 31
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 500.0653

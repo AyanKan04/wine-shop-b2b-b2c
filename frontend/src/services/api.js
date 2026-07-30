@@ -28,27 +28,8 @@ async function request(endpoint, options = {}) {
     
     return data;
   } catch (error) {
-    console.warn(`[Backend Offline/Unreachable] ${endpoint} -> Using Resilient Mock Response`, error.message);
-    
-    // Return friendly local fallback objects so UI actions succeed seamlessly
-    if (endpoint.includes('/approve')) {
-      return { success: true, message: 'Đã phê duyệt Giấy phép Rượu (Chế độ xem trước)' };
-    }
-    // Removed the mock fallback for /auth/login so that real authentication errors propagate to the UI
-    if (endpoint.includes('/auth/register') || endpoint.includes('/companies/register')) {
-      return { success: true, message: 'Đã lưu hồ sơ đăng ký doanh nghiệp thành công!' };
-    }
-    if (endpoint.includes('/rfqs')) {
-      return { success: true, message: 'Đã lưu Yêu cầu báo giá RFQ thành công!' };
-    }
-    if (endpoint.includes('/pay-invoice')) {
-      return { success: true, message: 'Đã thanh toán hóa đơn khôi phục hạn mức tín dụng!' };
-    }
-    if (endpoint.includes('/status')) {
-      return { success: true, message: 'Đã cập nhật trạng thái báo giá thành công!' };
-    }
-
-    return { success: true, data: [] };
+    console.error(`[API Error] ${endpoint}:`, error.message);
+    throw error;
   }
 }
 
@@ -58,6 +39,13 @@ export const apiService = {
   register: (userData) => request('/auth/register', { method: 'POST', body: JSON.stringify(userData) }),
   getMe: () => request('/auth/me'),
 
+  // IAM Users
+  getUsers: (search = '') => request(`/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  createUser: (userData) => request('/users', { method: 'POST', body: JSON.stringify(userData) }),
+  updateUser: (id, userData) => request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(userData) }),
+  deleteUser: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+  lockUser: (id) => request(`/users/${id}/lock`, { method: 'PUT' }),
+
   // Products
   getProducts: (params = {}) => {
     const query = new URLSearchParams(params).toString();
@@ -66,6 +54,7 @@ export const apiService = {
   getProductById: (id) => request(`/products/${id}`),
 
   // Companies & Licenses
+  getCompanies: () => request('/companies'),
   registerCompany: (companyData) => request('/companies/register', { method: 'POST', body: JSON.stringify(companyData) }),
   getAdminLicenses: () => request('/admin/licenses'),
   approveLicense: (id) => request(`/admin/licenses/${id}/approve`, { method: 'POST' }),
@@ -88,6 +77,14 @@ export const apiService = {
 
   // Warehouse
   getInventory: () => request('/warehouse/inventory'),
+  getShipments: () => request('/warehouse/shipments'),
+  createShipment: (shipmentData) => request('/warehouse/shipments', { method: 'POST', body: JSON.stringify(shipmentData) }),
+  updateShipmentStatus: (id, status) => request(`/warehouse/shipments/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
+
+  // Dashboard
+  getDashboardRevenue: () => request('/dashboard/revenue'),
+  getDashboardActivity: () => request('/dashboard/activity'),
+  getNotifications: () => request('/dashboard/notifications'),
 
   // Negotiation & AI Sommelier Chat
   getChatMessages: (rfqId) => request(`/rfqs/${rfqId}/messages`),

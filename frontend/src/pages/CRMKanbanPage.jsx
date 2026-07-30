@@ -1,84 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../services/api';
 
 export default function CRMKanbanPage({ showToast }) {
-  // Sample Initial B2B Kanban Deals State
-  const [deals, setDeals] = useState([
-    {
-      id: 'DEAL-101',
-      title: 'Hợp đồng Tết 2027 - Macallan 18',
-      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      product_name: 'Macallan 18 Year Old Sherry Oak Single Malt',
-      category: 'Spirits / Whisky',
-      quantity: 150,
-      unit_price: 68000000,
-      total_value: 10200000000,
-      status: 'in_negotiation', // new_rfq | in_negotiation | quotation_sent | closed_won | fulfillment_credit
-      buyer_type: 'Hotel 5*',
-      payment_method: 'Net-30 Credit',
-      license_verified: true,
-      last_updated: '10 phút trước'
-    },
-    {
-      id: 'DEAL-102',
-      title: 'Vang Đỏ Đêm Tiệc Gala - Chateau Margaux',
-      buyer_company: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL',
-      product_name: 'Château Margaux Premier Grand Cru Classé 2018',
-      category: 'Fine Wine',
-      quantity: 40,
-      unit_price: 110000000,
-      total_value: 4400000000,
-      status: 'new_rfq',
-      buyer_type: 'Hotel 4*',
-      payment_method: 'Pre-payment',
-      license_verified: false,
-      last_updated: '1 giờ trước'
-    },
-    {
-      id: 'DEAL-103',
-      title: 'Đơn Hàng Sâm-Panh Sự Kiện - Dom Perignon',
-      buyer_company: 'TẬP ĐOÀN DỊCH VỤ ẨM THỰC RED CHILI',
-      product_name: 'Dom Pérignon Vintage Brut Champagne 2012',
-      category: 'Champagne',
-      quantity: 80,
-      unit_price: 37500000,
-      total_value: 3000000000,
-      status: 'quotation_sent',
-      buyer_type: 'Restaurant Chain',
-      payment_method: 'Net-30 Credit',
-      license_verified: true,
-      last_updated: '3 giờ trước'
-    },
-    {
-      id: 'DEAL-104',
-      title: 'Cung Cấp Cognac - Hennessy X.O',
-      buyer_company: 'CÔNG TY CP THƯƠNG MẠI AN PHÚ',
-      product_name: 'Hennessy X.O Cognac Extra Old Edition',
-      category: 'Cognac',
-      quantity: 50,
-      unit_price: 54000000,
-      total_value: 2700000000,
-      status: 'closed_won',
-      buyer_type: 'Distributor',
-      payment_method: 'Net-30 Credit',
-      license_verified: true,
-      last_updated: 'Hôm qua'
-    },
-    {
-      id: 'DEAL-105',
-      title: 'Giao Hàng Lô Vang Đỏ Margaux Đợt 1',
-      buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      product_name: 'Château Margaux Premier Grand Cru Classé 2018',
-      category: 'Fine Wine',
-      quantity: 20,
-      unit_price: 110000000,
-      total_value: 2200000000,
-      status: 'fulfillment_credit',
-      buyer_type: 'Hotel 5*',
-      payment_method: 'Net-30 Credit',
-      license_verified: true,
-      last_updated: '2 ngày trước'
+  const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDeals();
+  }, []);
+
+  const fetchDeals = async () => {
+    setLoading(true);
+    try {
+      const [rfqRes, quoteRes] = await Promise.all([
+        apiService.getRFQs(),
+        apiService.getQuotations()
+      ]);
+
+      let newDeals = [];
+
+      if (rfqRes.success && rfqRes.data) {
+        rfqRes.data.forEach(rfq => {
+          let status = 'new_rfq';
+          if (rfq.status === 'IN_REVIEW') status = 'in_negotiation';
+          if (rfq.status === 'QUOTATION_SENT') return; 
+          if (rfq.status === 'REJECTED') return;
+          
+          newDeals.push({
+            id: `RFQ-${rfq.rfq_id}`,
+            title: rfq.title,
+            buyer_company: rfq.buyer_company || 'Khách hàng',
+            product_name: rfq.product_name,
+            category: 'Yêu cầu báo giá',
+            quantity: rfq.quantity,
+            unit_price: rfq.target_price,
+            total_value: rfq.quantity * rfq.target_price,
+            status: status,
+            buyer_type: 'B2B',
+            payment_method: 'N/A',
+            last_updated: rfq.created_at,
+            originalType: 'RFQ',
+            originalId: rfq.rfq_id
+          });
+        });
+      }
+
+      if (quoteRes.success && quoteRes.data) {
+        quoteRes.data.forEach(q => {
+          let status = 'quotation_sent';
+          if (q.status === 'ACCEPTED') status = 'closed_won';
+          if (q.status === 'FULFILLED') status = 'fulfillment_credit';
+          if (q.status === 'REJECTED') return;
+          
+          newDeals.push({
+            id: `QUOTE-${q.quotation_id}`,
+            title: `Báo Giá RFQ-${q.rfq_id}`,
+            buyer_company: q.buyer_company || 'Khách hàng',
+            product_name: 'Sản phẩm rượu', 
+            category: 'Báo Giá',
+            quantity: q.quantity,
+            unit_price: q.offer_unit_price,
+            total_value: q.quantity * q.offer_unit_price,
+            status: status,
+            buyer_type: 'B2B',
+            payment_method: 'Thỏa thuận',
+            last_updated: q.valid_until,
+            originalType: 'QUOTATION',
+            originalId: q.quotation_id
+          });
+        });
+      }
+      
+      setDeals(newDeals);
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi tải dữ liệu đàm phán CRM');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('ALL');
@@ -105,50 +105,67 @@ export default function CRMKanbanPage({ showToast }) {
   ];
 
   // Move deal to next or previous column
-  const moveDeal = (dealId, direction) => {
+  const moveDeal = async (dealId, direction) => {
     const columnOrder = ['new_rfq', 'in_negotiation', 'quotation_sent', 'closed_won', 'fulfillment_credit'];
-    setDeals(prevDeals => prevDeals.map(deal => {
-      if (deal.id === dealId) {
-        const currentIndex = columnOrder.indexOf(deal.status);
-        const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-        if (newIndex >= 0 && newIndex < columnOrder.length) {
-          const nextStatus = columnOrder[newIndex];
-          showToast(`Đã chuyển cơ hội ${deal.id} sang trạng thái: ${columns.find(c => c.id === nextStatus).title}`);
-          return { ...deal, status: nextStatus, last_updated: 'Vừa xong' };
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) return;
+    
+    const currentIndex = columnOrder.indexOf(deal.status);
+    const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex >= 0 && newIndex < columnOrder.length) {
+      const nextStatus = columnOrder[newIndex];
+      
+      try {
+        if (deal.originalType === 'QUOTATION') {
+          let beStatus = 'PENDING';
+          if (nextStatus === 'closed_won') beStatus = 'ACCEPTED';
+          else if (nextStatus === 'fulfillment_credit') beStatus = 'FULFILLED';
+          
+          await apiService.updateQuotationStatus(deal.originalId, beStatus);
+        } else if (deal.originalType === 'RFQ') {
+          // No API available for RFQ status update directly in current implementation, 
+          // usually moving RFQ to 'quotation_sent' implies creating a quotation.
+          if (nextStatus === 'quotation_sent') {
+            await apiService.createQuotation({
+              rfq_id: deal.originalId,
+              offer_unit_price: deal.unit_price,
+              quantity: deal.quantity
+            });
+          }
         }
+        
+        showToast(`Đã chuyển cơ hội ${deal.id} sang trạng thái: ${columns.find(c => c.id === nextStatus).title}`);
+        fetchDeals(); // Refresh from server
+      } catch(err) {
+        showToast('Lỗi cập nhật trạng thái');
       }
-      return deal;
-    }));
+    }
   };
 
   // Add new deal
-  const handleCreateDeal = (e) => {
+  const handleCreateDeal = async (e) => {
     e.preventDefault();
     const qty = parseInt(newDeal.quantity) || 1;
     const price = parseFloat(newDeal.unit_price) || 0;
-    const created = {
-      id: `DEAL-${Math.floor(100 + Math.random() * 900)}`,
-      title: newDeal.title || `Cơ hội B2B ${newDeal.product_name}`,
-      buyer_company: newDeal.buyer_company || 'Doanh Nghiệp Mới',
-      product_name: newDeal.product_name,
-      category: newDeal.category,
-      quantity: qty,
-      unit_price: price,
-      total_value: qty * price,
-      status: 'new_rfq',
-      buyer_type: newDeal.buyer_type,
-      payment_method: newDeal.payment_method,
-      license_verified: true,
-      last_updated: 'Vừa xong'
-    };
-
-    setDeals([created, ...deals]);
-    setShowAddModal(false);
-    showToast(`Đã thêm cơ hội B2B mới ${created.id} vào CRM Kanban!`);
+    
+    try {
+      await apiService.createRFQ({
+        title: newDeal.title,
+        product_name: newDeal.product_name,
+        quantity: qty,
+        target_price: price
+      });
+      setShowAddModal(false);
+      showToast(`Đã thêm cơ hội B2B mới vào CRM Kanban!`);
+      setNewDeal({ ...newDeal, title: '', buyer_company: '' }); // reset form
+      fetchDeals();
+    } catch(err) {
+      showToast('Lỗi tạo cơ hội mới');
+    }
   };
 
   // Calculate Metrics
-  const filteredDeals = deals.filter(d => {
+  const filteredDeals = (deals || []).filter(d => {
     const matchesSearch = d.title.toLowerCase().includes(searchTerm.toLowerCase()) || d.buyer_company.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'ALL' || d.category === filterCategory;
     return matchesSearch && matchesCategory;
@@ -156,7 +173,7 @@ export default function CRMKanbanPage({ showToast }) {
 
   const totalPipelineValue = filteredDeals.reduce((sum, d) => sum + d.total_value, 0);
   const closedWonValue = filteredDeals.filter(d => d.status === 'closed_won' || d.status === 'fulfillment_credit').reduce((sum, d) => sum + d.total_value, 0);
-  const conversionRate = deals.length > 0 ? Math.round(((deals.filter(d => d.status === 'closed_won' || d.status === 'fulfillment_credit').length) / deals.length) * 100) : 0;
+  const conversionRate = (deals || []).length > 0 ? Math.round((((deals || []).filter(d => d.status === 'closed_won' || d.status === 'fulfillment_credit').length) / (deals || []).length) * 100) : 0;
 
   const formatVND = (val) => {
     if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
@@ -167,6 +184,8 @@ export default function CRMKanbanPage({ showToast }) {
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
       
+      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu...</div>}
+
       {/* HEADER BAR */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
         <div>
@@ -182,6 +201,85 @@ export default function CRMKanbanPage({ showToast }) {
           <i className="fa-solid fa-plus"></i> THÊM CƠ HỘI B2B MÓI
         </button>
       </div>
+
+      {/* MODAL ADD NEW DEAL FORM */}
+      {showAddModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, color: 'var(--accent-gold)' }}>Thêm Cơ Hội Đàm Phán B2B Mới</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form onSubmit={handleCreateDeal}>
+              <div className="form-group">
+                <label>Tên Hợp Đồng / Tiêu Đề RFQ *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  required
+                  value={newDeal.title}
+                  onChange={e => setNewDeal({ ...newDeal, title: e.target.value })}
+                  placeholder="VD: Cung cấp rượu vang Tiệc Tất Niên Vingroup"
+                />
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="form-group">
+                  <label>Doanh nghiệp mua (B2B Buyer) *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    required
+                    value={newDeal.buyer_company}
+                    onChange={e => setNewDeal({ ...newDeal, buyer_company: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Sản phẩm quan tâm *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    required
+                    value={newDeal.product_name}
+                    onChange={e => setNewDeal({ ...newDeal, product_name: e.target.value })}
+                    placeholder="VD: Chateau Margaux 2015"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div className="form-group">
+                  <label>Số lượng (Chai/Thùng) *</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    required
+                    value={newDeal.quantity}
+                    onChange={e => setNewDeal({ ...newDeal, quantity: Number(e.target.value) })}
+                    min="1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Mức giá đề xuất (VNĐ) *</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    required
+                    value={newDeal.unit_price}
+                    onChange={e => setNewDeal({ ...newDeal, unit_price: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px', marginTop: '25px' }}>
+                <button type="button" className="btn-redapron-burgundy" onClick={() => setShowAddModal(false)}>Hủy</button>
+                <button type="submit" className="btn-redapron-gold">TẠO CƠ HỘI ĐÀM PHÁN</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* METRICS SUMMARY BAR */}
       <div style={{
@@ -383,101 +481,7 @@ export default function CRMKanbanPage({ showToast }) {
         })}
       </div>
 
-      {/* MODAL ADD NEW DEAL */}
-      {showAddModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '600px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Thêm Cơ Hội Đàm Phán B2B Mới</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}><i className="fa-solid fa-xmark"></i></button>
-            </div>
 
-            <form onSubmit={handleCreateDeal}>
-              <div className="form-group">
-                <label>Tên Hợp Đồng / Tiêu Đề RFQ *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Ví dụ: Đơn cung cấp rượu sự kiện Hè 2027..."
-                  value={newDeal.title}
-                  onChange={(e) => setNewDeal({ ...newDeal, title: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Tên Công Ty Khách Hàng (Buyer) *</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="CÔNG TY CP KHÁCH SẠN LOTTE SAIGON..."
-                  value={newDeal.buyer_company}
-                  onChange={(e) => setNewDeal({ ...newDeal, buyer_company: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Sản Phẩm Rượu</label>
-                  <select
-                    className="form-control"
-                    value={newDeal.product_name}
-                    onChange={(e) => setNewDeal({ ...newDeal, product_name: e.target.value })}
-                  >
-                    <option value="Macallan 18 Year Old Sherry Oak Single Malt">Macallan 18 Year Old Sherry Oak</option>
-                    <option value="Château Margaux Premier Grand Cru Classé 2018">Château Margaux Premier Grand Cru 2018</option>
-                    <option value="Dom Pérignon Vintage Brut Champagne 2012">Dom Pérignon Vintage Brut 2012</option>
-                    <option value="Hennessy X.O Cognac Extra Old Edition">Hennessy X.O Cognac Extra Old</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Số Lượng (Chai/Thùng)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={newDeal.quantity}
-                    onChange={(e) => setNewDeal({ ...newDeal, quantity: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group">
-                  <label>Đơn Giá Đề Xuất (VNĐ)</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={newDeal.unit_price}
-                    onChange={(e) => setNewDeal({ ...newDeal, unit_price: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phương Thức Thanh Toán</label>
-                  <select
-                    className="form-control"
-                    value={newDeal.payment_method}
-                    onChange={(e) => setNewDeal({ ...newDeal, payment_method: e.target.value })}
-                  >
-                    <option value="Net-30 Credit">Net-30 Credit (Nợ 30 ngày)</option>
-                    <option value="Pre-payment">Pre-payment (Chuyển khoản trước)</option>
-                    <option value="LC Credit">L/C Thư Tín Dụng</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
-                <button type="button" onClick={() => setShowAddModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
-                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>TẠO CƠ HỘI KANBAN</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );
