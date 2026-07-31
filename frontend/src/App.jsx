@@ -129,6 +129,7 @@ export default function App() {
 
   return (
     <div>
+      <div className="noise-overlay" />
       <AgeVerificationModal />
       <TopBar currentUser={currentUser} />
       <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} currentUser={currentUser} setCurrentUser={setCurrentUser} showToast={showToast} />
