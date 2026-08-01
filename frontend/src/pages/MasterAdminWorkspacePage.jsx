@@ -15,17 +15,20 @@ import apiService from '../services/api';
 function OverviewDashboard() {
   const [revenueData, setRevenueData] = useState({ monthly: [], top_products: [] });
   const [activityFeed, setActivityFeed] = useState([]);
+  const [dbStats, setDbStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [revRes, actRes] = await Promise.all([
+        const [revRes, actRes, statRes] = await Promise.all([
           apiService.getDashboardRevenue(),
-          apiService.getDashboardActivity()
+          apiService.getDashboardActivity(),
+          apiService.getDashboardStats()
         ]);
         if (revRes.success) setRevenueData(revRes.data);
         if (actRes.success) setActivityFeed(actRes.data);
+        if (statRes.success) setDbStats(statRes.stats);
       } catch (err) {
         console.error("Lỗi fetch dashboard:", err);
       } finally {
@@ -39,6 +42,14 @@ function OverviewDashboard() {
   let topProducts = revenueData.top_products;
   const activityLogs = activityFeed;
   
+  // Format VND helper
+  const formatRevenueStr = (val) => {
+    if (!val) return '0 ₫';
+    if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
+    if (val >= 1000000) return (val / 1000000).toFixed(0) + ' Tr ₫';
+    return val.toLocaleString('vi-VN') + ' ₫';
+  };
+
   // Assign colors to top products since DB doesn't store colors
   const colors = ['#D4AF37', '#E54D60', '#3B82F6', '#10B981', '#6B7280'];
   topProducts = topProducts.map((tp, idx) => ({ ...tp, color: colors[idx % colors.length] }));
@@ -47,6 +58,12 @@ function OverviewDashboard() {
   
   if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Đang tải dữ liệu Real-time...</div>;
   
+  const currentTotalRevenue = dbStats ? formatRevenueStr(dbStats.total_revenue) : '0 ₫';
+  const totalCompaniesCount = dbStats ? dbStats.total_companies : 0;
+  const totalInventoryCount = dbStats ? dbStats.total_inventory.toLocaleString('vi-VN') : 0;
+  const activeShipmentsCount = dbStats ? dbStats.active_shipments : 0;
+  const activeRFQsCount = dbStats ? dbStats.active_rfqs : 0;
+
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
       <div style={{ marginBottom: '25px' }}>
@@ -61,12 +78,11 @@ function OverviewDashboard() {
       {/* QUICK STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '25px' }}>
         {[
-          { label: 'Doanh Thu T7', value: '18.65 Tỷ ₫', color: '#D4AF37', icon: 'fa-coins', change: '+18%' },
-          { label: 'Đơn Hàng T7', value: '30', color: '#10B981', icon: 'fa-receipt', change: '+20%' },
-          { label: 'Đối Tác B2B', value: '4', color: '#3B82F6', icon: 'fa-building', change: '+2 mới' },
-          { label: 'Cơ Hội CRM', value: '5', color: '#8B5CF6', icon: 'fa-handshake', change: '40% chốt' },
-          { label: 'Tồn Kho', value: '1,650', color: '#F59E0B', icon: 'fa-warehouse', change: 'thùng' },
-          { label: 'Giao Hàng', value: '2', color: '#EC4899', icon: 'fa-truck', change: 'đang chờ' }
+          { label: 'Doanh Thu Realtime', value: currentTotalRevenue, color: '#D4AF37', icon: 'fa-coins', change: 'từ CSDL SQL' },
+          { label: 'Đội Ngũ & Công Ty', value: totalCompaniesCount, color: '#10B981', icon: 'fa-building', change: 'doanh nghiệp' },
+          { label: 'Đàm Phán RFQ', value: activeRFQsCount, color: '#3B82F6', icon: 'fa-file-signature', change: 'đang xử lý' },
+          { label: 'Tồn Kho Toàn Hệ Thống', value: totalInventoryCount, color: '#F59E0B', icon: 'fa-warehouse', change: 'thùng' },
+          { label: 'Đơn Vận Chuyển', value: activeShipmentsCount, color: '#EC4899', icon: 'fa-truck', change: 'đang giao' }
         ].map((stat, idx) => (
           <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

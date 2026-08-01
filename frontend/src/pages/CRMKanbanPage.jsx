@@ -166,7 +166,11 @@ export default function CRMKanbanPage({ showToast }) {
 
   // Calculate Metrics
   const filteredDeals = (deals || []).filter(d => {
-    const matchesSearch = d.title.toLowerCase().includes(searchTerm.toLowerCase()) || d.buyer_company.toLowerCase().includes(searchTerm.toLowerCase());
+    const titleStr = d && d.title ? String(d.title).toLowerCase() : '';
+    const companyStr = d && d.buyer_company ? String(d.buyer_company).toLowerCase() : '';
+    const searchStr = (searchTerm || '').toLowerCase();
+    
+    const matchesSearch = titleStr.includes(searchStr) || companyStr.includes(searchStr);
     const matchesCategory = filterCategory === 'ALL' || d.category === filterCategory;
     return matchesSearch && matchesCategory;
   });

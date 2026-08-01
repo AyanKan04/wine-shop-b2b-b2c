@@ -22,6 +22,15 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Health check endpoints (Unprotected)
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, status: 'RuuBusiness Express API Running Smoothly', timestamp: new Date() });
+});
+
+app.get('/api', (req, res) => {
+  res.json({ success: true, status: 'RuuBusiness Express API Active', health: '/api/health', timestamp: new Date() });
+});
+
 // API Modular Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -33,10 +42,5 @@ app.use('/api', warehouseRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api', chatRoutes);
 app.use('/api/test', testRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ success: true, status: 'RuuBusiness Express API Running Smoothly', timestamp: new Date() });
-});
 
 module.exports = app;
