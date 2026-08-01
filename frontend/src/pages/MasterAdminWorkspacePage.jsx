@@ -91,13 +91,13 @@ function OverviewDashboard() {
           { label: 'Tồn Kho Toàn Hệ Thống', value: totalInventoryCount, color: '#F59E0B', icon: 'fa-warehouse', change: 'thùng' },
           { label: 'Đơn Vận Chuyển', value: activeShipmentsCount, color: '#EC4899', icon: 'fa-truck', change: 'đang giao' }
         ].map((stat, idx) => (
-          <div key={idx} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '16px' }}>
+          <div key={idx} style={{ background: '#FFFFFF', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</span>
-              <i className={`fa-solid ${stat.icon}`} style={{ color: stat.color, fontSize: '0.9rem' }}></i>
+              <span style={{ fontSize: '0.72rem', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>{stat.label}</span>
+              <i className={`fa-solid ${stat.icon}`} style={{ color: stat.color, fontSize: '0.95rem' }}></i>
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: '700', color: stat.color, marginTop: '6px' }}>{stat.value}</div>
-            <div style={{ fontSize: '0.7rem', color: '#10B981', marginTop: '3px' }}>{stat.change}</div>
+            <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '3px', fontWeight: '500' }}>{stat.change}</div>
           </div>
         ))}
       </div>
@@ -326,18 +326,35 @@ export default function MasterAdminWorkspacePage({
               key={mod.id}
               onClick={() => setActiveAdminModule(mod.id)}
               style={{
-                background: isActive ? '#111111' : '#FFFFFF',
-                border: isActive ? '1px solid #111111' : '1px solid var(--border-gold)',
-                color: isActive ? '#FFFFFF' : 'var(--text-muted)',
+                background: isActive ? '#111111' : '#F8F9FA',
+                border: isActive ? '1px solid #111111' : '1px solid #D1D5DB',
+                color: isActive ? '#FFFFFF' : '#2D3748',
                 padding: '10px 18px',
                 borderRadius: '6px',
                 fontFamily: 'var(--font-body)',
-                fontWeight: '600',
-                fontSize: '0.78rem',
+                fontWeight: isActive ? '700' : '600',
+                fontSize: '0.8rem',
                 letterSpacing: '0.02em',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s ease-in-out',
                 whiteSpace: 'nowrap',
+                boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.2)' : 'none'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = '#EDF2F7';
+                  e.currentTarget.style.color = '#1A202C';
+                  e.currentTarget.style.borderColor = '#A0AEC0';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = '#F8F9FA';
+                  e.currentTarget.style.color = '#2D3748';
+                  e.currentTarget.style.borderColor = '#D1D5DB';
+                }
+              }}
+            >
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
