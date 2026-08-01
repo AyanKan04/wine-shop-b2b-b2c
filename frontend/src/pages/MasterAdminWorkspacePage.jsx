@@ -21,14 +21,17 @@ function OverviewDashboard() {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const [revRes, actRes, statRes] = await Promise.all([
-          apiService.getDashboardRevenue(),
-          apiService.getDashboardActivity(),
-          apiService.getDashboardStats()
-        ]);
-        if (revRes.success) setRevenueData(revRes.data);
-        if (actRes.success) setActivityFeed(actRes.data);
-        if (statRes.success) setDbStats(statRes.stats);
+        apiService.getDashboardRevenue()
+          .then(res => { if (res && res.success && res.data) setRevenueData(res.data); })
+          .catch(err => console.warn('Revenue error:', err));
+          
+        apiService.getDashboardActivity()
+          .then(res => { if (res && res.success && res.data) setActivityFeed(res.data); })
+          .catch(err => console.warn('Activity error:', err));
+
+        apiService.getDashboardStats()
+          .then(res => { if (res && res.success && res.stats) setDbStats(res.stats); })
+          .catch(err => console.warn('Stats error:', err));
       } catch (err) {
         console.error("Lỗi fetch dashboard:", err);
       } finally {
