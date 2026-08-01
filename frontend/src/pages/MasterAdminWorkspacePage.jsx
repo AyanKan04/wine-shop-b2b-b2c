@@ -338,7 +338,10 @@ export default function MasterAdminWorkspacePage({
                 cursor: 'pointer',
                 transition: 'all 0.2s ease-in-out',
                 whiteSpace: 'nowrap',
-                boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.2)' : 'none'
+                boxShadow: isActive ? '0 2px 6px rgba(0,0,0,0.2)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -355,13 +358,7 @@ export default function MasterAdminWorkspacePage({
                 }
               }}
             >
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: 'none'
-              }}
-            >
-              <i className={`fa-solid ${mod.icon}`} style={{ color: isActive ? '#FFFFFF' : 'var(--text-muted)' }}></i>
+              <i className={`fa-solid ${mod.icon}`} style={{ color: isActive ? '#FFFFFF' : '#6B7280' }}></i>
               <span>{mod.title}</span>
             </button>
           );
