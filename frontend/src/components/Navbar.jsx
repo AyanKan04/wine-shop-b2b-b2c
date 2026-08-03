@@ -163,13 +163,30 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
             className={`zone-admin ${currentRoute === 'master-admin' ? 'active' : ''}`}
             onClick={() => setCurrentRoute('master-admin')}
             style={{
-              background: currentRoute === 'master-admin' ? 'var(--accent-burgundy)' : 'rgba(229, 77, 96, 0.15)',
-              border: '1px solid #E54D60',
-              color: '#FFF',
-              fontWeight: '700'
+              background: currentRoute === 'master-admin' ? '#721C24' : '#1A1A1A',
+              border: currentRoute === 'master-admin' ? '1px solid #D4AF37' : '1px solid #D4AF37',
+              color: currentRoute === 'master-admin' ? '#FFFFFF' : '#D4AF37',
+              fontWeight: '700',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease-in-out',
+              boxShadow: currentRoute === 'master-admin' ? '0 2px 8px rgba(114, 28, 36, 0.4)' : '0 2px 6px rgba(0, 0, 0, 0.15)'
+            }}
+            onMouseEnter={(e) => {
+              if (currentRoute !== 'master-admin') {
+                e.currentTarget.style.background = '#2A2A2A';
+                e.currentTarget.style.color = '#FFFFFF';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (currentRoute !== 'master-admin') {
+                e.currentTarget.style.background = '#1A1A1A';
+                e.currentTarget.style.color = '#D4AF37';
+              }
             }}
           >
-            <i className="fa-solid fa-crown" style={{ marginRight: '6px', color: 'var(--accent-gold)' }}></i>
+            <i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i>
             TRANG QUẢN TRỊ MASTER ADMIN
           </button>
         )}

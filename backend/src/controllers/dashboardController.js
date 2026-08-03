@@ -127,9 +127,9 @@ const getActivityFeed = async (req, res) => {
         SELECT 
           'ACT-' + CAST(LogID AS VARCHAR) as id,
           CreatedAt as timestamp,
-          'Hệ Thống' as module,
+          N'Hệ Thống' as module,
           Action as action,
-          'Admin' as actor,
+          N'Quản trị viên' as actor,
           'fa-clock-rotate-left' as icon,
           '#6B7280' as color
         FROM AuditLogs
@@ -139,9 +139,9 @@ const getActivityFeed = async (req, res) => {
         SELECT 
           'ORD-' + CAST(OrderID AS VARCHAR) as id,
           CreatedAt as timestamp,
-          'Bán Hàng' as module,
-          'Đơn hàng mới ' + OrderNumber as action,
-          'Khách hàng' as actor,
+          N'Bán Hàng' as module,
+          N'Đơn hàng mới ' + OrderNumber as action,
+          N'Khách hàng' as actor,
           'fa-cart-shopping' as icon,
           '#3B82F6' as color
         FROM Orders
@@ -151,9 +151,9 @@ const getActivityFeed = async (req, res) => {
         SELECT 
           'INV-' + CAST(InvoiceID AS VARCHAR) as id,
           InvoiceDate as timestamp,
-          'Tài Chính' as module,
-          'Hóa đơn ' + InvoiceNumber + ' - ' + Status as action,
-          'Hệ thống' as actor,
+          N'Tài Chính' as module,
+          N'Hóa đơn ' + InvoiceNumber + ' - ' + Status as action,
+          N'Hệ thống' as actor,
           'fa-receipt' as icon,
           '#10B981' as color
         FROM Invoices

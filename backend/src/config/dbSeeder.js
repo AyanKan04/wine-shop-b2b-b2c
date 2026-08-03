@@ -86,12 +86,12 @@ async function seedIfEmpty(sql) {
     // Products
     await sql.query`
       SET IDENTITY_INSERT Products ON;
-      INSERT INTO Products (ProductID, SellerCompanyID, SKU, ProductName, Slug, Description, CountryOfOrigin, AlcoholContent, VolumeML, MOQ, Status, CreatedAt, UpdatedAt)
+      INSERT INTO Products (ProductID, SellerCompanyID, SKU, ProductName, Slug, Description, CountryOfOrigin, AlcoholContent, VolumeML, MOQ, Status, ImageURL, CreatedAt, UpdatedAt)
       VALUES
-      (101, 2, 'SKU-SCOT-MAC18', N'Macallan 18 Year Old Sherry Oak Single Malt', 'macallan-18-single-malt', N'Dòng Single Malt Whisky danh tiếng từ vùng Highland Scotland, ủ 18 năm trong thùng gỗ sồi Sherry Oak Tây Ban Nha.', N'Scotland', 43.0, 700, 5, 'ACTIVE', GETDATE(), GETDATE()),
-      (102, 2, 'SKU-FR-MARGAUX2018', N'Château Margaux Premier Grand Cru Classé 2018', 'chateau-margaux-2018', N'Vang đỏ huyền thoại thuộc bảng xếp hạng Premier Grand Cru Classé 1855 trứ danh vùng Margaux Bordeaux.', N'France', 13.5, 750, 10, 'ACTIVE', GETDATE(), GETDATE()),
-      (103, 2, 'SKU-FR-DOM2012', N'Dom Pérignon Vintage Brut Champagne 2012', 'dom-perignon-2012', N'Tuyệt phẩm Sâm-panh Pháp niên hiệu 2012 đạt sự cân bằng tuyệt hảo giữa hương hoa quả nhiệt đới và khoáng chất.', N'France', 12.5, 750, 8, 'ACTIVE', GETDATE(), GETDATE()),
-      (104, 2, 'SKU-FR-HENNESSY-XO', N'Hennessy X.O Cognac Extra Old Edition', 'hennessy-xo-cognac', N'Dòng Cognac X.O trứ danh nguyên bản từ năm 1870, phối trộn hơn 100 loại eaux-de-vie lâu năm.', N'France', 40.0, 700, 6, 'ACTIVE', GETDATE(), GETDATE());
+      (101, 2, 'SKU-SCOT-MAC18', N'Macallan 18 Year Old Sherry Oak Single Malt', 'macallan-18-single-malt', N'Dòng Single Malt Whisky danh tiếng từ vùng Highland Scotland, ủ 18 năm trong thùng gỗ sồi Sherry Oak Tây Ban Nha.', N'Scotland', 43.0, 700, 5, 'ACTIVE', 'https://images.unsplash.com/photo-1527281400683-1aae777175f8?auto=format&fit=crop&w=800&q=80', GETDATE(), GETDATE()),
+      (102, 2, 'SKU-FR-MARGAUX2018', N'Château Margaux Premier Grand Cru Classé 2018', 'chateau-margaux-2018', N'Vang đỏ huyền thoại thuộc bảng xếp hạng Premier Grand Cru Classé 1855 trứ danh vùng Margaux Bordeaux.', N'France', 13.5, 750, 10, 'ACTIVE', 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80', GETDATE(), GETDATE()),
+      (103, 2, 'SKU-FR-DOM2012', N'Dom Pérignon Vintage Brut Champagne 2012', 'dom-perignon-2012', N'Tuyệt phẩm Sâm-panh Pháp niên hiệu 2012 đạt sự cân bằng tuyệt hảo giữa hương hoa quả nhiệt đới và khoáng chất.', N'France', 12.5, 750, 8, 'ACTIVE', 'https://images.unsplash.com/photo-1569919659476-f0852f6834b7?auto=format&fit=crop&w=800&q=80', GETDATE(), GETDATE()),
+      (104, 2, 'SKU-FR-HENNESSY-XO', N'Hennessy X.O Cognac Extra Old Edition', 'hennessy-xo-cognac', N'Dòng Cognac X.O trứ danh nguyên bản từ năm 1870, phối trộn hơn 100 loại eaux-de-vie lâu năm.', N'France', 40.0, 700, 6, 'ACTIVE', 'https://images.unsplash.com/photo-1568213816046-0ee1c42bd559?auto=format&fit=crop&w=800&q=80', GETDATE(), GETDATE());
       SET IDENTITY_INSERT Products OFF;
     `;
 

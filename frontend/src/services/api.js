@@ -82,6 +82,7 @@ export const apiService = {
   updateShipmentStatus: (id, status) => request(`/warehouse/shipments/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
 
   // Dashboard
+  getDashboardStats: () => request('/dashboard/stats'),
   getDashboardRevenue: () => request('/dashboard/revenue'),
   getDashboardActivity: () => request('/dashboard/activity'),
   getNotifications: () => request('/dashboard/notifications'),
