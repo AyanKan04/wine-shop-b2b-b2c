@@ -4,16 +4,16 @@ const { getPool, sql } = require('../config/db');
 const getRFQs = async (req, res) => {
   try {
     const pool = await getPool();
-    // Query RFQs along with their items using JSON mapping
+    // Query RFQs along with their items and Product information using LEFT JOIN
     const result = await pool.request().query(`
-      SELECT r.*, c.CompanyName as buyer_company,
+      SELECT r.*, c.CompanyName as buyer_company, p.ProductName as db_product_name,
              (SELECT * FROM RFQItems ri WHERE ri.RFQID = r.RFQID FOR JSON PATH) as items
       FROM RFQs r
       LEFT JOIN Companies c ON r.BuyerCompanyID = c.CompanyID
+      LEFT JOIN Products p ON r.ProductID = p.ProductID
       ORDER BY r.CreatedAt DESC
     `);
     
-    // Map items to top level for frontend compatibility (fallback to default values if items empty)
     const rfqs = result.recordset.map(row => {
       let items = [];
       if (row.items) {
@@ -23,9 +23,9 @@ const getRFQs = async (req, res) => {
         rfq_id: row.RFQID,
         buyer_company: row.buyer_company,
         title: row.Title,
-        product_name: row.Description || 'Sản phẩm rượu', // Frontend expects product_name
-        quantity: items.length > 0 ? items[0].Quantity : 50,
-        target_price: items.length > 0 ? items[0].TargetPrice : 70000000,
+        product_name: row.db_product_name || row.Description || 'Sản phẩm rượu',
+        quantity: row.RequestedQuantity || (items.length > 0 ? items[0].Quantity : 50),
+        target_price: row.TargetPrice || 70000000,
         status: row.Status,
         created_at: row.CreatedAt ? row.CreatedAt.toISOString().split('T')[0] : null
       };
@@ -39,28 +39,42 @@ const getRFQs = async (req, res) => {
 };
 
 const createRFQ = async (req, res) => {
-  const { product_name, quantity, target_price } = req.body;
-  const qty = parseInt(quantity) || 50;
+  const { product_name, quantity, requested_quantity, target_price, title, product_id } = req.body;
+  const qty = parseInt(quantity || requested_quantity) || 50;
   const price = parseFloat(target_price) || 70000000;
-  const title = `Yêu cầu báo giá ${product_name}`;
+  const productId = parseInt(product_id) || 101;
 
   try {
     const pool = await getPool();
+    
+    // Look up actual product name if not provided
+    let finalProductName = product_name;
+    if (!finalProductName && productId) {
+      const prodQuery = await pool.request()
+        .input('ProductID', sql.BigInt, productId)
+        .query('SELECT ProductName FROM Products WHERE ProductID = @ProductID');
+      if (prodQuery.recordset.length > 0) {
+        finalProductName = prodQuery.recordset[0].ProductName;
+      }
+    }
+    if (!finalProductName) finalProductName = 'Sản phẩm rượu';
+
+    const finalTitle = title || `Yêu cầu báo giá ${finalProductName}`;
+
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
       // Hardcode BuyerCompanyID = 1, CreatedBy = 1 for now (if not using auth properly in this context)
-      // If auth is provided, we'd use req.user.company_id
       const buyerCompanyId = req.user && req.user.company_id ? req.user.company_id : 1;
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
 
       const rfqResult = await transaction.request()
         .input('BuyerCompanyID', sql.BigInt, buyerCompanyId)
         .input('CreatedBy', sql.BigInt, createdBy)
-        .input('Title', sql.NVarChar, title)
-        .input('Description', sql.NVarChar, product_name)
-        .input('ProductID', sql.BigInt, req.body.product_id || 101)
+        .input('Title', sql.NVarChar, finalTitle)
+        .input('Description', sql.NVarChar, finalProductName)
+        .input('ProductID', sql.BigInt, productId)
         .input('RequestedQuantity', sql.Int, qty)
         .input('TargetPrice', sql.Decimal(18,2), price)
         .input('DeliveryDate', sql.Date, req.body.delivery_date ? new Date(req.body.delivery_date) : new Date())
@@ -75,7 +89,7 @@ const createRFQ = async (req, res) => {
 
       await transaction.request()
         .input('RFQID', sql.BigInt, newId)
-        .input('ProductID', sql.BigInt, req.body.product_id || 101)
+        .input('ProductID', sql.BigInt, productId)
         .input('Quantity', sql.Int, qty)
         .query(`
           INSERT INTO RFQItems (RFQID, ProductID, Quantity)
@@ -87,8 +101,8 @@ const createRFQ = async (req, res) => {
       const newRfq = {
         rfq_id: newId,
         buyer_company: 'Công ty Khách Hàng',
-        title: title,
-        product_name: product_name,
+        title: finalTitle,
+        product_name: finalProductName,
         quantity: qty,
         target_price: price,
         status: 'SUBMITTED',

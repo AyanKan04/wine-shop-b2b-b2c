@@ -1,5 +1,5 @@
 const { getPool } = require('./src/config/db');
-const sql = require('mssql');
+const sql = require('mssql/msnodesqlv8');
 
 const API_URL = 'http://localhost:5000/api';
 
