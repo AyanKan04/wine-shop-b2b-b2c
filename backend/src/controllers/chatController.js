@@ -21,7 +21,50 @@ async function ensureRFQMessagesTable(pool) {
   }
 }
 
-// Helper to query Gemini API if GEMINI_API_KEY is configured in env
+// Helper to query Groq API
+async function queryGroqAI(userText, productCatalog, apiKey) {
+  const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, and wholesale discount tiers.
+Rules:
+1. Speak in a professional, polite, and luxury expert tone.
+2. Answer in Vietnamese.
+3. NEVER use any emojis in your response (emojis are strictly banned by design guidelines).
+4. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
+${JSON.stringify(productCatalog, null, 2)}`;
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: userText }
+        ],
+        temperature: 0.2
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('Groq API call failed with status:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content.trim().replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+    }
+    return null;
+  } catch (err) {
+    console.error('Error calling Groq API:', err.message);
+    return null;
+  }
+}
+
+// Helper to query Gemini/Groq API if configured in env
 async function queryGeminiAI(userText, productCatalog) {
   const geminiKeys = [
     process.env.GEMINI_API_KEY_0,
@@ -37,6 +80,11 @@ async function queryGeminiAI(userText, productCatalog) {
   
   // Pick a random key
   const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+
+  // Auto-detect Groq keys
+  if (apiKey.startsWith('gsk_')) {
+    return await queryGroqAI(userText, productCatalog, apiKey);
+  }
 
   const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, and wholesale discount tiers.
 Rules:
