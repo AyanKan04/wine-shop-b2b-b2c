@@ -275,6 +275,60 @@ const updateQuotationStatus = async (req, res) => {
         .query(`UPDATE Quotations SET Status = @Status WHERE QuotationID = @QuotationID`);
 
       if (status === 'ACCEPTED') {
+        // 1. Check buyer credit limit
+        const creditCheck = await transaction.request()
+          .input('CompanyID', sql.BigInt, qData.BuyerCompanyID)
+          .query('SELECT CreditLimitAmount, UsedAmount FROM CreditLimits WHERE CompanyID = @CompanyID');
+        
+        if (creditCheck.recordset.length > 0) {
+          const { CreditLimitAmount, UsedAmount } = creditCheck.recordset[0];
+          if (UsedAmount + totalAmount > CreditLimitAmount) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, message: `Hạn mức tín dụng không đủ để hoàn tất đơn hàng. Còn lại: ${(CreditLimitAmount - UsedAmount).toLocaleString('vi-VN')} VNĐ.` });
+          }
+        }
+
+        // 2. Check overdue unpaid invoices
+        const overdueCheck = await transaction.request()
+          .input('CompanyID', sql.BigInt, qData.BuyerCompanyID)
+          .query(`
+            SELECT COUNT(*) as overdue_count 
+            FROM Invoices i
+            JOIN Orders o ON i.OrderID = o.OrderID
+            WHERE o.BuyerCompanyID = @CompanyID AND i.Status = 'UNPAID' AND i.DueDate < GETDATE()
+          `);
+        
+        if (overdueCheck.recordset.length > 0 && overdueCheck.recordset[0].overdue_count > 0) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Tài khoản sỉ bị tạm khóa chức năng mua nợ Net-30 do có hóa đơn quá hạn chưa thanh toán.' });
+        }
+
+        // 3. Verify stock availability
+        const prodId = qData.ProductID || 101;
+        const invCheck = await transaction.request()
+          .input('ProductID', sql.BigInt, prodId)
+          .query('SELECT QuantityOnHand, ReservedQuantity FROM Inventories WHERE ProductID = @ProductID');
+        
+        let available = 0;
+        if (invCheck.recordset.length > 0) {
+          available = (invCheck.recordset[0].QuantityOnHand || 0) - (invCheck.recordset[0].ReservedQuantity || 0);
+        }
+        
+        if (available < qData.Quantity) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: `Số lượng hàng tồn kho khả dụng không đủ. Chỉ còn lại ${available} thùng.` });
+        }
+
+        // 4. Reserve stock
+        await transaction.request()
+          .input('ProductID', sql.BigInt, prodId)
+          .input('Quantity', sql.Int, qData.Quantity)
+          .query(`
+            UPDATE Inventories 
+            SET ReservedQuantity = ReservedQuantity + @Quantity 
+            WHERE ProductID = @ProductID
+          `);
+
         const orderNumber = `ORD-2026-${8800 + quotationId}`;
         const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
         
@@ -295,7 +349,7 @@ const updateQuotationStatus = async (req, res) => {
 
         await transaction.request()
           .input('OrderID', sql.BigInt, orderId)
-          .input('ProductID', sql.BigInt, qData.ProductID || 101)
+          .input('ProductID', sql.BigInt, prodId)
           .input('Quantity', sql.Int, qData.Quantity)
           .input('UnitPrice', sql.Decimal(18,2), qData.OfferUnitPrice)
           .query(`

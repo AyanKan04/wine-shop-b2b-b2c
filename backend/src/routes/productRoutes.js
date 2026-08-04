@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { getProducts, getProductById, createProduct, updateProduct, deleteProduct, updateProductPrices } = require('../controllers/productController');
-const { authenticateToken, requireRole } = require('../middlewares/authMiddleware');
+const { authenticateToken, requireRole, verifyAlcoholLicense } = require('../middlewares/authMiddleware');
 
-// Public product catalog endpoints
-router.get('/', getProducts);
-router.get('/:id', getProductById);
+// Protected product catalog endpoints (Decree 105/2017/ND-CP Compliance)
+router.get('/', authenticateToken, verifyAlcoholLicense, getProducts);
+router.get('/:id', authenticateToken, verifyAlcoholLicense, getProductById);
 
 router.post('/', authenticateToken, requireRole('PLATFORM_ADMIN', 'COMPANY_ADMIN'), createProduct);
 router.put('/:id', authenticateToken, requireRole('PLATFORM_ADMIN', 'COMPANY_ADMIN'), updateProduct);
