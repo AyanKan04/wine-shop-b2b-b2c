@@ -21,8 +21,57 @@ async function ensureRFQMessagesTable(pool) {
   }
 }
 
-// Helper to query Gemini API if GEMINI_API_KEY is configured in env
-async function queryGeminiAI(userText, productCatalog) {
+// Query Groq Cloud AI API (Llama-3.3-70b-versatile)
+async function queryGroqAI(userText, productCatalog) {
+  const groqApiKey = process.env.GROQ_API_KEY;
+
+  const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, wholesale discount tiers, and Net-30 credit terms.
+Rules:
+1. Speak in a professional, polite, and luxury expert tone.
+2. Answer in Vietnamese.
+3. NEVER use any emojis in your response (emojis are strictly banned by design guidelines).
+4. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
+${JSON.stringify(productCatalog, null, 2)}`;
+
+  if (groqApiKey) {
+    try {
+      console.log('🤖 Sending prompt to Groq Cloud API (Llama-3.3-70b)...');
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${groqApiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userText }
+          ],
+          temperature: 0.5,
+          max_tokens: 800
+        })
+      });
+
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.choices && resData.choices[0] && resData.choices[0].message) {
+          const rawText = resData.choices[0].message.content;
+          // Strip out emojis according to brand design guidelines
+          const cleanText = rawText.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+          console.log('✅ Groq AI Response generated successfully!');
+          return cleanText;
+        }
+      } else {
+        const errText = await response.text();
+        console.warn('Groq API call failed status:', response.status, errText);
+      }
+    } catch (err) {
+      console.error('Error calling Groq AI:', err.message);
+    }
+  }
+
+  // Secondary Fallback: Gemini API if configured
   const geminiKeys = [
     process.env.GEMINI_API_KEY_0,
     process.env.GEMINI_API_KEY_1,
@@ -31,53 +80,29 @@ async function queryGeminiAI(userText, productCatalog) {
     process.env.AI_API_KEY
   ].filter(Boolean);
 
-  if (geminiKeys.length === 0) {
-    return null; // Fallback to local rule-based engine
-  }
-  
-  // Pick a random key
-  const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+  if (geminiKeys.length > 0) {
+    const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: systemInstruction }, { text: `User message: ${userText}` }] }]
+        })
+      });
 
-  const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, and wholesale discount tiers.
-Rules:
-1. Speak in a professional, polite, and luxury expert tone.
-2. Answer in Vietnamese.
-3. NEVER use any emojis in your response (emojis are strictly banned by design guidelines).
-4. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
-${JSON.stringify(productCatalog, null, 2)}`;
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: systemInstruction },
-              { text: `User message: ${userText}` }
-            ]
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      console.warn('Gemini API call failed with status:', response.status);
-      return null;
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts[0]) {
+          return resData.candidates[0].content.parts[0].text.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
+        }
+      }
+    } catch (geminiErr) {
+      console.error('Gemini fallback error:', geminiErr.message);
     }
-
-    const resData = await response.json();
-    if (resData.candidates && resData.candidates[0] && resData.candidates[0].content && resData.candidates[0].content.parts[0]) {
-      return resData.candidates[0].content.parts[0].text.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
-    }
-  } catch (err) {
-    console.error('Error calling Gemini AI:', err.message);
   }
+
   return null;
 }
 
@@ -102,30 +127,30 @@ const getChatHistory = async (req, res) => {
       created_at: row.CreatedAt ? row.CreatedAt.toISOString().replace('T', ' ').slice(0, 16) : null
     }));
 
-    res.json({ success: true, count: messages.length, data: messages });
+    res.json({ success: true, data: messages });
   } catch (err) {
     console.error('Error fetching chat history:', err);
     res.status(500).json({ success: false, message: 'Lỗi tải lịch sử chat' });
   }
 };
 
-// Send a chat message with AI Sommelier trigger hook
+// Send message & get AI response
 const sendMessage = async (req, res) => {
   const rfqId = parseInt(req.params.id);
   const { sender_name, sender_role, message_text } = req.body;
 
-  if (!message_text) {
-    return res.status(400).json({ success: false, message: 'Nội dung tin nhắn là bắt buộc' });
+  if (!message_text || !message_text.trim()) {
+    return res.status(400).json({ success: false, message: 'Nội dung tin nhắn không được để trống' });
   }
 
   try {
     const pool = await getPool();
     await ensureRFQMessagesTable(pool);
 
-    // 1. Save Buyer or Sales message
+    // 1. Insert user message
     await pool.request()
       .input('RFQID', sql.BigInt, rfqId)
-      .input('SenderName', sql.NVarChar, sender_name || 'Anonymous')
+      .input('SenderName', sql.NVarChar, sender_name || 'Khách hàng')
       .input('SenderRole', sql.NVarChar, sender_role || 'BUYER')
       .input('MessageText', sql.NVarChar, message_text.trim())
       .query(`
@@ -133,9 +158,9 @@ const sendMessage = async (req, res) => {
         VALUES (@RFQID, @SenderName, @SenderRole, @MessageText, GETDATE())
       `);
 
-    // 2. Trigger AI Sommelier if tagged "@ai" or if message is explicitly requesting Sommelier assist
+    // 2. Trigger AI Sommelier if tagged "@ai" or if message is requesting Sommelier assist
     const lowerMsg = message_text.toLowerCase();
-    const needsAiResponse = lowerMsg.includes('@ai') || lowerMsg.includes('sommelier') || lowerMsg.includes('tư vấn') || lowerMsg.includes('chiết khấu');
+    const needsAiResponse = lowerMsg.includes('@ai') || lowerMsg.includes('sommelier') || lowerMsg.includes('tư vấn') || lowerMsg.includes('chiết khấu') || lowerMsg.includes('rượu') || lowerMsg.includes('giá');
 
     if (needsAiResponse) {
       let aiResponseText = null;
@@ -149,10 +174,10 @@ const sendMessage = async (req, res) => {
       
       const productCatalog = prodRes.recordset;
 
-      // 2a. Try real Gemini AI if API Key is configured
-      aiResponseText = await queryGeminiAI(message_text, productCatalog);
+      // 2a. Query Groq Cloud AI
+      aiResponseText = await queryGroqAI(message_text, productCatalog);
 
-      // 2b. Fallback to Local Rule-Based Sommelier Engine if real AI is unavailable
+      // 2b. Fallback to Local Rule-Based Sommelier Engine if AI is unavailable
       if (!aiResponseText) {
         aiResponseText = 'Xin chào, tôi là trợ lý AI Sommelier từ Red Apron. Tôi có thể hỗ trợ quý khách về chiết khấu sỉ, kiểm tra MOQ sản phẩm hoặc giới thiệu các dòng vang/spirits đẳng cấp.';
 
@@ -172,7 +197,7 @@ const sendMessage = async (req, res) => {
       // Append AI Response to database
       await pool.request()
         .input('RFQID', sql.BigInt, rfqId)
-        .input('SenderName', sql.NVarChar, 'AI Sommelier Assistant')
+        .input('SenderName', sql.NVarChar, 'AI Sommelier Assistant (Groq Llama-3.3)')
         .input('SenderRole', sql.NVarChar, 'AI_ASSISTANT')
         .input('MessageText', sql.NVarChar, aiResponseText.trim())
         .query(`
@@ -204,5 +229,6 @@ const sendMessage = async (req, res) => {
 
 module.exports = {
   getChatHistory,
-  sendMessage
+  sendMessage,
+  queryGroqAI
 };
