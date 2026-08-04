@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatVND } from '../utils/formatters.js';
 import apiService from '../services/api.js';
 
@@ -13,28 +13,44 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
     notes: ''
   });
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [rfqRes, quoteRes] = await Promise.all([
+        apiService.getRFQs(),
+        apiService.getQuotations()
+      ]);
+      if (rfqRes.success && rfqRes.data) {
+        setRfqList(rfqRes.data);
+      }
+      if (quoteRes.success && quoteRes.data) {
+        setQuotationList(quoteRes.data);
+      }
+    } catch (err) {
+      console.error('Error fetching RFQs:', err);
+    }
+  };
+
   const handleCreateRfq = (e) => {
     e.preventDefault();
     const created = {
-      rfq_id: 8800 + rfqList.length + 1,
-      buyer_company: 'Doanh Nghiệp Của Bạn',
-      title: `Đơn RFQ ${newRfq.product_name}`,
       product_name: newRfq.product_name,
       quantity: parseInt(newRfq.quantity) || 1,
       target_price: parseInt(newRfq.target_price) || 0,
-      status: 'SUBMITTED',
-      created_at: new Date().toISOString().split('T')[0]
+      title: `Đơn RFQ ${newRfq.product_name}`
     };
     apiService.createRFQ(created)
       .then(res => {
         if (res.success) {
-          setRfqList([res.rfq || created, ...rfqList]);
-          showToast(`Đã gửi RFQ #${res.rfq?.rfq_id || created.rfq_id} thành công! Sales sẽ phản hồi trong vòng 24h.`);
+          if (showToast) showToast(`Đã gửi RFQ #${res.rfq?.rfq_id || 'mới'} thành công! Sales sẽ phản hồi trong vòng 24h.`);
+          fetchData(); // Sync with real SQL Server DB immediately
         }
       })
-      .catch(() => {
-        setRfqList([created, ...rfqList]);
-        showToast(`Đã gửi RFQ #${created.rfq_id} (Chế độ xem trước).`);
+      .catch((err) => {
+        if (showToast) showToast('Lỗi khi tạo RFQ.');
       });
     setShowNewRfqModal(false);
     setNewRfq({ product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 50, target_price: 68000000, notes: '' });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatVND } from '../utils/formatters.js';
 import apiService from '../services/api.js';
 
@@ -8,6 +8,21 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [quoteForm, setQuoteForm] = useState({ offer_price: '', notes: '' });
   const [quotationsSent, setQuotationsSent] = useState([]);
+
+  useEffect(() => {
+    fetchRFQs();
+  }, []);
+
+  const fetchRFQs = async () => {
+    try {
+      const res = await apiService.getRFQs();
+      if (res.success && res.data) {
+        setRfqList(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching RFQs:', err);
+    }
+  };
 
   const handleOpenQuote = (rfq) => {
     setSelectedRfq(rfq);
