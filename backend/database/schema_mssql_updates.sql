@@ -11,8 +11,8 @@ BEGIN
         ProductID BIGINT NOT NULL,
         BuyerCompanyID BIGINT NOT NULL,
         PricePerUnit DECIMAL(18,2) NOT NULL,
-        FOREIGN KEY (ProductID) REFERENCES Products(product_id) ON DELETE CASCADE,
-        FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(company_id) ON DELETE CASCADE
+        FOREIGN KEY (ProductID) REFERENCES Products(ProductID) ON DELETE CASCADE,
+        FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(CompanyID) ON DELETE CASCADE
     );
 END
 GO
@@ -26,7 +26,7 @@ BEGIN
         ContractNumber VARCHAR(100) UNIQUE NOT NULL,
         EndDate DATETIME,
         Status VARCHAR(50) DEFAULT 'ACTIVE',
-        FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(company_id) ON DELETE CASCADE
+        FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(CompanyID) ON DELETE CASCADE
     );
 END
 GO
@@ -40,7 +40,7 @@ BEGIN
         ProductID BIGINT NOT NULL,
         ContractPrice DECIMAL(18,2) NOT NULL,
         FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID) ON DELETE CASCADE,
-        FOREIGN KEY (ProductID) REFERENCES Products(product_id) ON DELETE CASCADE
+        FOREIGN KEY (ProductID) REFERENCES Products(ProductID) ON DELETE CASCADE
     );
 END
 GO

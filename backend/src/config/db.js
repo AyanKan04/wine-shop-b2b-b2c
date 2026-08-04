@@ -1,17 +1,9 @@
 // Database Configuration & MS SQL Server Persistent Sync Engine
-const sql = require('mssql');
+const sql = require('mssql/msnodesqlv8');
 const { seedIfEmpty } = require('./dbSeeder');
 
 const config = {
-  user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || '123456',
-  server: process.env.DB_SERVER || 'DESKTOP-1OOP6D0\\CHUONG',
-  database: process.env.DB_NAME || 'B2B_Alcohol_Ecommerce',
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
-    instanceName: process.env.DB_SERVER ? process.env.DB_SERVER.split('\\')[1] : 'CHUONG'
-  }
+  connectionString: process.env.DATABASE_URL || 'Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-BFLA0CO\\SQLEXPRESS;Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;'
 };
 
 let isConnected = false;
@@ -149,6 +141,78 @@ async function connectDB() {
       }
     } catch (colErr) {
       console.warn('Skipping column alteration checks:', colErr.message);
+    }
+
+    // 2.3 Alter RFQs table to add missing ProductID, RequestedQuantity, TargetPrice, DeliveryDate if missing
+    try {
+      const checkCol = await sql.query`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'RFQs' AND COLUMN_NAME = 'ProductID'
+      `;
+      if (checkCol.recordset.length === 0) {
+        console.log('Adding missing ProductID, RequestedQuantity, TargetPrice, DeliveryDate columns to RFQs table...');
+        await sql.query`
+          ALTER TABLE RFQs ADD ProductID BIGINT NULL;
+          ALTER TABLE RFQs ADD RequestedQuantity INT NULL;
+          ALTER TABLE RFQs ADD TargetPrice DECIMAL(18,2) NULL;
+          ALTER TABLE RFQs ADD DeliveryDate DATE NULL;
+        `;
+        try {
+          await sql.query`ALTER TABLE RFQs ADD FOREIGN KEY (ProductID) REFERENCES Products(ProductID)`;
+        } catch (fkErr) {
+          console.warn('Could not add Foreign Key to RFQs.ProductID:', fkErr.message);
+        }
+        console.log('RFQs columns added successfully.');
+      }
+    } catch (rfqColErr) {
+      console.warn('Skipping RFQ column alteration checks:', rfqColErr.message);
+    }
+
+    // 2.5 Ensure additional pricing tables exist (CustomerPrices, Contracts, ContractPrices)
+    try {
+      await sql.query`
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[CustomerPrices]') AND type in (N'U'))
+        BEGIN
+            CREATE TABLE CustomerPrices (
+                PriceID BIGINT IDENTITY(1,1) PRIMARY KEY,
+                ProductID BIGINT NOT NULL,
+                BuyerCompanyID BIGINT NOT NULL,
+                PricePerUnit DECIMAL(18,2) NOT NULL,
+                FOREIGN KEY (ProductID) REFERENCES Products(ProductID) ON DELETE CASCADE,
+                FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(CompanyID) ON DELETE CASCADE
+            );
+        END
+      `;
+      await sql.query`
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Contracts]') AND type in (N'U'))
+        BEGIN
+            CREATE TABLE Contracts (
+                ContractID BIGINT IDENTITY(1,1) PRIMARY KEY,
+                BuyerCompanyID BIGINT NOT NULL,
+                ContractNumber VARCHAR(100) UNIQUE NOT NULL,
+                EndDate DATETIME,
+                Status VARCHAR(50) DEFAULT 'ACTIVE',
+                FOREIGN KEY (BuyerCompanyID) REFERENCES Companies(CompanyID) ON DELETE CASCADE
+            );
+        END
+      `;
+      await sql.query`
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ContractPrices]') AND type in (N'U'))
+        BEGIN
+            CREATE TABLE ContractPrices (
+                ContractPriceID BIGINT IDENTITY(1,1) PRIMARY KEY,
+                ContractID BIGINT NOT NULL,
+                ProductID BIGINT NOT NULL,
+                ContractPrice DECIMAL(18,2) NOT NULL,
+                FOREIGN KEY (ContractID) REFERENCES Contracts(ContractID) ON DELETE CASCADE,
+                FOREIGN KEY (ProductID) REFERENCES Products(ProductID) ON DELETE CASCADE
+            );
+        END
+      `;
+      console.log('Additional pricing tables verified/created successfully.');
+    } catch (pricingTablesErr) {
+      console.error('Failed to create additional pricing tables:', pricingTablesErr.message);
     }
 
     // 3. Seed database if empty

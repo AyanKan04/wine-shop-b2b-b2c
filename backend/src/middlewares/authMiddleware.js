@@ -1,5 +1,4 @@
-// Auth & Role-Based Access Control (RBAC) Middleware with Alcohol Compliance Guard
-const { dbMock } = require('../config/db');
+const { getPool } = require('../config/db');
 const jwt = require('jsonwebtoken');
 
 /**
@@ -60,27 +59,65 @@ const requireRole = (...allowedRoles) => {
   };
 };
 
-/**
- * Alcohol Compliance Guard (Decree 105/2017/ND-CP)
- * Verifies Company Wholesale Alcohol License Status
- */
-const verifyAlcoholLicense = (req, res, next) => {
-  const companyId = req.user ? req.user.company_id : 1;
-  const license = dbMock.licenses.find(l => l.company_id === companyId);
-
-  // If using a real newly created user for auth testing, skip license check for basic API tests
-  if (process.env.NODE_ENV === 'test' && req.user.username !== 'lotte_buyer') {
+const verifyAlcoholLicense = async (req, res, next) => {
+  const companyId = req.user ? (req.user.company_id || req.user.CompanyID) : null;
+  const userType = req.user ? (req.user.user_type || req.user.role) : null;
+  
+  // Platform Admin and Seller Rep do not need wholesale license checks
+  if (userType === 'PLATFORM_ADMIN' || userType === 'SELLER_REP') {
     return next();
   }
 
-  if (!license || license.status !== 'VERIFIED') {
+  // If using a real newly created user for auth testing, skip license check for basic API tests
+  if (process.env.NODE_ENV === 'test' && req.user && req.user.username !== 'lotte_buyer') {
+    return next();
+  }
+
+  if (!companyId) {
     return res.status(403).json({
       success: false,
-      message: 'Chưa thể thực hiện giao dịch sỉ: Giấy phép Bán buôn Rượu của doanh nghiệp đang chờ thẩm định hoặc chưa hợp lệ!',
-      license_status: license ? license.status : 'NOT_SUBMITTED'
+      message: 'Tài khoản chưa được liên kết với bất kỳ doanh nghiệp nào.'
     });
   }
-  next();
+
+  try {
+    const pool = await getPool();
+
+    // Check if the company is a SELLER
+    const compRes = await pool.request()
+      .input('CompanyID', companyId)
+      .query('SELECT CompanyType FROM Companies WHERE CompanyID = @CompanyID');
+    
+    if (compRes.recordset.length > 0 && compRes.recordset[0].CompanyType === 'SELLER') {
+      return next();
+    }
+
+    const result = await pool.request()
+      .input('CompanyID', companyId)
+      .query(`SELECT Status FROM CompanyLicenses WHERE CompanyID = @CompanyID`);
+
+    if (result.recordset.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Chưa thể thực hiện giao dịch sỉ: Giấy phép Bán buôn Rượu của doanh nghiệp chưa được nộp!',
+        license_status: 'NOT_SUBMITTED'
+      });
+    }
+
+    const licenseStatus = result.recordset[0].Status;
+    if (licenseStatus !== 'VERIFIED') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chưa thể thực hiện giao dịch sỉ: Giấy phép Bán buôn Rượu của doanh nghiệp đang chờ thẩm định hoặc chưa hợp lệ!',
+        license_status: licenseStatus
+      });
+    }
+
+    next();
+  } catch (err) {
+    console.error('Error verifying alcohol license:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi xác thực giấy phép rượu.' });
+  }
 };
 
 module.exports = {

@@ -378,18 +378,80 @@ const submitLCDocument = async (req, res) => {
 
 const verifyLCDocument = async (req, res) => {
   const { status } = req.body;
+  const lcid = parseInt(req.params.id);
   if (!['VERIFIED', 'REJECTED'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ.' });
   }
 
   try {
     const pool = await getPool();
-    await pool.request()
-      .input('LCID', sql.Int, parseInt(req.params.id))
-      .input('Status', sql.NVarChar, status)
-      .query(`UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID`);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    res.json({ success: true, message: `Đã cập nhật trạng thái L/C thành ${status}` });
+    try {
+      // 1. Fetch LC Document details
+      const lcRes = await transaction.request()
+        .input('LCID', sql.Int, lcid)
+        .query('SELECT BuyerCompany, Amount, Status FROM LCDocuments WHERE LCID = @LCID');
+
+      if (lcRes.recordset.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C.' });
+      }
+
+      const lc = lcRes.recordset[0];
+      if (lc.Status !== 'SUBMITTED') {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý trước đó.' });
+      }
+
+      // 2. Update status of LC
+      await transaction.request()
+        .input('LCID', sql.Int, lcid)
+        .input('Status', sql.NVarChar, status)
+        .query('UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID');
+
+      // 3. If verified, link and add L/C amount to the buyer company's Credit Limit
+      if (status === 'VERIFIED') {
+        const compRes = await transaction.request()
+          .input('CompanyName', sql.NVarChar, lc.BuyerCompany)
+          .query('SELECT CompanyID FROM Companies WHERE CompanyName = @CompanyName');
+
+        if (compRes.recordset.length > 0) {
+          const companyId = compRes.recordset[0].CompanyID;
+          
+          // Check if CreditLimit entry exists
+          const limitCheck = await transaction.request()
+            .input('CompanyID', sql.BigInt, companyId)
+            .query('SELECT CompanyID FROM CreditLimits WHERE CompanyID = @CompanyID');
+
+          if (limitCheck.recordset.length > 0) {
+            await transaction.request()
+              .input('CompanyID', sql.BigInt, companyId)
+              .input('LCAmount', sql.Decimal(18, 2), lc.Amount)
+              .query(`
+                UPDATE CreditLimits 
+                SET CreditLimitAmount = CreditLimitAmount + @LCAmount 
+                WHERE CompanyID = @CompanyID
+              `);
+          } else {
+            await transaction.request()
+              .input('CompanyID', sql.BigInt, companyId)
+              .input('LCAmount', sql.Decimal(18, 2), lc.Amount)
+              .query(`
+                INSERT INTO CreditLimits (CompanyID, CreditLimitAmount, UsedAmount)
+                VALUES (@CompanyID, @LCAmount, 0)
+              `);
+          }
+        }
+      }
+
+      await transaction.commit();
+      res.json({ success: true, message: `Đã cập nhật trạng thái L/C thành ${status}` });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   } catch (err) {
     console.error('Error verifying L/C doc:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi xác thực L/C' });
@@ -397,14 +459,38 @@ const verifyLCDocument = async (req, res) => {
 };
 
 const rejectLCDocument = async (req, res) => {
+  const lcid = parseInt(req.params.id);
   try {
     const pool = await getPool();
-    await pool.request()
-      .input('LCID', sql.Int, parseInt(req.params.id))
-      .input('Status', sql.NVarChar, 'REJECTED')
-      .query(`UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID`);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    res.json({ success: true, message: `Đã từ chối L/C` });
+    try {
+      const lcRes = await transaction.request()
+        .input('LCID', sql.Int, lcid)
+        .query('SELECT Status FROM LCDocuments WHERE LCID = @LCID');
+
+      if (lcRes.recordset.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C.' });
+      }
+
+      if (lcRes.recordset[0].Status !== 'SUBMITTED') {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý trước đó.' });
+      }
+
+      await transaction.request()
+        .input('LCID', sql.Int, lcid)
+        .input('Status', sql.NVarChar, 'REJECTED')
+        .query(`UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID`);
+
+      await transaction.commit();
+      res.json({ success: true, message: `Đã từ chối L/C` });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   } catch (err) {
     console.error('Error rejecting L/C doc:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi từ chối L/C' });

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatVND } from '../utils/formatters.js';
+import apiService from '../services/api.js';
 
 export default function ProductDetailPage({ productId, products, showToast }) {
   const prod = products.find(p => p.product_id === productId) || products[0];

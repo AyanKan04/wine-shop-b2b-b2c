@@ -239,12 +239,18 @@ Tài liệu quản lý RESTful API chính thức cho Hệ thống Thương mại
 
 ### 5.1. Tạo Yêu cầu Báo giá RFQ (Buyer)
 - **Endpoint:** `POST /api/rfqs`
+- **Mô tả:** Tạo mới một đơn đàm phán giá RFQ. Tự động liên kết sản phẩm, người tạo, và hỗ trợ tra cứu thông tin sản phẩm tự động nếu chỉ có `product_id`.
 - **Request Body:**
 ```json
 {
+  "title": "Đơn hàng đàm phán rượu sự kiện Tết 2027",
+  "product_id": 101,
   "product_name": "Macallan 18 Year Old Sherry Oak Single Malt",
   "quantity": 150,
-  "target_price": 68000000
+  "requested_quantity": 150,
+  "target_price": 68000000,
+  "delivery_date": "2026-12-31",
+  "note": "Yêu cầu giao tận kho khách sạn kèm CO/CQ"
 }
 ```
 - **Response (`201 Created`):**
@@ -254,11 +260,38 @@ Tài liệu quản lý RESTful API chính thức cho Hệ thống Thương mại
   "message": "Tạo Yêu cầu Báo giá RFQ thành công!",
   "rfq": {
     "rfq_id": 8843,
-    "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+    "buyer_company": "Công ty Khách Hàng",
+    "title": "Đơn hàng đàm phán rượu sự kiện Tết 2027",
     "product_name": "Macallan 18 Year Old Sherry Oak Single Malt",
     "quantity": 150,
-    "status": "SUBMITTED"
+    "target_price": 68000000,
+    "status": "SUBMITTED",
+    "created_at": "2026-08-04"
   }
+}
+```
+
+---
+
+### 5.2. Danh sách Yêu cầu Báo giá RFQ (Platform Admin / Seller / Buyer)
+- **Endpoint:** `GET /api/rfqs`
+- **Mô tả:** Lấy toàn bộ danh sách RFQ của hệ thống (kèm thông tin công ty mua và thông tin sản phẩm liên kết).
+- **Response (`200 OK`):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "rfq_id": 8843,
+      "buyer_company": "CÔNG TY CP KHÁCH SẠN LOTTE SAIGON",
+      "title": "Đơn hàng đàm phán rượu sự kiện Tết 2027",
+      "product_name": "Macallan 18 Year Old Sherry Oak Single Malt",
+      "quantity": 150,
+      "target_price": 68000000,
+      "status": "SUBMITTED",
+      "created_at": "2026-08-04"
+    }
+  ]
 }
 ```
 

@@ -193,19 +193,75 @@ const createShipment = async (req, res) => {
 // Update Shipment status
 const updateShipmentStatus = async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status } = req.body; // 'PICKING' | 'IN_TRANSIT' | 'DELIVERED' | 'CANCELLED'
+  const shipmentId = parseInt(id);
 
   try {
     const pool = await getPool();
-    await pool.request()
-      .input('ShipmentID', sql.BigInt, parseInt(id))
-      .input('Status', sql.NVarChar, status)
-      .query(`UPDATE Shipments SET ShipmentStatus = @Status WHERE ShipmentID = @ShipmentID`);
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
 
-    res.json({
-      success: true,
-      message: `Cập nhật trạng thái vận chuyển: ${status}`
-    });
+    try {
+      // 1. Fetch current shipment details
+      const shipCheck = await transaction.request()
+        .input('ShipmentID', sql.BigInt, shipmentId)
+        .query('SELECT OrderID, ShipmentStatus FROM Shipments WHERE ShipmentID = @ShipmentID');
+
+      if (shipCheck.recordset.length === 0) {
+        await transaction.rollback();
+        return res.status(404).json({ success: false, message: 'Không tìm thấy vận đơn' });
+      }
+
+      const shipment = shipCheck.recordset[0];
+      if (shipment.ShipmentStatus === status) {
+        await transaction.rollback();
+        return res.json({ success: true, message: `Vận đơn đã ở trạng thái ${status} từ trước.` });
+      }
+
+      // 2. Update Shipment status
+      await transaction.request()
+        .input('ShipmentID', sql.BigInt, shipmentId)
+        .input('Status', sql.NVarChar, status)
+        .query('UPDATE Shipments SET ShipmentStatus = @Status WHERE ShipmentID = @ShipmentID');
+
+      // 3. If transitioning to DELIVERED, automatically deduct inventory and complete order
+      if (status === 'DELIVERED') {
+        const orderId = shipment.OrderID;
+        if (orderId) {
+          // Fetch order items
+          const itemsRes = await transaction.request()
+            .input('OrderID', sql.BigInt, orderId)
+            .query('SELECT ProductID, Quantity FROM OrderItems WHERE OrderID = @OrderID');
+
+          // Deduct stock for each item
+          for (let item of itemsRes.recordset) {
+            await transaction.request()
+              .input('ProductID', sql.BigInt, item.ProductID)
+              .input('Quantity', sql.Int, item.Quantity)
+              .query(`
+                UPDATE Inventories 
+                SET QuantityOnHand = QuantityOnHand - @Quantity,
+                    ReservedQuantity = ReservedQuantity - @Quantity
+                WHERE ProductID = @ProductID
+              `);
+          }
+
+          // Complete the order
+          await transaction.request()
+            .input('OrderID', sql.BigInt, orderId)
+            .query("UPDATE Orders SET OrderStatus = 'COMPLETED' WHERE OrderID = @OrderID");
+        }
+      }
+
+      await transaction.commit();
+      res.json({
+        success: true,
+        message: `Cập nhật trạng thái vận chuyển: ${status}`
+      });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   } catch (err) {
     console.error('Error updating shipment status:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật trạng thái vận đơn' });

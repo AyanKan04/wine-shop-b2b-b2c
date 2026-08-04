@@ -22,8 +22,8 @@ async function ensureRFQMessagesTable(pool) {
 }
 
 // Query Groq Cloud AI API (Llama-3.3-70b-versatile)
-async function queryGroqAI(userText, productCatalog) {
-  const groqApiKey = process.env.GROQ_API_KEY;
+async function queryGroqAI(userText, productCatalog, customApiKey = null) {
+  const groqApiKey = customApiKey || process.env.GROQ_API_KEY;
 
   const systemInstruction = `You are the Red Apron AI Sommelier Assistant. You help B2B partners with wine/spirits catalog specs, MOQ checks, wholesale discount tiers, and Net-30 credit terms.
 Rules:
@@ -57,7 +57,6 @@ ${JSON.stringify(productCatalog, null, 2)}`;
         const resData = await response.json();
         if (resData.choices && resData.choices[0] && resData.choices[0].message) {
           const rawText = resData.choices[0].message.content;
-          // Strip out emojis according to brand design guidelines
           const cleanText = rawText.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '');
           console.log('✅ Groq AI Response generated successfully!');
           return cleanText;
@@ -78,10 +77,13 @@ ${JSON.stringify(productCatalog, null, 2)}`;
     process.env.GEMINI_API_KEY_2,
     process.env.GEMINI_API_KEY,
     process.env.AI_API_KEY
-  ].filter(Boolean);
+  ].filter(key => key && key !== 'YOUR_GEMINI_API_KEY_HERE');
 
   if (geminiKeys.length > 0) {
     const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)];
+    if (apiKey.startsWith('gsk_')) {
+      return await queryGroqAI(userText, productCatalog, apiKey);
+    }
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const response = await fetch(url, {

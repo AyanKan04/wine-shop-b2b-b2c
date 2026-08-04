@@ -1,9 +1,21 @@
-const { describe, it } = require('node:test');
+const { describe, it, before } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
 const app = require('../src/app');
 
 describe('API Module 9: B2B RFQ Chat & AI Sommelier Assistant', () => {
+
+  before(async () => {
+    const { getPool } = require('../src/config/db');
+    const pool = await getPool();
+    // Clear existing messages to avoid pollution
+    await pool.request().query('DELETE FROM RFQMessages');
+    // Seed initial system message for test
+    await pool.request().query(`
+      INSERT INTO RFQMessages (RFQID, SenderName, SenderRole, MessageText, CreatedAt)
+      VALUES (8842, 'System', 'SYSTEM', 'RFQ đã được khởi tạo thành công.', GETDATE())
+    `);
+  });
 
   it('GET /api/rfqs/:id/messages - Should return chat history for an RFQ', async () => {
     const res = await request(app).get('/api/rfqs/8842/messages');
