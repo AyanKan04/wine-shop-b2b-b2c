@@ -61,9 +61,10 @@ const requireRole = (...allowedRoles) => {
 
 const verifyAlcoholLicense = async (req, res, next) => {
   const companyId = req.user ? (req.user.company_id || req.user.CompanyID) : null;
+  const userType = req.user ? (req.user.user_type || req.user.role) : null;
   
-  // Platform Admin does not need a license check to browse or perform operations
-  if (req.user && req.user.user_type === 'PLATFORM_ADMIN') {
+  // Platform Admin and Seller Rep do not need wholesale license checks
+  if (userType === 'PLATFORM_ADMIN' || userType === 'SELLER_REP') {
     return next();
   }
 
@@ -81,6 +82,16 @@ const verifyAlcoholLicense = async (req, res, next) => {
 
   try {
     const pool = await getPool();
+
+    // Check if the company is a SELLER
+    const compRes = await pool.request()
+      .input('CompanyID', companyId)
+      .query('SELECT CompanyType FROM Companies WHERE CompanyID = @CompanyID');
+    
+    if (compRes.recordset.length > 0 && compRes.recordset[0].CompanyType === 'SELLER') {
+      return next();
+    }
+
     const result = await pool.request()
       .input('CompanyID', companyId)
       .query(`SELECT Status FROM CompanyLicenses WHERE CompanyID = @CompanyID`);
