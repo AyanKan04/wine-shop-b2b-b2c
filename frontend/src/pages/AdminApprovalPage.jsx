@@ -1,6 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import apiService from '../services/api';
 
 export default function AdminApprovalPage({ licenses, showToast }) {
+  const [licenseList, setLicenseList] = useState(licenses || []);
+
+  useEffect(() => {
+    fetchLicenses();
+  }, []);
+
+  const fetchLicenses = async () => {
+    try {
+      const res = await apiService.getAdminLicenses();
+      if (res.success && res.data) {
+        setLicenseList(res.data);
+      }
+    } catch (err) {
+      console.error('Error fetching licenses:', err);
+    }
+  };
   return (
     <div className="page-container">
       <h2 className="page-title burgundy-text">7. PLATFORM ADMIN: DUYỆT DOANH NGHIỆP & GIẤY PHÉP RƯỢU</h2>
@@ -12,7 +29,7 @@ export default function AdminApprovalPage({ licenses, showToast }) {
             <tr><th>MÃ DOANH NGHIỆP</th><th>LOẠI GIẤY PHÉP</th><th>SỐ GIẤY PHÉP</th><th>HẠN HIỆU LỰC</th><th>TRẠNG THÁI</th><th>HÀNH ĐỘNG</th></tr>
           </thead>
           <tbody>
-            {licenses.map(l => (
+            {(licenseList || []).map(l => (
               <tr key={l.license_id}>
                 <td>Company #{l.company_id}</td>
                 <td>{l.license_type || 'Giấy phép Bán buôn Rượu'}</td>

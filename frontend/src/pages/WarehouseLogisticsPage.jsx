@@ -15,8 +15,25 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    fetchInventory();
     fetchShipments();
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const res = await apiService.getInventory();
+      if (res.success && res.inventory) {
+        setInventoryData(res.inventory.map(item => ({
+          ...item,
+          product_name: item.product_name || item.sku,
+          min_stock_level: item.min_stock_level || 30,
+          location: item.location || 'Kho A1'
+        })));
+      }
+    } catch (err) {
+      console.error('Error fetching inventory:', err);
+    }
+  };
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -26,7 +43,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
         setShipments(res.data);
       }
     } catch (err) {
-      showToast('Lỗi tải danh sách phiếu xuất kho');
+      if (showToast) showToast('Lỗi tải danh sách phiếu xuất kho');
     } finally {
       setLoading(false);
     }
