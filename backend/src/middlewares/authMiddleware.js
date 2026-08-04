@@ -40,6 +40,24 @@ const authenticateToken = (req, res, next) => {
 };
 
 /**
+ * Optional Auth Middleware (Sets req.user if token valid, but allows guest traffic)
+ */
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_if_env_missing');
+      req.user = decoded;
+    } catch (err) {
+      // Ignore invalid token for optional auth
+    }
+  }
+  next();
+};
+
+/**
  * RBAC Permission Guard (Require specific user_type)
  */
 const requireRole = (...allowedRoles) => {
@@ -122,6 +140,7 @@ const verifyAlcoholLicense = async (req, res, next) => {
 
 module.exports = {
   authenticateToken,
+  optionalAuth,
   requireRole,
   verifyAlcoholLicense
 };
