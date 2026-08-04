@@ -1,5 +1,4 @@
-const { getPool } = require('../config/db');
-const sql = require('mssql');
+const { getPool, sql } = require('../config/db');
 const bcrypt = require('bcryptjs');
 
 // GET /api/users - Lấy danh sách người dùng (hỗ trợ search và phân quyền)

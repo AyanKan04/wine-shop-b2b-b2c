@@ -1,5 +1,22 @@
 // Database Configuration & MS SQL Server Persistent Sync Engine
-const sql = require('mssql');
+let sql;
+let useOdbc = false;
+
+try {
+  const isWinAuth = process.platform === 'win32' && 
+                    (!process.env.DB_USER || process.env.DB_USER === 'sa') && 
+                    (!process.env.DB_PASSWORD || process.env.DB_PASSWORD === '123456');
+                    
+  if (isWinAuth || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('Trusted_Connection=yes'))) {
+    sql = require('mssql/msnodesqlv8');
+    useOdbc = true;
+  } else {
+    sql = require('mssql');
+  }
+} catch (e) {
+  sql = require('mssql');
+}
+
 const { seedIfEmpty } = require('./dbSeeder');
 
 // Configure connection parameters
@@ -7,7 +24,9 @@ const dbServer = process.env.DB_SERVER || 'localhost';
 const serverName = dbServer.includes('\\') ? dbServer.split('\\')[0] : dbServer;
 const instanceName = dbServer.includes('\\') ? dbServer.split('\\')[1] : undefined;
 
-const config = {
+const config = useOdbc ? {
+  connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'DESKTOP-BFLA0CO\\SQLEXPRESS'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
+} : {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASSWORD || '123456',
   server: serverName,
@@ -37,16 +56,28 @@ async function connectDB() {
     try {
       mssqlPool = await sql.connect(config);
       isConnected = true;
-      console.log('SUCCESSFULLY connected to MS SQL Server (SA Auth / Tedious)');
-    } catch (tediousErr) {
-      console.warn('SA Auth failed, trying Connection String fallback:', tediousErr.message);
-      const fallbackConfig = {
-        connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'localhost'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
+      console.log('SUCCESSFULLY connected to MS SQL Server (Primary Driver)');
+    } catch (primaryErr) {
+      console.warn('Primary connection failed, trying fallback:', primaryErr.message);
+      const fallbackConfig = useOdbc ? {
+        user: process.env.DB_USER || 'sa',
+        password: process.env.DB_PASSWORD || '123456',
+        server: serverName,
+        database: process.env.DB_NAME || 'B2B_Alcohol_Ecommerce',
+        options: {
+          encrypt: false,
+          trustServerCertificate: true,
+          instanceName: instanceName
+        }
+      } : {
+        connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'DESKTOP-BFLA0CO\\SQLEXPRESS'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
       };
-      const odbcSql = require('mssql');
-      mssqlPool = await odbcSql.connect(fallbackConfig);
+      
+      const altSql = useOdbc ? require('mssql') : require('mssql/msnodesqlv8');
+      mssqlPool = await altSql.connect(fallbackConfig);
+      sql = altSql;
       isConnected = true;
-      console.log('SUCCESSFULLY connected to MS SQL Server (Windows Auth / ODBC)');
+      console.log('SUCCESSFULLY connected to MS SQL Server (Fallback Driver)');
     }
 
     // 1. Create LCDocuments table if it does not exist
@@ -143,6 +174,29 @@ async function connectDB() {
         console.log('Adding missing PaidAmount column to Invoices table...');
         await mssqlPool.request().query(`ALTER TABLE Invoices ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`);
         console.log('PaidAmount column added successfully.');
+      }
+
+      // Alter Payments table if columns are missing
+      const checkPayPaidCol = await mssqlPool.request().query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaidAmount'
+      `);
+      if (checkPayPaidCol.recordset.length === 0) {
+        console.log('Adding missing PaidAmount column to Payments table...');
+        await mssqlPool.request().query(`ALTER TABLE Payments ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`);
+        console.log('PaidAmount column added successfully in Payments.');
+      }
+
+      const checkPayRefCol = await mssqlPool.request().query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaymentReference'
+      `);
+      if (checkPayRefCol.recordset.length === 0) {
+        console.log('Adding missing PaymentReference column to Payments table...');
+        await mssqlPool.request().query(`ALTER TABLE Payments ADD PaymentReference NVARCHAR(100) NULL`);
+        console.log('PaymentReference column added successfully in Payments.');
       }
     } catch (colErr) {
       console.warn('Skipping column alteration checks:', colErr.message);
