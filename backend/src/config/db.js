@@ -87,13 +87,25 @@ async function connectDB() {
             [UpdatedAt] DATETIME NOT NULL DEFAULT GETDATE()
           );
         END
+
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Payments]') AND type in (N'U'))
+        BEGIN
+          CREATE TABLE [dbo].[Payments] (
+            [PaymentID] BIGINT IDENTITY(1,1) PRIMARY KEY,
+            [InvoiceID] BIGINT NOT NULL,
+            [PaidAmount] DECIMAL(18,2) NOT NULL DEFAULT 0,
+            [PaymentMethod] NVARCHAR(50) NOT NULL DEFAULT 'BANK_TRANSFER',
+            [PaymentReference] NVARCHAR(100) NULL,
+            [PaidAt] DATETIME NOT NULL DEFAULT GETDATE()
+          );
+        END
       `;
-      console.log('Pricing tables (ProductPrices, Contracts, ContractPrices) checked/created successfully.');
+      console.log('Pricing & Payment tables checked/created successfully.');
     } catch (lcTableErr) {
       console.error('Failed to create tables:', lcTableErr.message);
     }
 
-    // 2. Alter Invoices table to add missing Amount column if missing
+    // 2. Alter Invoices table to add missing Amount and PaidAmount columns if missing
     try {
       const checkCol = await sql.query`
         SELECT COLUMN_NAME 
@@ -104,6 +116,36 @@ async function connectDB() {
         console.log('Adding missing Amount column to Invoices table...');
         await sql.query`ALTER TABLE Invoices ADD Amount DECIMAL(18,2) NOT NULL DEFAULT 0`;
         console.log('Amount column added successfully.');
+      }
+
+      const checkPaidCol = await sql.query`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'Invoices' AND COLUMN_NAME = 'PaidAmount'
+      `;
+      if (checkPaidCol.recordset.length === 0) {
+        console.log('Adding missing PaidAmount column to Invoices table...');
+        await sql.query`ALTER TABLE Invoices ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`;
+        console.log('PaidAmount column added successfully.');
+      }
+
+      // Check Payments table columns
+      const checkPayAmtCol = await sql.query`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaidAmount'
+      `;
+      if (checkPayAmtCol.recordset.length === 0) {
+        await sql.query`ALTER TABLE Payments ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`;
+      }
+
+      const checkPayRefCol = await sql.query`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaymentReference'
+      `;
+      if (checkPayRefCol.recordset.length === 0) {
+        await sql.query`ALTER TABLE Payments ADD PaymentReference NVARCHAR(100) NULL`;
       }
     } catch (colErr) {
       console.warn('Skipping column alteration checks:', colErr.message);

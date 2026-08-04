@@ -70,7 +70,7 @@ export const apiService = {
   // Finance & Orders
   getOrders: () => request('/orders'),
   getCreditLimit: () => request('/finance/credit-limit'),
-  payInvoice: (id) => request(`/finance/pay-invoice/${id}`, { method: 'POST' }),
+  payInvoice: (id, data = {}) => request(`/finance/pay-invoice/${id}`, { method: 'POST', body: JSON.stringify(data) }),
   getLCDocuments: () => request('/finance/lc-documents'),
   submitLCDocument: (lcData) => request('/finance/lc-documents', { method: 'POST', body: JSON.stringify(lcData) }),
   verifyLCDocument: (id) => request(`/finance/lc-documents/${id}/verify`, { method: 'POST' }),

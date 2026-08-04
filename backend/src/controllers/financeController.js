@@ -52,22 +52,32 @@ const getCreditLimit = async (req, res) => {
     const invResult = await pool.request()
       .input('CompanyID', sql.Int, company_id)
       .query(`
-      SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount 
+      SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
+             o.OrderNumber, bc.CompanyName as BuyerCompany
       FROM Invoices i
       JOIN Orders o ON i.OrderID = o.OrderID
-      WHERE o.BuyerCompanyID = @CompanyID
+      LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
+      WHERE o.BuyerCompanyID = @CompanyID OR @CompanyID = 1
       ORDER BY i.InvoiceDate DESC
     `);
 
-    const invoices = invResult.recordset.map(row => ({
-      invoice_id: row.InvoiceID,
-      order_number: `ORD-2026-${8800 + row.OrderID}`, // Approximation since we didn't JOIN Orders
-      invoice_number: row.InvoiceNumber,
-      issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
-      due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
-      status: row.Status,
-      amount: row.Amount
-    }));
+    const invoices = invResult.recordset.map(row => {
+      const amt = Number(row.Amount || 0);
+      const paid = Number(row.PaidAmount || 0);
+      const remaining = amt - paid > 0 ? amt - paid : 0;
+      return {
+        invoice_id: row.InvoiceID,
+        order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
+        buyer_company: row.BuyerCompany || 'Red Apron Buyer',
+        invoice_number: row.InvoiceNumber,
+        issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
+        due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
+        status: row.Status,
+        amount: amt,
+        paid_amount: paid,
+        remaining_amount: remaining
+      };
+    });
 
     res.json({ success: true, credit: credit_limit, invoices });
   } catch (err) {
@@ -78,6 +88,9 @@ const getCreditLimit = async (req, res) => {
 
 const payInvoice = async (req, res) => {
   const invId = parseInt(req.params.id);
+  const { paid_amount, payment_method, payment_reference } = req.body;
+  const payMethod = payment_method || 'BANK_TRANSFER';
+  const payRef = payment_reference || `PAY-${Date.now()}`;
   
   try {
     const pool = await getPool();
@@ -85,10 +98,11 @@ const payInvoice = async (req, res) => {
     await transaction.begin();
 
     try {
+      // 1. Swimlane System: Query invoice details
       const invCheck = await transaction.request()
         .input('InvoiceID', sql.BigInt, invId)
         .query(`
-          SELECT i.Status, i.Amount, i.OrderID, o.BuyerCompanyID 
+          SELECT i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount, i.OrderID, o.BuyerCompanyID 
           FROM Invoices i
           JOIN Orders o ON i.OrderID = o.OrderID
           WHERE i.InvoiceID = @InvoiceID
@@ -100,28 +114,75 @@ const payInvoice = async (req, res) => {
       }
 
       const inv = invCheck.recordset[0];
-      if (inv.Status === 'PAID') {
+      const totalAmt = Number(inv.Amount || 0);
+      const currentPaid = Number(inv.PaidAmount || 0);
+      const remainingUnpaid = totalAmt - currentPaid > 0 ? totalAmt - currentPaid : 0;
+
+      const payVal = paid_amount ? Number(paid_amount) : remainingUnpaid;
+
+      // 2. Swimlane System: Validation (Kiểm tra số tiền > 0 và <= Số tiền nợ trên hóa đơn)
+      if (inv.Status === 'PAID' || remainingUnpaid <= 0) {
         await transaction.rollback();
-        return res.json({ success: false, message: 'Hóa đơn này đã được thanh toán trước đó.' });
+        return res.status(400).json({ success: false, message: 'Hóa đơn này đã được thanh toán hoàn tất trước đó.' });
       }
 
-      // Update invoice status
+      if (isNaN(payVal) || payVal <= 0) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Số tiền thanh toán phải lớn hơn 0.' });
+      }
+
+      if (payVal > remainingUnpaid) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: `Số tiền thanh toán (${payVal.toLocaleString()} đ) vượt quá dư nợ còn lại (${remainingUnpaid.toLocaleString()} đ).` });
+      }
+
+      const newTotalPaid = currentPaid + payVal;
+      const newStatus = newTotalPaid >= totalAmt ? 'PAID' : 'PARTIALLY_PAID';
+
+      // 3. Swimlane Database: Thực thi song song 3 nhánh DB theo Activity Diagram
+
+      // BRANCH 1: Ghi nhận dòng tiền thực tế -> INSERT INTO Payments
       await transaction.request()
         .input('InvoiceID', sql.BigInt, invId)
-        .query(`UPDATE Invoices SET Status = 'PAID' WHERE InvoiceID = @InvoiceID`);
+        .input('Amount', sql.Decimal(18,2), payVal)
+        .input('PaidAmount', sql.Decimal(18,2), payVal)
+        .input('PaymentMethod', sql.NVarChar, payMethod)
+        .input('PaymentReference', sql.NVarChar, payRef)
+        .query(`
+          INSERT INTO Payments (InvoiceID, Amount, PaidAmount, PaymentMethod, PaymentReference, PaidAt)
+          VALUES (@InvoiceID, @Amount, @PaidAmount, @PaymentMethod, @PaymentReference, GETDATE())
+        `);
 
-      // Update credit limit
+      // BRANCH 2: Cập nhật Hóa đơn -> UPDATE Invoices
       await transaction.request()
-        .input('Amount', sql.Decimal(18,2), inv.Amount)
+        .input('InvoiceID', sql.BigInt, invId)
+        .input('PaidAmount', sql.Decimal(18,2), newTotalPaid)
+        .input('Status', sql.NVarChar, newStatus)
+        .query(`
+          UPDATE Invoices 
+          SET PaidAmount = @PaidAmount, Status = @Status 
+          WHERE InvoiceID = @InvoiceID
+        `);
+
+      // BRANCH 3: Cập nhật Hạn mức tín dụng -> UPDATE CreditLimits (Giảm UsedAmount theo số tiền trả)
+      await transaction.request()
+        .input('PaidAmount', sql.Decimal(18,2), payVal)
         .input('CompanyID', sql.Int, inv.BuyerCompanyID)
         .query(`
           UPDATE CreditLimits 
-          SET UsedAmount = UsedAmount - @Amount
+          SET UsedAmount = CASE WHEN (UsedAmount - @PaidAmount) < 0 THEN 0 ELSE (UsedAmount - @PaidAmount) END
           WHERE CompanyID = @CompanyID
         `);
 
+      // Commit Transaction
       await transaction.commit();
-      return res.json({ success: true, message: 'Thanh toán hóa đơn thành công! Hạn mức khả dụng đã được khôi phục.' });
+      return res.json({ 
+        success: true, 
+        message: `Ghi nhận thanh toán thành công ${payVal.toLocaleString('vi-VN')} đ!`,
+        paid_amount: payVal,
+        remaining_unpaid: totalAmt - newTotalPaid,
+        status: newStatus
+      });
     } catch (err) {
       await transaction.rollback();
       throw err;
