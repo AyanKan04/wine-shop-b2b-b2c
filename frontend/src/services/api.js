@@ -52,6 +52,7 @@ export const apiService = {
     return request(`/products${query ? `?${query}` : ''}`);
   },
   getProductById: (id) => request(`/products/${id}`),
+  updateBatchProductPrices: (data) => request('/products/batch-prices', { method: 'POST', body: JSON.stringify(data) }),
 
   // Companies & Licenses
   getCompanies: () => request('/companies'),

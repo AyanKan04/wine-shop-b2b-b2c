@@ -33,6 +33,8 @@ const mapProductToFrontend = (prod) => {
     image_url: prod.ImageURL || prod.image_url || '',
     description: prod.Description || prod.description || '',
     status: prod.Status || prod.status || 'ACTIVE',
+    cost_price: Number(prod.CostPrice || prod.cost_price || 0),
+    base_price: Number(prod.BasePrice || prod.base_price || (mappedTierPrices.length > 0 ? mappedTierPrices[0].price_per_unit : 0)),
     tier_prices: mappedTierPrices
   };
 };
@@ -40,24 +42,28 @@ const mapProductToFrontend = (prod) => {
 // GET /api/products
 const getProducts = async (req, res) => {
   try {
-    const { category, country, grape, search } = req.query;
+    const { category, country, grape, search, priceStatus } = req.query;
     const pool = await getPool();
     
     let query = `
       SELECT p.*, c.CategoryName as Category,
+             pp.CostPrice, pp.BasePrice,
              (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
       FROM Products p
       LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
+      LEFT JOIN ProductPrices pp ON pp.ProductID = p.ProductID
       WHERE 1=1
     `;
     
-    if (category) query += ` AND Category LIKE @Category`;
-    if (country) query += ` AND CountryOfOrigin LIKE @Country`;
-    if (grape) query += ` AND GrapeVariety LIKE @Grape`;
-    if (search) query += ` AND ProductName LIKE @Search`;
+    if (category && category !== 'ALL') query += ` AND c.CategoryName LIKE @Category`;
+    if (country) query += ` AND p.CountryOfOrigin LIKE @Country`;
+    if (grape) query += ` AND p.GrapeVariety LIKE @Grape`;
+    if (search) query += ` AND (p.ProductName LIKE @Search OR p.SKU LIKE @Search)`;
+    if (priceStatus === 'PRICED') query += ` AND (pp.BasePrice > 0 OR EXISTS (SELECT 1 FROM ProductTierPrices WHERE ProductID = p.ProductID))`;
+    if (priceStatus === 'UNPRICED') query += ` AND (pp.BasePrice IS NULL OR pp.BasePrice = 0) AND NOT EXISTS (SELECT 1 FROM ProductTierPrices WHERE ProductID = p.ProductID)`;
     
     const request = pool.request();
-    if (category) request.input('Category', sql.NVarChar, `%${category}%`);
+    if (category && category !== 'ALL') request.input('Category', sql.NVarChar, `%${category}%`);
     if (country) request.input('Country', sql.NVarChar, `%${country}%`);
     if (grape) request.input('Grape', sql.NVarChar, `%${grape}%`);
     if (search) request.input('Search', sql.NVarChar, `%${search}%`);
@@ -245,68 +251,138 @@ const deleteProduct = async (req, res) => {
 };
 
 const updateProductPrices = async (req, res) => {
-  const productId = req.params.id;
-  const { priceType, prices } = req.body;
-  
-  if (!['TIER', 'CUSTOMER', 'CONTRACT'].includes(priceType)) {
-    return res.status(400).json({ success: false, message: 'Loại giá không hợp lệ (TIER, CUSTOMER, CONTRACT)' });
+  const { priceType, prices, costPrice, basePrice, product_ids } = req.body;
+  const targetIds = (product_ids && Array.isArray(product_ids) && product_ids.length > 0)
+    ? product_ids
+    : [req.params.id];
+
+  // 1. Swimlane System: Xác thực tính hợp lệ của dữ liệu (Validation)
+  if (!['ORIGINAL', 'TIER', 'CUSTOMER', 'CONTRACT'].includes(priceType)) {
+    return res.status(400).json({ success: false, message: 'Loại hình thiết lập giá không hợp lệ (ORIGINAL, TIER, CUSTOMER, CONTRACT)' });
+  }
+
+  if (priceType === 'ORIGINAL') {
+    const costVal = Number(costPrice || 0);
+    const baseVal = Number(basePrice || 0);
+    if (isNaN(baseVal) || baseVal < 0) {
+      return res.status(400).json({ success: false, message: 'Giá cơ sở không hợp lệ. Phải là số dương.' });
+    }
+    if (costVal > 0 && costVal > baseVal) {
+      return res.status(400).json({ success: false, message: 'Giá vốn không thể lớn hơn Giá cơ sở.' });
+    }
   }
 
   try {
     const pool = await getPool();
+
+    // 2. Swimlane System: Khởi tạo Transaction
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
-      if (priceType === 'TIER') {
-        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
-        for (const tier of prices) {
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('TierLevel', sql.Int, tier.tier_level)
-            .input('MinQuantity', sql.Int, tier.min_quantity)
-            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
-            .query('INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit) VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)');
-        }
-      } else if (priceType === 'CUSTOMER') {
-        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM CustomerPrices WHERE ProductID = @ProductID');
-        for (const cp of prices) {
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('BuyerCompanyID', sql.BigInt, cp.company_id)
-            .input('PricePerUnit', sql.Decimal(18,2), cp.price_per_unit)
-            .query('INSERT INTO CustomerPrices (ProductID, BuyerCompanyID, PricePerUnit) VALUES (@ProductID, @BuyerCompanyID, @PricePerUnit)');
-        }
-      } else if (priceType === 'CONTRACT') {
-        await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ContractPrices WHERE ProductID = @ProductID');
-        for (const ctp of prices) {
-          let contractResult = await transaction.request()
-            .input('ContractNumber', sql.NVarChar, ctp.contract_number)
-            .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
-            .query('SELECT ContractID FROM Contracts WHERE ContractNumber = @ContractNumber AND BuyerCompanyID = @BuyerCompanyID');
-          
-          let contractId;
-          if (contractResult.recordset.length === 0) {
-            const insertResult = await transaction.request()
-              .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
-              .input('ContractNumber', sql.NVarChar, ctp.contract_number)
-              .input('EndDate', sql.DateTime, new Date(ctp.valid_until))
-              .query("INSERT INTO Contracts (BuyerCompanyID, ContractNumber, EndDate, Status) OUTPUT INSERTED.ContractID VALUES (@BuyerCompanyID, @ContractNumber, @EndDate, 'ACTIVE')");
-            contractId = insertResult.recordset[0].ContractID;
-          } else {
-            contractId = contractResult.recordset[0].ContractID;
-          }
+      for (const pId of targetIds) {
+        const productId = parseInt(pId);
+        if (isNaN(productId)) continue;
+
+        // 3. Swimlane Database: Thực thi theo từng chế độ trong Activity Diagram
+
+        // CHẾ ĐỘ 1: GIÁ GỐC -> Chạy vòng lặp UPSERT vào ProductPrices
+        if (priceType === 'ORIGINAL') {
+          const costVal = Number(costPrice || 0);
+          const baseVal = Number(basePrice || 0);
 
           await transaction.request()
-            .input('ContractID', sql.BigInt, contractId)
             .input('ProductID', sql.BigInt, productId)
-            .input('ContractPrice', sql.Decimal(18,2), ctp.price_per_unit)
-            .query('INSERT INTO ContractPrices (ContractID, ProductID, ContractPrice) VALUES (@ContractID, @ProductID, @ContractPrice)');
+            .input('CostPrice', sql.Decimal(18,2), costVal)
+            .input('BasePrice', sql.Decimal(18,2), baseVal)
+            .query(`
+              IF EXISTS (SELECT 1 FROM ProductPrices WHERE ProductID = @ProductID)
+              BEGIN
+                UPDATE ProductPrices 
+                SET CostPrice = @CostPrice, BasePrice = @BasePrice
+                WHERE ProductID = @ProductID;
+              END
+              ELSE
+              BEGIN
+                INSERT INTO ProductPrices (ProductID, CostPrice, BasePrice)
+                VALUES (@ProductID, @CostPrice, @BasePrice);
+              END
+            `);
+        } 
+        
+        // CHẾ ĐỘ 2: SỐ LƯỢNG (TIER) -> Chạy vòng lặp DELETE và vòng lặp INSERT vào ProductTierPrices
+        else if (priceType === 'TIER') {
+          // Step 2a: Chạy DELETE vào ProductTierPrices
+          await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
+
+          // Step 2b: Chạy vòng lặp INSERT vào ProductTierPrices
+          if (Array.isArray(prices)) {
+            for (const tier of prices) {
+              if (!tier.price_per_unit || Number(tier.price_per_unit) <= 0) continue;
+              await transaction.request()
+                .input('ProductID', sql.BigInt, productId)
+                .input('TierLevel', sql.Int, tier.tier_level)
+                .input('MinQuantity', sql.Int, tier.min_quantity || 1)
+                .input('PricePerUnit', sql.Decimal(18,2), Number(tier.price_per_unit))
+                .query('INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit) VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)');
+            }
+          }
+        } 
+        
+        // CHẾ ĐỘ 3: HỢP ĐỒNG (CONTRACT) -> Chạy vòng lặp INSERT và UPDATE vào ContractPrices
+        else if (priceType === 'CONTRACT') {
+          if (Array.isArray(prices)) {
+            for (const ctp of prices) {
+              if (!ctp.price_per_unit || !ctp.company_id) continue;
+              
+              const contractNumber = ctp.contract_number || `CTR-${ctp.company_id}-${Date.now()}`;
+              
+              // Find or create Contract
+              let contractResult = await transaction.request()
+                .input('ContractNumber', sql.NVarChar, contractNumber)
+                .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
+                .query('SELECT ContractID FROM Contracts WHERE ContractNumber = @ContractNumber AND BuyerCompanyID = @BuyerCompanyID');
+              
+              let contractId;
+              if (contractResult.recordset.length === 0) {
+                const insertResult = await transaction.request()
+                  .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
+                  .input('ContractNumber', sql.NVarChar, contractNumber)
+                  .input('EndDate', sql.DateTime, ctp.valid_until ? new Date(ctp.valid_until) : new Date('2027-12-31'))
+                  .query("INSERT INTO Contracts (BuyerCompanyID, ContractNumber, EndDate, Status) OUTPUT INSERTED.ContractID VALUES (@BuyerCompanyID, @ContractNumber, @EndDate, 'ACTIVE')");
+                contractId = insertResult.recordset[0].ContractID;
+              } else {
+                contractId = contractResult.recordset[0].ContractID;
+              }
+
+              // Exec INSERT or UPDATE into ContractPrices as specified by activity diagram
+              await transaction.request()
+                .input('ContractID', sql.BigInt, contractId)
+                .input('ProductID', sql.BigInt, productId)
+                .input('ContractPrice', sql.Decimal(18,2), Number(ctp.price_per_unit))
+                .query(`
+                  IF EXISTS (SELECT 1 FROM ContractPrices WHERE ContractID = @ContractID AND ProductID = @ProductID)
+                  BEGIN
+                    UPDATE ContractPrices 
+                    SET ContractPrice = @ContractPrice
+                    WHERE ContractID = @ContractID AND ProductID = @ProductID;
+                  END
+                  ELSE
+                  BEGIN
+                    INSERT INTO ContractPrices (ContractID, ProductID, ContractPrice)
+                    VALUES (@ContractID, @ProductID, @ContractPrice);
+                  END
+                `);
+            }
+          }
         }
       }
 
+      // 4. Swimlane Database: Commit Transaction
       await transaction.commit();
-      res.json({ success: true, message: 'Cập nhật giá thành công!' });
+      res.json({ success: true, message: 'Cập nhật giá thành công' });
     } catch (err) {
       await transaction.rollback();
       throw err;

@@ -51,8 +51,46 @@ async function connectDB() {
         END
       `;
       console.log('LCDocuments table checked/created successfully.');
+
+      // 1b. Create ProductPrices, Contracts, ContractPrices tables if not exist
+      await sql.query`
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductPrices]') AND type in (N'U'))
+        BEGIN
+          CREATE TABLE [dbo].[ProductPrices] (
+            [PriceID] BIGINT IDENTITY(1,1) PRIMARY KEY,
+            [ProductID] BIGINT NOT NULL,
+            [CostPrice] DECIMAL(18,2) NOT NULL DEFAULT 0,
+            [BasePrice] DECIMAL(18,2) NOT NULL DEFAULT 0,
+            [UpdatedAt] DATETIME NOT NULL DEFAULT GETDATE()
+          );
+        END
+
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Contracts]') AND type in (N'U'))
+        BEGIN
+          CREATE TABLE [dbo].[Contracts] (
+            [ContractID] BIGINT IDENTITY(1,1) PRIMARY KEY,
+            [BuyerCompanyID] BIGINT NOT NULL,
+            [ContractNumber] NVARCHAR(100) NOT NULL,
+            [EndDate] DATETIME NULL,
+            [Status] NVARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+            [CreatedAt] DATETIME NOT NULL DEFAULT GETDATE()
+          );
+        END
+
+        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ContractPrices]') AND type in (N'U'))
+        BEGIN
+          CREATE TABLE [dbo].[ContractPrices] (
+            [ContractPriceID] BIGINT IDENTITY(1,1) PRIMARY KEY,
+            [ContractID] BIGINT NOT NULL,
+            [ProductID] BIGINT NOT NULL,
+            [ContractPrice] DECIMAL(18,2) NOT NULL DEFAULT 0,
+            [UpdatedAt] DATETIME NOT NULL DEFAULT GETDATE()
+          );
+        END
+      `;
+      console.log('Pricing tables (ProductPrices, Contracts, ContractPrices) checked/created successfully.');
     } catch (lcTableErr) {
-      console.error('Failed to create LCDocuments table:', lcTableErr.message);
+      console.error('Failed to create tables:', lcTableErr.message);
     }
 
     // 2. Alter Invoices table to add missing Amount column if missing
