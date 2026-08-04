@@ -1,5 +1,5 @@
 // Database Configuration & MS SQL Server Persistent Sync Engine
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 const { seedIfEmpty } = require('./dbSeeder');
 
 const config = {

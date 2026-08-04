@@ -1,5 +1,5 @@
 const { getPool } = require('../config/db');
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 
 // Helper to map SQL Server PascalCase keys to Frontend camelCase/snake_case keys
 const mapProductToFrontend = (prod) => {

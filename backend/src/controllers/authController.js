@@ -1,5 +1,5 @@
 const { getPool, persistUser, persistCompany, persistLicense } = require('../config/db');
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
