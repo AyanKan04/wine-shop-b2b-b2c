@@ -181,49 +181,107 @@ const getActivityFeed = async (req, res) => {
 const getNotifications = async (req, res) => {
   try {
     const pool = await getPool();
-    
-    // Generate dynamic notifications based on system state
-    // 1. Unpaid invoices
-    const invRes = await pool.request().query(`
-      SELECT InvoiceNumber, DueDate FROM Invoices WHERE Status = 'UNPAID'
-    `);
-    
-    // 2. Pending RFQs
-    const rfqRes = await pool.request().query(`
-      SELECT RFQID, Title, CreatedAt FROM RFQs WHERE Status = 'SUBMITTED'
-    `);
+    const companyId = req.user?.company_id;
+    const userId = req.user?.user_id;
+    const userType = req.user?.user_type || 'BUYER';
     
     let notifications = [];
-    
-    invRes.recordset.forEach((inv, index) => {
-      const days = Math.round((new Date(inv.DueDate) - new Date()) / (1000 * 60 * 60 * 24));
-      notifications.push({
-        id: 'NOTIF-INV-' + index,
-        type: days < 7 ? 'warning' : 'info',
-        title: 'Hóa đơn chưa thanh toán',
-        message: `Hóa đơn ${inv.InvoiceNumber} cần thanh toán (còn ${days > 0 ? days : 0} ngày)`,
-        read: false,
-        timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+
+    if (userType === 'BUYER' && companyId) {
+      // 1. Unpaid invoices FOR THIS BUYER COMPANY ONLY
+      const invRes = await pool.request()
+        .input('CompanyID', sql.BigInt, companyId)
+        .query(`
+          SELECT i.InvoiceNumber, i.DueDate, i.Amount 
+          FROM Invoices i
+          JOIN Orders o ON i.OrderID = o.OrderID
+          WHERE o.BuyerCompanyID = @CompanyID AND i.Status != 'PAID'
+        `);
+
+      invRes.recordset.forEach((inv, index) => {
+        const days = Math.round((new Date(inv.DueDate) - new Date()) / (1000 * 60 * 60 * 24));
+        notifications.push({
+          id: 'NOTIF-BUYER-INV-' + index,
+          type: days < 5 ? 'warning' : 'info',
+          title: 'Hóa đơn cần thanh toán Net-30',
+          message: `Hóa đơn ${inv.InvoiceNumber} (${(Number(inv.Amount)).toLocaleString('vi-VN')} đ) đến hạn trong ${days > 0 ? days : 0} ngày`,
+          read: false,
+          timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+        });
       });
-    });
-    
-    rfqRes.recordset.forEach((rfq, index) => {
-      notifications.push({
-        id: 'NOTIF-RFQ-' + index,
-        type: 'info',
-        title: 'Yêu cầu báo giá mới',
-        message: `RFQ-${rfq.RFQID} đang chờ xử lý`,
-        read: false,
-        timestamp: new Date(rfq.CreatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+
+      // 2. RFQ status updates FOR THIS BUYER USER ONLY
+      const rfqRes = await pool.request()
+        .input('UserID', sql.BigInt, userId || 0)
+        .input('CompanyID', sql.BigInt, companyId)
+        .query(`
+          SELECT RFQID, Title, Status, CreatedAt 
+          FROM RFQs 
+          WHERE CreatedBy = @UserID OR BuyerCompanyID = @CompanyID
+        `);
+
+      rfqRes.recordset.forEach((rfq, index) => {
+        let statusText = 'đang chờ xử lý';
+        if (rfq.Status === 'QUOTED') statusText = 'đã có Báo giá mới từ Sales!';
+        if (rfq.Status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
+        
+        notifications.push({
+          id: 'NOTIF-BUYER-RFQ-' + index,
+          type: rfq.Status === 'QUOTED' ? 'success' : 'info',
+          title: `Cập nhật báo giá RFQ-${rfq.RFQID}`,
+          message: `Yêu cầu báo giá "${rfq.Title || 'Báo giá Rượu'}" ${statusText}`,
+          read: false,
+          timestamp: new Date(rfq.CreatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+        });
       });
-    });
-    
+
+    } else {
+      // ADMIN / SALES_REP System Notifications
+      const invRes = await pool.request().query(`
+        SELECT i.InvoiceNumber, i.DueDate, bc.CompanyName 
+        FROM Invoices i
+        JOIN Orders o ON i.OrderID = o.OrderID
+        LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
+        WHERE i.Status != 'PAID'
+      `);
+      
+      const rfqRes = await pool.request().query(`
+        SELECT r.RFQID, r.Title, r.CreatedAt, bc.CompanyName 
+        FROM RFQs r
+        LEFT JOIN Companies bc ON r.BuyerCompanyID = bc.CompanyID
+        WHERE r.Status = 'SUBMITTED'
+      `);
+
+      invRes.recordset.forEach((inv, index) => {
+        const days = Math.round((new Date(inv.DueDate) - new Date()) / (1000 * 60 * 60 * 24));
+        notifications.push({
+          id: 'NOTIF-ADM-INV-' + index,
+          type: days < 7 ? 'warning' : 'info',
+          title: 'Hóa đơn chưa thu tiền',
+          message: `Hóa đơn ${inv.InvoiceNumber} (${inv.CompanyName || 'Khách B2B'}) chờ thu hồi nợ`,
+          read: false,
+          timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+        });
+      });
+      
+      rfqRes.recordset.forEach((rfq, index) => {
+        notifications.push({
+          id: 'NOTIF-ADM-RFQ-' + index,
+          type: 'info',
+          title: 'RFQ mới cần báo giá',
+          message: `RFQ-${rfq.RFQID} từ ${rfq.CompanyName || 'Khách B2B'} đang chờ phát hành quotation`,
+          read: false,
+          timestamp: new Date(rfq.CreatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+        });
+      });
+    }
+
     if (notifications.length === 0) {
       notifications = [
         { id: 'NOTIF-000', type: 'success', title: 'Hệ thống ổn định', message: 'Không có thông báo mới nào', read: true, timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) }
       ];
     }
-    
+
     res.json({
       success: true,
       data: notifications,
