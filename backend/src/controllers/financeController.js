@@ -57,7 +57,7 @@ const getCreditLimit = async (req, res) => {
       FROM Invoices i
       JOIN Orders o ON i.OrderID = o.OrderID
       LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-      WHERE o.BuyerCompanyID = @CompanyID OR @CompanyID = 1
+      WHERE 1=1
       ORDER BY i.InvoiceDate DESC
     `);
 
