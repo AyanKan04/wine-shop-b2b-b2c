@@ -1,5 +1,7 @@
 # wine-shop-b2b-b2c
 
+> 📖 **[BẤM VÀO ĐÂY ĐỂ XEM HƯỚNG DẪN KHỞI CHẠY KHI CHUYỂN SANG MÁY PC MỚI](./HUONG_DAN_CHUYEN_MAY_PC_MOI.md)**
+
 # Main Branch
 
 ## Mục đích
