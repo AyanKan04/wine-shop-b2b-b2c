@@ -67,7 +67,7 @@ const login = async (req, res) => {
 
 // 2. Đăng ký doanh nghiệp B2B
 const registerUser = async (req, res) => {
-  const { username, email, password, company_name, tax_code } = req.body;
+  const { username, email, password, company_name, tax_code, license_type, license_number, issue_date, expiry_date } = req.body;
 
   if (!username || !email || !password || !company_name || !tax_code) {
     return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
@@ -128,6 +128,21 @@ const registerUser = async (req, res) => {
         `);
 
       const newUserId = userResult.recordset[0].UserID;
+
+      // 3. Tạo License (nếu được cung cấp trong registration payload)
+      if (license_number) {
+        await transaction.request()
+          .input('CompanyID', sql.BigInt, newCompanyId)
+          .input('LicenseType', sql.NVarChar, license_type || 'Giấy phép Bán buôn Rượu')
+          .input('LicenseNumber', sql.NVarChar, license_number)
+          .input('IssueDate', sql.Date, issue_date ? new Date(issue_date) : new Date())
+          .input('ExpiryDate', sql.Date, expiry_date ? new Date(expiry_date) : new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000))
+          .input('DocumentUrl', sql.NVarChar, '/uploads/license_default.pdf')
+          .query(`
+            INSERT INTO CompanyLicenses (CompanyID, LicenseType, LicenseNumber, IssueDate, ExpiryDate, DocumentUrl, Status)
+            VALUES (@CompanyID, @LicenseType, @LicenseNumber, @IssueDate, @ExpiryDate, @DocumentUrl, 'PENDING_VERIFICATION')
+          `);
+      }
 
       await transaction.commit();
 

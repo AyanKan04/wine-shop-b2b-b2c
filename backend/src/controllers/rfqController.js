@@ -254,7 +254,7 @@ const updateQuotationStatus = async (req, res) => {
         const qCheck = await transaction.request()
         .input('QuotationID', sql.BigInt, quotationId)
         .query(`
-          SELECT q.RFQID, q.BuyerCompanyID, q.SellerCompanyID, qi.ProductID, qi.OfferUnitPrice, qi.Quantity 
+          SELECT q.RFQID, q.BuyerCompanyID, q.SellerCompanyID, q.Status, qi.ProductID, qi.OfferUnitPrice, qi.Quantity 
           FROM Quotations q
           LEFT JOIN QuotationItems qi ON q.QuotationID = qi.QuotationID
           WHERE q.QuotationID = @QuotationID
@@ -266,6 +266,13 @@ const updateQuotationStatus = async (req, res) => {
       }
 
       const qData = qCheck.recordset[0];
+      
+      // Prevent duplicate order creation if quotation was already accepted
+      if (qData.Status === 'ACCEPTED') {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Báo giá này đã được chấp nhận từ trước.' });
+      }
+
       const rfqId = qData.RFQID;
       const totalAmount = (qData.OfferUnitPrice || 0) * (qData.Quantity || 0);
 
