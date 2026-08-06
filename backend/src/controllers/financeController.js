@@ -3,15 +3,23 @@ const { getPool, sql } = require('../config/db');
 const getOrders = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    let query = `
       SELECT o.OrderID, o.OrderNumber, o.TotalAmount, o.OrderStatus, o.PaymentMethod, o.CreatedAt,
              bc.CompanyName as buyer_company,
              ISNULL(i.Status, 'UNPAID') as payment_status
       FROM Orders o
       LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
       LEFT JOIN Invoices i ON o.OrderID = i.OrderID
-      ORDER BY o.CreatedAt DESC
-    `);
+    `;
+
+    const request = pool.request();
+    if (req.user && req.user.user_type === 'BUYER_REP' && req.user.company_id) {
+      query += ` WHERE o.BuyerCompanyID = @CompanyID `;
+      request.input('CompanyID', sql.BigInt, req.user.company_id);
+    }
+    query += ` ORDER BY o.CreatedAt DESC `;
+
+    const result = await request.query(query);
 
     const orders = result.recordset.map(row => ({
       order_id: row.OrderID,
@@ -33,7 +41,7 @@ const getOrders = async (req, res) => {
 
 const getCreditLimit = async (req, res) => {
   try {
-    const company_id = req.user.company_id;
+    const company_id = (req.user && req.user.company_id) ? req.user.company_id : 1;
     const pool = await getPool();
     const result = await pool.request()
       .input('CompanyID', sql.Int, company_id)
@@ -42,24 +50,32 @@ const getCreditLimit = async (req, res) => {
     let credit_limit = { total_limit: 1000000000, used_amount: 0, available_balance: 1000000000 };
     if (result.recordset.length > 0) {
       const row = result.recordset[0];
+      const total = Number(row.CreditLimitAmount || 0);
+      const used = Number(row.UsedAmount || 0);
       credit_limit = {
-        total_limit: row.CreditLimitAmount,
-        used_amount: row.UsedAmount,
-        available_balance: row.AvailableAmount
+        total_limit: total,
+        used_amount: used,
+        available_balance: total - used > 0 ? total - used : 0
       };
     }
 
-    const invResult = await pool.request()
-      .input('CompanyID', sql.Int, company_id)
-      .query(`
+    const invRequest = pool.request();
+    let invQuery = `
       SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
              o.OrderNumber, bc.CompanyName as BuyerCompany
       FROM Invoices i
       JOIN Orders o ON i.OrderID = o.OrderID
       LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
       WHERE 1=1
-      ORDER BY i.InvoiceDate DESC
-    `);
+    `;
+
+    if (req.user && req.user.user_type === 'BUYER_REP' && req.user.company_id) {
+      invQuery += ` AND o.BuyerCompanyID = @BuyerCompanyID `;
+      invRequest.input('BuyerCompanyID', sql.BigInt, req.user.company_id);
+    }
+    invQuery += ` ORDER BY i.InvoiceDate DESC `;
+
+    const invResult = await invRequest.query(invQuery);
 
     const invoices = invResult.recordset.map(row => {
       const amt = Number(row.Amount || 0);
@@ -348,8 +364,19 @@ const submitLCDocument = async (req, res) => {
 
   try {
     const pool = await getPool();
+    let actualCompanyName = buyer_company;
+    if (req.user && req.user.company_id) {
+      const compRes = await pool.request()
+        .input('CompanyID', sql.BigInt, req.user.company_id)
+        .query('SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID');
+      if (compRes.recordset.length > 0) {
+        actualCompanyName = compRes.recordset[0].CompanyName;
+      }
+    }
+    if (!actualCompanyName) actualCompanyName = 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON';
+
     const result = await pool.request()
-      .input('BuyerCompany', sql.NVarChar, buyer_company || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON')
+      .input('BuyerCompany', sql.NVarChar, actualCompanyName)
       .input('LCNumber', sql.NVarChar, lc_number)
       .input('IssuingBank', sql.NVarChar, issuing_bank)
       .input('Amount', sql.Decimal(18,2), parseFloat(amount))

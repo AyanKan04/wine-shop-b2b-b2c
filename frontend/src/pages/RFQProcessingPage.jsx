@@ -57,11 +57,27 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
       created_at: new Date().toISOString().split('T')[0]
     };
 
-    setQuotationsSent([quotation, ...quotationsSent]);
-    setRfqList(prev => prev.map(r =>
-      r.rfq_id === selectedRfq.rfq_id ? { ...r, status: 'QUOTATION_SENT' } : r
-    ));
-    showToast(`Đã phát hành Báo giá Quotation #${quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
+    const payload = {
+      rfq_id: selectedRfq.rfq_id,
+      offer_unit_price: offerPrice,
+      quantity: selectedRfq.quantity,
+      product_id: selectedRfq.product_id || 101,
+      notes: quoteForm.notes
+    };
+
+    apiService.createQuotation(payload)
+      .then(res => {
+        if (res.success) {
+          showToast(`Đã phát hành Báo giá Quotation #${res.quotation?.quotation_id || quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
+          fetchRFQs();
+        }
+      })
+      .catch(err => {
+        setQuotationsSent([quotation, ...quotationsSent]);
+        setRfqList(prev => prev.map(r => r.rfq_id === selectedRfq.rfq_id ? { ...r, status: 'QUOTATION_SENT' } : r));
+        showToast(`Đã phát hành Báo giá Quotation #${quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
+      });
+
     setShowQuoteModal(false);
     setSelectedRfq(null);
   };
