@@ -341,7 +341,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
             onChange={(e) => setSearch(e.target.value)}
           />
           <button className="btn-redapron-gold" onClick={() => {
-            setFormData({ username: '', email: '', password: '', user_type: 'BUYER_REP', first_name: '', last_name: '', company_id: '' });
+            setCreateFormData({ username: '', email: '', password: '', user_type: 'BUYER_REP', first_name: '', last_name: '', company_id: '' });
             setShowModal(true);
           }}>
             + Thêm User

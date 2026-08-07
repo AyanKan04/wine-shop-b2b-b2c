@@ -188,8 +188,18 @@ const payInvoice = async (req, res) => {
         await transaction.rollback();
         return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
       }
-
       const inv = invCheck.recordset[0];
+
+      // Ownership Validation (IDOR prevention)
+      if (req.user?.company_id && inv.BuyerCompanyID !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN' && req.user.user_type !== 'COMPANY_ADMIN') {
+         // COMPANY_ADMIN of the seller can probably view/pay? Wait, it's the Buyer who pays.
+         // Let's ensure if it's a buyer, they can only pay their own. If it's the seller or admin, they might process payment on behalf.
+         // But the BuyerCompanyID must match if they are BUYER_REP.
+         if (req.user.user_type === 'BUYER_REP') {
+             await transaction.rollback();
+             return res.status(403).json({ success: false, message: 'Bạn không có quyền thanh toán hóa đơn của doanh nghiệp khác.' });
+         }
+      }
       const totalAmt = Number(inv.Amount || 0);
       const currentPaid = Number(inv.PaidAmount || 0);
       const remainingUnpaid = totalAmt - currentPaid > 0 ? totalAmt - currentPaid : 0;
@@ -229,16 +239,21 @@ const payInvoice = async (req, res) => {
           VALUES (@InvoiceID, @Amount, @PaidAmount, @PaymentMethod, @PaymentReference, GETDATE())
         `);
 
-      // BRANCH 2: Cập nhật Hóa đơn -> UPDATE Invoices
-      await transaction.request()
+      // BRANCH 2: Cập nhật Hóa đơn -> UPDATE Invoices (Atomic conditional update)
+      const invUpdateRes = await transaction.request()
         .input('InvoiceID', sql.BigInt, invId)
-        .input('PaidAmount', sql.Decimal(18,2), newTotalPaid)
+        .input('PaidAmount', sql.Decimal(18,2), payVal)
         .input('Status', sql.NVarChar, newStatus)
         .query(`
           UPDATE Invoices 
-          SET PaidAmount = @PaidAmount, Status = @Status 
-          WHERE InvoiceID = @InvoiceID
+          SET PaidAmount = PaidAmount + @PaidAmount, Status = CASE WHEN (PaidAmount + @PaidAmount) >= Amount THEN 'PAID' ELSE 'PARTIALLY_PAID' END
+          WHERE InvoiceID = @InvoiceID AND (Amount - PaidAmount) >= @PaidAmount
         `);
+
+      if (invUpdateRes.rowsAffected[0] === 0) {
+        await transaction.rollback();
+        return res.status(400).json({ success: false, message: 'Dữ liệu hóa đơn đã thay đổi hoặc dư nợ không đủ để thanh toán số tiền này. Vui lòng thử lại.' });
+      }
 
       // BRANCH 3: Cập nhật Hạn mức tín dụng -> UPDATE CreditLimits (Giảm UsedAmount theo số tiền trả)
       await transaction.request()

@@ -163,7 +163,7 @@ const sendMessage = async (req, res) => {
 
     // 2. Trigger AI Sommelier for Chatbot & Negotiation
     const lowerMsg = message_text.toLowerCase();
-    const needsAiResponse = true; // Always generate intelligent AI response for Chatbot channel
+    const needsAiResponse = lowerMsg.includes('@ai');
 
     if (needsAiResponse) {
       let aiResponseText = null;

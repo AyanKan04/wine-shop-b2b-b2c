@@ -9,7 +9,7 @@ export default function SommelierBotWidget() {
       sender_name: 'AI Sommelier Assistant',
       sender_role: 'AI_ASSISTANT',
       message_text: 'Xin kính chào quý đối tác. Tôi là chuyên gia thử nếm kiêm Trợ lý ảo của Red Apron. Quý đối tác cần tư vấn về niên vụ, nồng độ ABV, MOQ hay chính sách chiết khấu sỉ của dòng rượu nào?',
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -41,7 +41,7 @@ export default function SommelierBotWidget() {
       sender_name: 'Khách hàng',
       sender_role: 'BUYER',
       message_text: text.trim(),
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
     };
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
@@ -64,7 +64,7 @@ export default function SommelierBotWidget() {
             sender_name: latestAi.sender_name,
             sender_role: latestAi.sender_role,
             message_text: latestAi.message_text,
-            created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
           }]);
         }
       }
@@ -74,7 +74,7 @@ export default function SommelierBotWidget() {
         sender_name: 'AI Sommelier Assistant',
         sender_role: 'AI_ASSISTANT',
         message_text: 'Rất tiếc, kết nối đến chuyên gia Sommelier bị gián đoạn. Quý đối tác vui lòng thử lại sau ít phút.',
-        created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
       }]);
     } finally {
       setLoading(false);

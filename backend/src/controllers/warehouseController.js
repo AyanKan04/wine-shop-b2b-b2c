@@ -191,7 +191,7 @@ const createShipment = async (req, res) => {
     res.status(201).json({ success: true, message: 'Đã tạo phiếu vận chuyển thành công!', shipment: newShipment });
   } catch (err) {
     console.error('Error creating shipment:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi tạo vận đơn: ' + err.message });
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo vận đơn.' });
   }
 };
 
@@ -229,8 +229,8 @@ const updateShipmentStatus = async (req, res) => {
         .input('Status', sql.NVarChar, status)
         .query('UPDATE Shipments SET ShipmentStatus = @Status WHERE ShipmentID = @ShipmentID');
 
-      // 3. If transitioning to DELIVERED, automatically deduct inventory and complete order
-      if (status === 'DELIVERED') {
+      // 3. If transitioning to DELIVERED or CANCELLED
+      if (status === 'DELIVERED' || status === 'CANCELLED') {
         const orderId = shipment.OrderID;
         if (orderId) {
           // Fetch order items
@@ -238,23 +238,36 @@ const updateShipmentStatus = async (req, res) => {
             .input('OrderID', sql.BigInt, orderId)
             .query('SELECT ProductID, Quantity FROM OrderItems WHERE OrderID = @OrderID');
 
-          // Deduct stock for each item
+          // Update stock for each item
           for (let item of itemsRes.recordset) {
-            await transaction.request()
-              .input('ProductID', sql.BigInt, item.ProductID)
-              .input('Quantity', sql.Int, item.Quantity)
-              .query(`
-                UPDATE Inventories 
-                SET QuantityOnHand = QuantityOnHand - @Quantity,
-                    ReservedQuantity = ReservedQuantity - @Quantity
-                WHERE ProductID = @ProductID
-              `);
+            if (status === 'DELIVERED') {
+              // Deduct stock
+              await transaction.request()
+                .input('ProductID', sql.BigInt, item.ProductID)
+                .input('Quantity', sql.Int, item.Quantity)
+                .query(`
+                  UPDATE Inventories 
+                  SET QuantityOnHand = QuantityOnHand - @Quantity,
+                      ReservedQuantity = ReservedQuantity - @Quantity
+                  WHERE ProductID = @ProductID
+                `);
+            } else if (status === 'CANCELLED') {
+              // Restore reserved stock
+              await transaction.request()
+                .input('ProductID', sql.BigInt, item.ProductID)
+                .input('Quantity', sql.Int, item.Quantity)
+                .query(`
+                  UPDATE Inventories 
+                  SET ReservedQuantity = ReservedQuantity - @Quantity
+                  WHERE ProductID = @ProductID
+                `);
+            }
           }
 
-          // Complete the order
+          // Complete or Cancel the order
           await transaction.request()
             .input('OrderID', sql.BigInt, orderId)
-            .query("UPDATE Orders SET OrderStatus = 'COMPLETED' WHERE OrderID = @OrderID");
+            .query(`UPDATE Orders SET OrderStatus = '${status === 'DELIVERED' ? 'COMPLETED' : 'CANCELLED'}' WHERE OrderID = @OrderID`);
         }
       }
 

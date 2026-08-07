@@ -108,7 +108,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
       sender_name: 'Khách hàng',
       sender_role: 'BUYER',
       message_text: userMsg.message_text,
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
     }];
     setChatMessages(tempMessages);
     setChatInput('');

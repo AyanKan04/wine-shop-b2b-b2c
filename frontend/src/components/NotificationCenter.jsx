@@ -10,7 +10,12 @@ export default function NotificationCenter() {
       try {
         const res = await apiService.getNotifications();
         if (res.success) {
-          setNotifications(res.data);
+          const readIds = JSON.parse(localStorage.getItem('readNotifications') || '[]');
+          const processedNotifs = res.data.map(n => ({
+            ...n,
+            read: n.read || readIds.includes(n.id)
+          }));
+          setNotifications(processedNotifs);
         }
       } catch (err) {
         console.error("Lỗi fetch thông báo:", err);
@@ -24,11 +29,19 @@ export default function NotificationCenter() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    const newNotifs = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(newNotifs);
+    const readIds = newNotifs.map(n => n.id);
+    localStorage.setItem('readNotifications', JSON.stringify(readIds));
   };
 
   const markRead = (id) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    const readIds = JSON.parse(localStorage.getItem('readNotifications') || '[]');
+    if (!readIds.includes(id)) {
+      readIds.push(id);
+      localStorage.setItem('readNotifications', JSON.stringify(readIds));
+    }
   };
 
   const typeIcons = {

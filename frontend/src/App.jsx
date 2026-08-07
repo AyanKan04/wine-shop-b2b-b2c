@@ -60,26 +60,6 @@ export default function App() {
       .then(res => { if (res.success && res.data && res.data.length > 0) setOrders(res.data); })
       .catch(() => {});
 
-    // Load Credit Limit & Invoices
-    apiService.getCreditLimit()
-      .then(res => {
-        if (res.success) {
-          if (res.credit) setCredit(res.credit);
-          if (res.invoices && res.invoices.length > 0) setInvoices(res.invoices);
-        }
-      })
-      .catch(() => {});
-
-    // Load Admin Licenses
-    apiService.getAdminLicenses()
-      .then(res => { if (res.success && res.data && res.data.length > 0) setLicenses(res.data); })
-      .catch(() => {});
-
-    // Load Inventory
-    apiService.getInventory()
-      .then(res => { if (res.success && res.inventory && res.inventory.length > 0) setInventory(res.inventory); })
-      .catch(() => {});
-
     const token = localStorage.getItem('token');
     if (token) {
       apiService.getMe()
@@ -90,6 +70,29 @@ export default function App() {
               user.role = user.user_type;
             }
             setCurrentUser(user);
+
+            // Fetch role-specific data
+            if (user.role === 'BUYER_REP' || user.role === 'BUYER') {
+              apiService.getCreditLimit().then(r => {
+                if (r.success) {
+                  if (r.credit) setCredit(r.credit);
+                  if (r.invoices) setInvoices(r.invoices);
+                }
+              }).catch(() => {});
+            }
+
+            if (user.role === 'PLATFORM_ADMIN') {
+              apiService.getAdminLicenses().then(r => {
+                if (r.success && r.data) setLicenses(r.data);
+              }).catch(() => {});
+            }
+
+            if (['PLATFORM_ADMIN', 'COMPANY_ADMIN', 'SALES_REP'].includes(user.role)) {
+              apiService.getInventory().then(r => {
+                if (r.success && r.inventory) setInventory(r.inventory);
+              }).catch(() => {});
+            }
+
             // Dynamic redirect if user lands on login/register/unauthorized admin page
             setCurrentRoute(prevRoute => {
               if (prevRoute === 'login' || prevRoute === 'register') {

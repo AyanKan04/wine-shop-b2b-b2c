@@ -135,7 +135,7 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
       sender_name: 'Sales Rep',
       sender_role: 'SALES_REP',
       message_text: repMsg.message_text,
-      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      created_at: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })
     }];
     setChatMessages(tempMessages);
     setChatInput('');

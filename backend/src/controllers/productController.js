@@ -51,7 +51,7 @@ const getProducts = async (req, res) => {
       FROM Products p
       LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
       LEFT JOIN ProductPrices pp ON pp.ProductID = p.ProductID
-      WHERE 1=1
+      WHERE p.Status != 'DELETED'
     `;
     
     if (category && category !== 'ALL') query += ` AND c.CategoryName LIKE @Category`;
@@ -181,8 +181,9 @@ const updateProduct = async (req, res) => {
     await transaction.begin();
 
     try {
-      await transaction.request()
+      const updateResult = await transaction.request()
         .input('ProductID', sql.BigInt, productId)
+        .input('CompanyID', sql.BigInt, req.user?.company_id || 0)
         .input('SKU', sql.NVarChar, sku)
         .input('ProductName', sql.NVarChar, product_name)
         .input('Category', sql.NVarChar, category)
@@ -201,8 +202,14 @@ const updateProduct = async (req, res) => {
             CountryOfOrigin = @CountryOfOrigin, Region = @Region, GrapeVariety = @GrapeVariety, 
             VintageYear = @VintageYear, AlcoholContent = @AlcoholContent, VolumeML = @VolumeML, 
             MOQ = @MOQ, ImageUrl = @ImageUrl, Description = @Description
-          WHERE ProductID = @ProductID
+          WHERE ProductID = @ProductID 
+          ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}
         `);
+
+      if (updateResult.rowsAffected[0] === 0) {
+        await transaction.rollback();
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền cập nhật sản phẩm này hoặc sản phẩm không tồn tại.' });
+      }
 
       await transaction.request()
         .input('ProductID', sql.BigInt, productId)
@@ -252,7 +259,17 @@ const deleteProduct = async (req, res) => {
       await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM Inventories WHERE ProductID = @ProductID AND ReservedQuantity = 0');
 
       // 2. Thử xóa cứng sản phẩm khỏi bảng Products
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM Products WHERE ProductID = @ProductID');
+      const delReq = transaction.request().input('ProductID', sql.BigInt, productId);
+      if (req.user?.user_type === 'COMPANY_ADMIN') {
+        delReq.input('CompanyID', sql.BigInt, req.user.company_id || 0);
+      }
+      
+      const delResult = await delReq.query(`DELETE FROM Products WHERE ProductID = @ProductID ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}`);
+
+      if (delResult.rowsAffected[0] === 0) {
+        await transaction.rollback();
+        return res.status(403).json({ success: false, message: 'Sản phẩm không tồn tại hoặc bạn không có quyền xóa.' });
+      }
 
       await transaction.commit();
       res.json({ success: true, message: 'Đã xóa hoàn tất sản phẩm khỏi danh mục.' });
@@ -260,9 +277,15 @@ const deleteProduct = async (req, res) => {
       await transaction.rollback();
 
       // 3. Nếu vướng Foreign Key ở OrderItems/RFQs, tự động chuyển sang Soft Delete (Status = 'DELETED')
-      await pool.request()
-        .input('ProductID', sql.BigInt, productId)
-        .query("UPDATE Products SET Status = 'DELETED' WHERE ProductID = @ProductID");
+      const softDelReq = pool.request().input('ProductID', sql.BigInt, productId);
+      if (req.user?.user_type === 'COMPANY_ADMIN') {
+         softDelReq.input('CompanyID', sql.BigInt, req.user.company_id || 0);
+      }
+      const softResult = await softDelReq.query(`UPDATE Products SET Status = 'DELETED' WHERE ProductID = @ProductID ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}`);
+      
+      if (softResult.rowsAffected[0] === 0) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa sản phẩm này.' });
+      }
 
       res.json({ success: true, message: 'Sản phẩm có đơn hàng lịch sử đã được lưu vết và đánh dấu Đã Xóa (Soft Delete).' });
     }
@@ -305,6 +328,14 @@ const updateProductPrices = async (req, res) => {
       for (const pId of targetIds) {
         const productId = parseInt(pId);
         if (isNaN(productId)) continue;
+
+        if (req.user?.user_type === 'COMPANY_ADMIN') {
+          const pCheck = await transaction.request()
+            .input('ProductID', sql.BigInt, productId)
+            .input('CompanyID', sql.BigInt, req.user.company_id || 0)
+            .query('SELECT 1 FROM Products WHERE ProductID = @ProductID AND SellerCompanyID = @CompanyID');
+          if (pCheck.recordset.length === 0) continue; // Không có quyền
+        }
 
         // 3. Swimlane Database: Thực thi theo từng chế độ trong Activity Diagram
 

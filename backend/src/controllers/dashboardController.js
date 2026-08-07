@@ -199,10 +199,17 @@ const getNotifications = async (req, res) => {
     const isBuyerRole = userType === 'BUYER' || userType === 'BUYER_REP';
     let notifications = [];
 
-    if (isBuyerRole && companyId) {
+    let cid = companyId;
+    if (isBuyerRole && !cid && userId) {
+      const uRes = await pool.request().input('UID', sql.BigInt, userId).query('SELECT CompanyID FROM Users WHERE UserID = @UID');
+      cid = uRes.recordset[0]?.CompanyID;
+    }
+
+    if (isBuyerRole) {
+      if (cid) {
       // 1. Unpaid invoices FOR THIS BUYER COMPANY ONLY
       const invRes = await pool.request()
-        .input('CompanyID', sql.BigInt, companyId)
+        .input('CompanyID', sql.BigInt, cid)
         .query(`
           SELECT i.InvoiceNumber, i.DueDate, i.Amount 
           FROM Invoices i
@@ -218,14 +225,14 @@ const getNotifications = async (req, res) => {
           title: 'Hóa đơn cần thanh toán Net-30',
           message: `Hóa đơn ${inv.InvoiceNumber} (${(Number(inv.Amount)).toLocaleString('vi-VN')} đ) đến hạn trong ${days > 0 ? days : 0} ngày`,
           read: false,
-          timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+          timestamp: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' })
         });
       });
 
       // 2. RFQ status updates FOR THIS BUYER USER ONLY
       const rfqRes = await pool.request()
         .input('UserID', sql.BigInt, userId || 0)
-        .input('CompanyID', sql.BigInt, companyId)
+        .input('CompanyID', sql.BigInt, cid)
         .query(`
           SELECT RFQID, Title, Status, CreatedAt 
           FROM RFQs 
@@ -238,7 +245,10 @@ const getNotifications = async (req, res) => {
         if (rfq.Status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
         
         const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
-        const timeStr = isNaN(rfqDate.getTime()) ? new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : rfqDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+        let timeStr = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' });
+        if (rfq.CreatedAt && !isNaN(rfqDate.getTime())) {
+          timeStr = rfqDate.toISOString().substring(11, 16);
+        }
 
         notifications.push({
           id: 'NOTIF-BUYER-RFQ-' + index,
@@ -249,7 +259,7 @@ const getNotifications = async (req, res) => {
           timestamp: timeStr
         });
       });
-
+      }
     } else {
       // ADMIN / SALES_REP System Notifications
       const invRes = await pool.request().query(`
@@ -275,13 +285,16 @@ const getNotifications = async (req, res) => {
           title: 'Hóa đơn chưa thu tiền',
           message: `Hóa đơn ${inv.InvoiceNumber} (${inv.CompanyName || 'Khách B2B'}) chờ thu hồi nợ`,
           read: false,
-          timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+          timestamp: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' })
         });
       });
       
       rfqRes.recordset.forEach((rfq, index) => {
         const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
-        const timeStr = isNaN(rfqDate.getTime()) ? new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : rfqDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+        let timeStr = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' });
+        if (rfq.CreatedAt && !isNaN(rfqDate.getTime())) {
+          timeStr = rfqDate.toISOString().substring(11, 16);
+        }
 
         notifications.push({
           id: 'NOTIF-ADM-RFQ-' + index,
@@ -296,7 +309,7 @@ const getNotifications = async (req, res) => {
 
     if (notifications.length === 0) {
       notifications = [
-        { id: 'NOTIF-000', type: 'success', title: 'Hệ thống ổn định', message: 'Không có thông báo mới nào', read: true, timestamp: new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) }
+        { id: 'NOTIF-000', type: 'success', title: 'Hệ thống ổn định', message: 'Không có thông báo mới nào', read: true, timestamp: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' }) }
       ];
     }
 

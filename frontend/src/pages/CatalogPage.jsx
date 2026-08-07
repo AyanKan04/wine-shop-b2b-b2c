@@ -6,6 +6,8 @@ export default function CatalogPage({ products, onSelectProduct }) {
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [sortBy, setSortBy] = useState('name_asc');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   // Derive unique countries from product data
   const countries = [...new Set((products || []).map(p => p.country_of_origin))];
@@ -35,7 +37,11 @@ export default function CatalogPage({ products, onSelectProduct }) {
       (p.grape_variety || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchCountry = filterCountry === 'ALL' || p.country_of_origin === filterCountry;
     const matchCategory = filterCategory === 'ALL' || p.category === filterCategory;
-    return matchSearch && matchCountry && matchCategory;
+    const price = Number(p.base_price) || 0;
+    const matchMin = minPrice === '' || price >= Number(minPrice);
+    const matchMax = maxPrice === '' || price <= Number(maxPrice);
+
+    return matchSearch && matchCountry && matchCategory && matchMin && matchMax;
   });
 
   // Sort
@@ -54,10 +60,12 @@ export default function CatalogPage({ products, onSelectProduct }) {
     setSearchTerm('');
     setFilterCountry('ALL');
     setFilterCategory('ALL');
+    setMinPrice('');
+    setMaxPrice('');
     setSortBy('name_asc');
   };
 
-  const hasActiveFilters = searchTerm || filterCountry !== 'ALL' || filterCategory !== 'ALL';
+  const hasActiveFilters = searchTerm || filterCountry !== 'ALL' || filterCategory !== 'ALL' || minPrice !== '' || maxPrice !== '';
 
   return (
     <div className="page-container" style={{ maxWidth: '1400px' }}>
@@ -89,18 +97,44 @@ export default function CatalogPage({ products, onSelectProduct }) {
             />
           </div>
 
+          {/* PRICE RANGE */}
+          <div className="card-box" style={{ marginBottom: '16px' }}>
+            <h4 className="gold-text" style={{ fontFamily: 'var(--font-brand)', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '12px' }}>
+              <i className="fa-solid fa-money-bill-wave"></i> KHOẢNG GIÁ (VNĐ)
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input 
+                type="number" 
+                className="form-control" 
+                placeholder="TỐI THIỂU" 
+                value={minPrice} 
+                onChange={e => setMinPrice(e.target.value)} 
+                style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
+              />
+              <span style={{ color: 'var(--text-muted)' }}>-</span>
+              <input 
+                type="number" 
+                className="form-control" 
+                placeholder="TỐI ĐA" 
+                value={maxPrice} 
+                onChange={e => setMaxPrice(e.target.value)} 
+                style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
+              />
+            </div>
+          </div>
+
           {/* COUNTRY */}
           <div className="card-box" style={{ marginBottom: '16px' }}>
             <h4 className="gold-text" style={{ fontFamily: 'var(--font-brand)', fontSize: '0.75rem', letterSpacing: '1px', marginBottom: '12px' }}>
               <i className="fa-solid fa-globe"></i> QUỐC GIA XUẤT XỨ
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === 'ALL' ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === 'ALL' ? 'var(--primary-gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
                 <input type="radio" name="country" checked={filterCountry === 'ALL'} onChange={() => setFilterCountry('ALL')} />
                 Tất cả ({(products || []).length})
               </label>
               {countries.map(c => (
-                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === c ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
+                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCountry === c ? 'var(--primary-gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
                   <input type="radio" name="country" checked={filterCountry === c} onChange={() => setFilterCountry(c)} />
                   {c} ({(products || []).filter(p => p.country_of_origin === c).length})
                 </label>
@@ -114,12 +148,12 @@ export default function CatalogPage({ products, onSelectProduct }) {
               <i className="fa-solid fa-tags"></i> DÒNG RƯỢU
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCategory === 'ALL' ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCategory === 'ALL' ? 'var(--primary-gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
                 <input type="radio" name="category" checked={filterCategory === 'ALL'} onChange={() => setFilterCategory('ALL')} />
                 Tất cả
               </label>
               {categories.map(c => (
-                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCategory === c ? '#FFF' : 'var(--text-muted)', cursor: 'pointer' }}>
+                <label key={c} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: filterCategory === c ? 'var(--primary-gold)' : 'var(--text-muted)', cursor: 'pointer' }}>
                   <input type="radio" name="category" checked={filterCategory === c} onChange={() => setFilterCategory(c)} />
                   {c}
                 </label>

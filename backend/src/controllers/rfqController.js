@@ -289,6 +289,12 @@ const updateQuotationStatus = async (req, res) => {
       }
 
       const qData = qCheck.recordset[0];
+
+      // Ownership Validation (IDOR prevention)
+      if (req.user?.company_id && qData.BuyerCompanyID !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN') {
+         await transaction.rollback();
+         return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên báo giá này.' });
+      }
       
       // Prevent duplicate order creation if quotation was already accepted
       if (qData.Status === 'ACCEPTED') {
@@ -299,10 +305,15 @@ const updateQuotationStatus = async (req, res) => {
       const rfqId = qData.RFQID;
       const totalAmount = (qData.OfferUnitPrice || 0) * (qData.Quantity || 0);
 
-      await transaction.request()
+      const statusUpdateRes = await transaction.request()
         .input('QuotationID', sql.BigInt, quotationId)
         .input('Status', sql.NVarChar, status)
-        .query(`UPDATE Quotations SET Status = @Status WHERE QuotationID = @QuotationID`);
+        .query(`UPDATE Quotations SET Status = @Status WHERE QuotationID = @QuotationID AND Status != 'ACCEPTED'`);
+      
+      if (statusUpdateRes.rowsAffected[0] === 0) {
+         await transaction.rollback();
+         return res.status(400).json({ success: false, message: 'Báo giá này đã được xử lý (hoặc đã được chấp nhận) trước đó.' });
+      }
 
       if (status === 'ACCEPTED') {
         // 1. Check buyer credit limit
@@ -444,10 +455,7 @@ const updateRFQStatus = async (req, res) => {
     await pool.request()
       .input('UserID', sql.BigInt, req.user?.user_id || 1)
       .input('Action', sql.NVarChar, `Chuyển cơ hội RFQ-${rfqId} sang trạng thái: ${status}`)
-      .input('TableName', sql.NVarChar, 'RFQs')
-      .input('RecordID', sql.BigInt, rfqId)
-      .input('IPAddress', sql.NVarChar, req.ip || '127.0.0.1')
-      .query(`INSERT INTO AuditLogs (UserID, Action, TableName, RecordID, IPAddress, CreatedAt) VALUES (@UserID, @Action, @TableName, @RecordID, @IPAddress, GETDATE())`);
+      .query(`INSERT INTO AuditLogs (UserID, Action, CreatedAt) VALUES (@UserID, @Action, GETDATE())`);
 
     res.json({ success: true, message: `Đã chuyển trạng thái RFQ-${rfqId} sang ${status}` });
   } catch (err) {
