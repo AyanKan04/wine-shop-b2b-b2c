@@ -4,15 +4,34 @@ const { getPool, sql } = require('../config/db');
 const getRFQs = async (req, res) => {
   try {
     const pool = await getPool();
-    // Query RFQs along with their items and Product information using LEFT JOIN
-    const result = await pool.request().query(`
+    const userType = req.user?.user_type || 'BUYER_REP';
+    const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+    const request = pool.request();
+
+    let query = `
       SELECT r.*, c.CompanyName as buyer_company, p.ProductName as db_product_name,
              (SELECT * FROM RFQItems ri WHERE ri.RFQID = r.RFQID FOR JSON PATH) as items
       FROM RFQs r
       LEFT JOIN Companies c ON r.BuyerCompanyID = c.CompanyID
       LEFT JOIN Products p ON r.ProductID = p.ProductID
-      ORDER BY r.CreatedAt DESC
-    `);
+      WHERE 1=1
+    `;
+
+    if (isBuyerRole) {
+      if (req.user?.company_id) {
+        query += ` AND (r.BuyerCompanyID = @CompanyID OR r.CreatedBy = @UserID) `;
+        request.input('CompanyID', sql.BigInt, req.user.company_id);
+        request.input('UserID', sql.BigInt, req.user.user_id || 0);
+      } else if (req.user?.user_id) {
+        query += ` AND r.CreatedBy = @UserID `;
+        request.input('UserID', sql.BigInt, req.user.user_id);
+      } else {
+        query += ` AND 1=0 `;
+      }
+    }
+
+    query += ` ORDER BY r.CreatedAt DESC `;
+    const result = await request.query(query);
     
     const rfqs = result.recordset.map(row => {
       let items = [];
@@ -415,7 +434,7 @@ const updateRFQStatus = async (req, res) => {
     const result = await pool.request()
       .input('RFQID', sql.BigInt, rfqId)
       .input('Status', sql.NVarChar, status)
-      .query(`UPDATE RFQs SET Status = @Status, UpdatedAt = GETDATE() WHERE RFQID = @RFQID`);
+      .query(`UPDATE RFQs SET Status = @Status WHERE RFQID = @RFQID`);
 
     if (result.rowsAffected[0] === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy RFQ' });

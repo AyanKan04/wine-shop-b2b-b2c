@@ -1,23 +1,23 @@
 {
   "success": true,
-  "timestamp": "2026-08-07T18:18:37.645Z",
+  "timestamp": "2026-08-07T18:28:34.980Z",
   "summary": {
     "totalTests": 18,
-    "buyerCompanyId": "38",
-    "buyerCompanyName": "TẬP ĐOÀN KHÁCH SẠN LUXURY 1786126716537",
-    "buyerUsername": "b2b_buyer_1786126716537",
-    "buyerUserId": "105",
-    "createdAdminUserId": "104",
-    "rfqId": "8873",
-    "quotationId": "9940",
-    "orderId": "541",
-    "orderNumber": "ORD-2026-18740",
-    "invoiceId": "139",
-    "invoiceNumber": "INV-2026-18740",
-    "lcId": "33",
-    "lcNumber": "LC-BIDV-1786126716537",
-    "shipmentId": "27",
-    "trackingNumber": "GHN-717328-VN"
+    "buyerCompanyId": "40",
+    "buyerCompanyName": "TẬP ĐOÀN KHÁCH SẠN LUXURY 1786127313855",
+    "buyerUsername": "b2b_buyer_1786127313855",
+    "buyerUserId": "110",
+    "createdAdminUserId": "109",
+    "rfqId": "8876",
+    "quotationId": "9942",
+    "orderId": "542",
+    "orderNumber": "ORD-2026-18742",
+    "invoiceId": "140",
+    "invoiceNumber": "INV-2026-18742",
+    "lcId": "34",
+    "lcNumber": "LC-BIDV-1786127313855",
+    "shipmentId": "28",
+    "trackingNumber": "GHN-314705-VN"
   },
   "details": [
     {
@@ -35,7 +35,7 @@
       "webEndpoint": "GET /api/dashboard/stats",
       "dbTable": "Orders/Invoices/Companies",
       "dbQueryKey": "TotalRevenue",
-      "dbValue": "132977000000 VNĐ",
+      "dbValue": "142817000000 VNĐ",
       "status": "SUCCESS"
     },
     {
@@ -44,13 +44,13 @@
       "webEndpoint": "POST /api/users",
       "dbTable": "Users",
       "dbQueryKey": "UserID",
-      "dbValue": "104",
+      "dbValue": "109",
       "status": "SUCCESS"
     },
     {
       "role": "PLATFORM_ADMIN",
       "feature": "Cập nhật thông tin User Admin",
-      "webEndpoint": "PUT /api/users/104",
+      "webEndpoint": "PUT /api/users/109",
       "dbTable": "Users",
       "dbQueryKey": "FirstName",
       "dbValue": "'Quản Trị Cao Cấp'",
@@ -62,7 +62,7 @@
       "webEndpoint": "POST /api/auth/register",
       "dbTable": "Companies & Users",
       "dbQueryKey": "CompanyID / UserID",
-      "dbValue": "38 / 105",
+      "dbValue": "40 / 110",
       "status": "SUCCESS"
     },
     {
@@ -71,13 +71,13 @@
       "webEndpoint": "POST /api/auth/login",
       "dbTable": "Users",
       "dbQueryKey": "UserID",
-      "dbValue": "105",
+      "dbValue": "110",
       "status": "SUCCESS"
     },
     {
       "role": "PLATFORM_ADMIN",
       "feature": "Duyệt giấy phép kinh doanh B2B",
-      "webEndpoint": "POST /api/admin/licenses/22/approve",
+      "webEndpoint": "POST /api/admin/licenses/24/approve",
       "dbTable": "CompanyLicenses",
       "dbQueryKey": "Status",
       "dbValue": "'VERIFIED'",
@@ -89,7 +89,7 @@
       "webEndpoint": "POST /api/rfqs",
       "dbTable": "RFQs",
       "dbQueryKey": "RFQID",
-      "dbValue": "8873",
+      "dbValue": "8876",
       "status": "SUCCESS"
     },
     {
@@ -98,16 +98,16 @@
       "webEndpoint": "POST /api/sales/quotations",
       "dbTable": "Quotations",
       "dbQueryKey": "QuotationID",
-      "dbValue": "9940",
+      "dbValue": "9942",
       "status": "SUCCESS"
     },
     {
       "role": "BUYER_REP",
       "feature": "Chấp nhận Báo giá (Sinh tự động Order & Invoice)",
-      "webEndpoint": "PUT /api/sales/quotations/9940/status",
+      "webEndpoint": "PUT /api/sales/quotations/9942/status",
       "dbTable": "Orders & Invoices",
       "dbQueryKey": "OrderID / InvoiceID",
-      "dbValue": "541 / 139",
+      "dbValue": "542 / 140",
       "status": "SUCCESS"
     },
     {
@@ -125,13 +125,13 @@
       "webEndpoint": "POST /api/finance/lc-documents",
       "dbTable": "LCDocuments",
       "dbQueryKey": "LCID",
-      "dbValue": "33",
+      "dbValue": "34",
       "status": "SUCCESS"
     },
     {
       "role": "PLATFORM_ADMIN",
       "feature": "Phê duyệt Chứng từ L/C",
-      "webEndpoint": "POST /api/finance/lc-documents/33/verify",
+      "webEndpoint": "POST /api/finance/lc-documents/34/verify",
       "dbTable": "LCDocuments",
       "dbQueryKey": "Status",
       "dbValue": "'VERIFIED'",
@@ -140,7 +140,7 @@
     {
       "role": "BUYER_REP",
       "feature": "Thanh toán Hóa đơn đơn hàng Net-30",
-      "webEndpoint": "POST /api/finance/pay-invoice/139",
+      "webEndpoint": "POST /api/finance/pay-invoice/140",
       "dbTable": "Invoices",
       "dbQueryKey": "Status",
       "dbValue": "'PAID'",
@@ -152,7 +152,7 @@
       "webEndpoint": "POST /api/warehouse/inventory/adjust",
       "dbTable": "Inventories",
       "dbQueryKey": "QuantityOnHand",
-      "dbValue": 4350,
+      "dbValue": 4650,
       "status": "SUCCESS"
     },
     {
@@ -161,13 +161,13 @@
       "webEndpoint": "POST /api/warehouse/shipments",
       "dbTable": "Shipments",
       "dbQueryKey": "ShipmentID",
-      "dbValue": "27",
+      "dbValue": "28",
       "status": "SUCCESS"
     },
     {
       "role": "WAREHOUSE / ADMIN",
       "feature": "Cập nhật trạng thái vận đơn (Đang giao)",
-      "webEndpoint": "PUT /api/warehouse/shipments/27/status",
+      "webEndpoint": "PUT /api/warehouse/shipments/28/status",
       "dbTable": "Shipments",
       "dbQueryKey": "ShipmentStatus",
       "dbValue": "'IN_TRANSIT'",
@@ -179,7 +179,7 @@
       "webEndpoint": "POST /api/users",
       "dbTable": "Users",
       "dbQueryKey": "UserID",
-      "dbValue": "107",
+      "dbValue": "112",
       "status": "SUCCESS"
     }
   ]

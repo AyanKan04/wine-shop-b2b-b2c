@@ -13,9 +13,17 @@ const getOrders = async (req, res) => {
     `;
 
     const request = pool.request();
-    if (req.user && req.user.user_type === 'BUYER_REP' && req.user.company_id) {
-      query += ` WHERE o.BuyerCompanyID = @CompanyID `;
-      request.input('CompanyID', sql.BigInt, req.user.company_id);
+    const userType = req.user?.user_type || 'BUYER_REP';
+    const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+
+    if (isBuyerRole) {
+      if (req.user?.company_id) {
+        query += ` WHERE (o.BuyerCompanyID = @CompanyID OR o.CreatedBy = @UserID) `;
+        request.input('CompanyID', sql.BigInt, req.user.company_id);
+        request.input('UserID', sql.BigInt, req.user.user_id || 0);
+      } else {
+        query += ` WHERE 1=0 `;
+      }
     }
     query += ` ORDER BY o.CreatedAt DESC `;
 
@@ -333,7 +341,24 @@ const getOverdueInvoices = async (req, res) => {
 const getLCDocuments = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`SELECT * FROM LCDocuments ORDER BY CreatedAt DESC`);
+    const userType = req.user?.user_type || 'BUYER_REP';
+    const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+    const companyId = req.user?.company_id;
+
+    let query = `SELECT * FROM LCDocuments WHERE 1=1 `;
+    const request = pool.request();
+
+    if (isBuyerRole) {
+      if (companyId) {
+        query += ` AND (CompanyID = @CompanyID OR BuyerCompany IN (SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID)) `;
+        request.input('CompanyID', sql.BigInt, companyId);
+      } else {
+        query += ` AND 1=0 `;
+      }
+    }
+
+    query += ` ORDER BY CreatedAt DESC `;
+    const result = await request.query(query);
     
     const docs = result.recordset.map(row => ({
       lc_id: row.LCID,

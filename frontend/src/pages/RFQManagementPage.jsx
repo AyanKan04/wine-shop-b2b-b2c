@@ -78,6 +78,20 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
       .finally(() => setChatLoading(false));
   };
 
+  useEffect(() => {
+    if (!selectedRfqChat) return;
+    const interval = setInterval(() => {
+      apiService.getChatMessages(selectedRfqChat.rfq_id)
+        .then(res => {
+          if (res.success && res.data) {
+            setChatMessages(res.data);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [selectedRfqChat]);
+
   const handleSendChatMessage = (e) => {
     e.preventDefault();
     if (!chatInput.trim() || !selectedRfqChat) return;
