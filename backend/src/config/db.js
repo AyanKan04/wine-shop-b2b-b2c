@@ -84,8 +84,12 @@ const memoryDb = {
     { OrderID: 8842, OrderNumber: 'ORD-2026-8842', BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', TotalAmount: 150000000, OrderStatus: 'PROCESSING', PaymentMethod: 'NET_30_CREDIT', CreatedAt: new Date('2026-08-01') },
     { OrderID: 8821, OrderNumber: 'ORD-2026-8821', BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', TotalAmount: 200000000, OrderStatus: 'COMPLETED', PaymentMethod: 'NET_30_CREDIT', CreatedAt: new Date('2026-07-15') }
   ],
-  rfqs: [],
-  quotations: [],
+  rfqs: [
+    { rfq_id: 5001, RFQID: 5001, BuyerCompanyID: 1, title: 'RFQ Mua Sỉ Macallan 18 Year Old', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 20, target_price: 65000000, status: 'PENDING', created_at: new Date().toISOString() }
+  ],
+  quotations: [
+    { quotation_id: 9001, QuotationID: 9001, rfq_id: 5001, RFQID: 5001, BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', offer_unit_price: 64000000, quantity: 20, status: 'PENDING', valid_until: '2026-12-31' }
+  ],
   lcDocuments: [],
   licenses: [
     { LicenseID: 1, CompanyID: 1, LicenseType: 'Giấy phép Bán buôn & Phân phối Rượu', LicenseNumber: '108/GP-BCT', Status: 'VERIFIED' }
@@ -99,19 +103,29 @@ const memoryDb = {
 };
 
 const createMockPool = () => {
-  return {
+  const transactionMock = () => {
+    return {
+      begin: async () => {},
+      commit: async () => {},
+      rollback: async () => {},
+      request: () => createMockPool().request()
+    };
+  };
+
+  const poolObj = {
+    transaction: transactionMock,
     request: () => {
       const inputs = {};
       const reqObj = {
         input: (name, type, val) => {
-          inputs[name] = val;
+          inputs[name] = (val !== undefined) ? val : type;
           return reqObj;
         },
         query: async (queryString) => {
-          const q = queryString.toLowerCase();
+          const q = String(queryString).toLowerCase();
 
           // 1. Users login / getMe
-          if (q.includes('from users')) {
+          if (q.includes('users')) {
             if (inputs.Username) {
               const u = memoryDb.users.find(x => x.Username.toLowerCase() === String(inputs.Username).toLowerCase());
               return { recordset: u ? [u] : [] };
@@ -124,7 +138,7 @@ const createMockPool = () => {
           }
 
           // 2. Products query
-          if (q.includes('from products')) {
+          if (q.includes('products')) {
             if (inputs.ProductID) {
               const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
               return { recordset: p ? [p] : [] };
@@ -138,18 +152,24 @@ const createMockPool = () => {
           }
 
           // 3. CreditLimits
-          if (q.includes('from creditlimits')) {
+          if (q.includes('creditlimits')) {
             const cid = inputs.CompanyID || 1;
             let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
             if (!c) {
               c = { CompanyID: cid, CreditLimitAmount: 1000000000, UsedAmount: 0, AvailableAmount: 1000000000 };
               memoryDb.creditLimits.push(c);
             }
+            if (q.includes('update')) {
+              if (inputs.LCAmount) {
+                c.CreditLimitAmount += Number(inputs.LCAmount);
+                c.AvailableAmount += Number(inputs.LCAmount);
+              }
+            }
             return { recordset: [c] };
           }
 
           // 4. Invoices
-          if (q.includes('from invoices')) {
+          if (q.includes('invoices')) {
             let invs = [...memoryDb.invoices];
             if (inputs.BuyerCompanyID) {
               invs = invs.filter(i => i.BuyerCompanyID == inputs.BuyerCompanyID);
@@ -158,7 +178,7 @@ const createMockPool = () => {
           }
 
           // 5. Orders
-          if (q.includes('from orders')) {
+          if (q.includes('orders')) {
             let ords = [...memoryDb.orders];
             if (inputs.CompanyID || inputs.BuyerCompanyID) {
               const cid = inputs.CompanyID || inputs.BuyerCompanyID;
@@ -168,91 +188,80 @@ const createMockPool = () => {
           }
 
           // 6. RFQs
-          if (q.includes('insert into rfqs')) {
-            const newId = 5000 + memoryDb.rfqs.length + 1;
-            const newRfq = {
-              rfq_id: newId,
-              RFQID: newId,
-              BuyerCompanyID: inputs.BuyerCompanyID || 1,
-              title: inputs.Title || 'RFQ Mua Sỉ Rượu',
-              product_name: inputs.ProductName || 'Hennessy XO',
-              quantity: inputs.RequestedQuantity || 10,
-              target_price: inputs.TargetUnitPrice || 45000000,
-              buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-              status: 'PENDING',
-              created_at: new Date().toISOString()
-            };
-            memoryDb.rfqs.push(newRfq);
-            return { recordset: [{ RFQID: newId }] };
-          }
-          if (q.includes('from rfqs')) {
+          if (q.includes('insert into rfqs') || q.includes('rfqs')) {
+            if (q.includes('insert')) {
+              const newId = 5000 + memoryDb.rfqs.length + 1;
+              const newRfq = {
+                rfq_id: newId,
+                RFQID: newId,
+                BuyerCompanyID: inputs.BuyerCompanyID || 1,
+                title: inputs.Title || 'RFQ Mua Sỉ Rượu',
+                product_name: inputs.ProductName || 'Hennessy XO',
+                quantity: inputs.RequestedQuantity || 10,
+                target_price: inputs.TargetUnitPrice || 45000000,
+                buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+                status: 'PENDING',
+                created_at: new Date().toISOString()
+              };
+              memoryDb.rfqs.push(newRfq);
+              return { recordset: [{ RFQID: newId }] };
+            }
             return { recordset: memoryDb.rfqs.map(r => ({ ...r, RFQID: r.rfq_id || r.RFQID, BuyerCompany: r.buyer_company })) };
           }
 
           // 7. Quotations
-          if (q.includes('insert into quotations')) {
-            const newId = 9000 + memoryDb.quotations.length + 1;
-            const newQ = {
-              quotation_id: newId,
-              QuotationID: newId,
-              rfq_id: inputs.RFQID,
-              RFQID: inputs.RFQID,
-              BuyerCompanyID: inputs.BuyerCompanyID || 1,
-              offer_unit_price: inputs.OfferUnitPrice || 44000000,
-              quantity: inputs.Quantity || 10,
-              buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-              status: 'PENDING',
-              valid_until: '2026-12-31'
-            };
-            memoryDb.quotations.push(newQ);
-            return { recordset: [{ QuotationID: newId }] };
-          }
-          if (q.includes('from quotations')) {
+          if (q.includes('insert into quotations') || q.includes('quotations')) {
+            if (q.includes('insert')) {
+              const newId = 9000 + memoryDb.quotations.length + 1;
+              const newQ = {
+                quotation_id: newId,
+                QuotationID: newId,
+                rfq_id: inputs.RFQID,
+                RFQID: inputs.RFQID,
+                BuyerCompanyID: inputs.BuyerCompanyID || 1,
+                offer_unit_price: inputs.OfferUnitPrice || 44000000,
+                quantity: inputs.Quantity || 10,
+                buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+                status: 'PENDING',
+                valid_until: '2026-12-31'
+              };
+              memoryDb.quotations.push(newQ);
+              return { recordset: [{ QuotationID: newId }] };
+            }
             return { recordset: memoryDb.quotations };
           }
 
           // 8. LCDocuments
-          if (q.includes('insert into lcdocuments')) {
-            const newId = 7000 + memoryDb.lcDocuments.length + 1;
-            const newLc = {
-              LCID: newId,
-              lc_id: newId,
-              BuyerCompany: inputs.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-              LCNumber: inputs.LCNumber || 'LC-12345',
-              IssuingBank: inputs.IssuingBank || 'VIETCOMBANK',
-              Amount: inputs.Amount || 500000000,
-              ExpiryDate: inputs.ExpiryDate || new Date(),
-              Status: 'SUBMITTED'
-            };
-            memoryDb.lcDocuments.push(newLc);
-            return { recordset: [{ LCID: newId }] };
-          }
-          if (q.includes('update lcdocuments')) {
-            if (inputs.LCID && inputs.Status) {
-              const lc = memoryDb.lcDocuments.find(x => x.LCID == inputs.LCID);
-              if (lc) lc.Status = inputs.Status;
+          if (q.includes('lcdocuments')) {
+            if (q.includes('insert')) {
+              const newId = 7000 + memoryDb.lcDocuments.length + 1;
+              const newLc = {
+                LCID: newId,
+                lc_id: newId,
+                BuyerCompany: inputs.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+                LCNumber: inputs.LCNumber || 'LC-12345',
+                IssuingBank: inputs.IssuingBank || 'VIETCOMBANK',
+                Amount: inputs.Amount || 500000000,
+                ExpiryDate: inputs.ExpiryDate || new Date(),
+                Status: 'SUBMITTED'
+              };
+              memoryDb.lcDocuments.push(newLc);
+              return { recordset: [{ LCID: newId }] };
             }
-            return { recordset: [] };
-          }
-          if (q.includes('from lcdocuments')) {
+            if (q.includes('update')) {
+              if (inputs.LCID && inputs.Status) {
+                const lc = memoryDb.lcDocuments.find(x => x.LCID == inputs.LCID);
+                if (lc) lc.Status = inputs.Status;
+              }
+              return { recordset: [] };
+            }
             return { recordset: memoryDb.lcDocuments };
           }
 
-          // 9. Update CreditLimits
-          if (q.includes('update creditlimits')) {
-            const cid = inputs.CompanyID || 1;
-            let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
-            if (c && inputs.LCAmount) {
-              c.CreditLimitAmount += Number(inputs.LCAmount);
-              c.AvailableAmount += Number(inputs.LCAmount);
-            }
-            return { recordset: [] };
-          }
-
-          // 10. Companies & Licenses & Inventory
-          if (q.includes('from companylicenses')) return { recordset: memoryDb.licenses };
-          if (q.includes('from inventories')) return { recordset: memoryDb.inventory };
-          if (q.includes('from companies')) return { recordset: memoryDb.companies };
+          // 9. Companies & Licenses & Inventory
+          if (q.includes('companylicenses')) return { recordset: memoryDb.licenses };
+          if (q.includes('inventories')) return { recordset: memoryDb.inventory };
+          if (q.includes('companies')) return { recordset: memoryDb.companies };
 
           return { recordset: [] };
         }
@@ -260,6 +269,7 @@ const createMockPool = () => {
       return reqObj;
     }
   };
+  return poolObj;
 };
 
 const getPool = async () => {
