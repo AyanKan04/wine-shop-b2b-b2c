@@ -174,9 +174,16 @@ async function runLiveAudit() {
     logTest('10. Đồng Bộ Dữ Liệu CRM Kanban 5 Cột', valid, `RFQs Status: ${resRfqs.status} | Quotes Status: ${resQuotes.status}`);
   }
 
-  // 11. Frontend Vercel Live Page Load Check
+  // 11. Overview Dashboard KPI Stats Check
+  if (adminToken) {
+    const resStats = await safeFetchJson(`${LIVE_BACKEND}/dashboard/stats`, { headers: { Authorization: `Bearer ${adminToken}` } });
+    const statsValid = resStats.ok && resStats.data?.stats?.total_revenue > 0 && resStats.data?.stats?.total_companies > 0;
+    logTest('11. Thống Kê Realtime Trang Tổng Quan (Doanh Thu > 0 & Số Công Ty > 0)', statsValid, resStats.data?.stats);
+  }
+
+  // 12. Frontend Vercel Live Page Load Check
   const resFe = await safeFetchJson(LIVE_FRONTEND);
-  logTest('11. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
+  logTest('12. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
 
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KẾT QUẢ KIỂM THỬ: ${report.passed}/${report.tests.length} TEST CASES THÀNH CÔNG (PASS)`);

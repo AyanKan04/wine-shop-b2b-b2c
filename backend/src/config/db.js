@@ -71,7 +71,11 @@ const memoryDb = {
   ],
   companies: [
     { CompanyID: 1, CompanyCode: 'COMP-LOTTE', CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', CompanyType: 'BUYER', Status: 'ACTIVE' },
-    { CompanyID: 2, CompanyCode: 'COMP-REDAPRON', CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY', CompanyType: 'SELLER', Status: 'ACTIVE' }
+    { CompanyID: 2, CompanyCode: 'COMP-REDAPRON', CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY', CompanyType: 'SELLER', Status: 'ACTIVE' },
+    { CompanyID: 3, CompanyCode: 'COMP-CONTINENTAL', CompanyName: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL', CompanyType: 'BUYER', Status: 'ACTIVE' },
+    { CompanyID: 4, CompanyCode: 'COMP-FURAMA', CompanyName: 'CÔNG TY CP KHÁCH SẠN FURAMA ĐÀ NẴNG', CompanyType: 'BUYER', Status: 'ACTIVE' },
+    { CompanyID: 5, CompanyCode: 'COMP-SAIGONCOOP', CompanyName: 'LIÊN HIỆP HTX THƯƠNG MẠI TP.HCM - SAIGON CO.OP', CompanyType: 'BUYER', Status: 'ACTIVE' },
+    { CompanyID: 6, CompanyCode: 'COMP-DALATWINE', CompanyName: 'NHÀ MÁY VANG ĐÀ LẠT - DALAT WINE JSC', CompanyType: 'SELLER', Status: 'ACTIVE' }
   ],
   creditLimits: [
     { CompanyID: 1, CreditLimitAmount: 1000000000, UsedAmount: 150000000, AvailableAmount: 850000000 }
@@ -85,7 +89,7 @@ const memoryDb = {
     { OrderID: 8821, OrderNumber: 'ORD-2026-8821', BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', TotalAmount: 200000000, OrderStatus: 'COMPLETED', PaymentMethod: 'NET_30_CREDIT', CreatedAt: new Date('2026-07-15') }
   ],
   rfqs: [
-    { rfq_id: 5001, RFQID: 5001, BuyerCompanyID: 1, title: 'RFQ Mua Sỉ Macallan 18 Year Old', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 20, target_price: 65000000, status: 'PENDING', created_at: new Date().toISOString() }
+    { rfq_id: 5001, RFQID: 5001, BuyerCompanyID: 1, title: 'RFQ Mua Sỉ Macallan 18 Year Old', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 20, target_price: 65000000, status: 'SUBMITTED', created_at: new Date().toISOString() }
   ],
   quotations: [
     { quotation_id: 9001, QuotationID: 9001, rfq_id: 5001, RFQID: 5001, BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', offer_unit_price: 64000000, quantity: 20, status: 'PENDING', valid_until: '2026-12-31' }
@@ -125,6 +129,66 @@ const createMockPool = () => {
         query: async (queryString) => {
           const q = String(queryString).toLowerCase();
 
+          // 0. Dashboard KPI Aggregations & Analytics
+          if (q.includes('sum(totalamount)') || q.includes('total_revenue')) {
+            const tot = memoryDb.orders.reduce((acc, o) => acc + (Number(o.TotalAmount) || 0), 0);
+            return { recordset: [{ total_revenue: tot || 350000000 }] };
+          }
+          if (q.includes('count(*)') && q.includes('products')) {
+            return { recordset: [{ count: memoryDb.products.length || 10 }] };
+          }
+          if (q.includes('count(*)') && q.includes('companies')) {
+            return { recordset: [{ count: memoryDb.companies.length || 6 }] };
+          }
+          if (q.includes('companylicenses') && q.includes('pending_verification')) {
+            return { recordset: [{ count: 1 }] };
+          }
+          if (q.includes('inventories') && (q.includes('sum') || q.includes('quantityonhand') || q.includes('total_inventory'))) {
+            const totInv = memoryDb.inventory.reduce((acc, i) => acc + (Number(i.QuantityOnHand) || 0), 0);
+            return { recordset: [{ total_inventory: totInv || 410 }] };
+          }
+          if (q.includes('count(*)') && q.includes('rfqs')) {
+            return { recordset: [{ count: memoryDb.rfqs.length || 3 }] };
+          }
+          if (q.includes('unpaid_invoices') || (q.includes('invoices') && q.includes('unpaid'))) {
+            const unpInvs = memoryDb.invoices.filter(i => i.Status === 'UNPAID');
+            const unpAmt = unpInvs.reduce((acc, i) => acc + (Number(i.Amount) || 0), 0);
+            return { recordset: [{ unpaid_invoices: unpInvs.length || 1, unpaid_amount: unpAmt || 150000000 }] };
+          }
+          if (q.includes('count(*)') && q.includes('shipments')) {
+            return { recordset: [{ count: 1 }] };
+          }
+          if (q.includes('month(createdat)') || q.includes('month as month')) {
+            return {
+              recordset: [
+                { month: 'T5', revenue: 180000000, orders: 3 },
+                { month: 'T6', revenue: 240000000, orders: 4 },
+                { month: 'T7', revenue: 310000000, orders: 5 },
+                { month: 'T8', revenue: 350000000, orders: 6 }
+              ]
+            };
+          }
+          if (q.includes('top 5') || q.includes('orderitems')) {
+            return {
+              recordset: [
+                { name: 'Macallan 18 Year Old Sherry Oak', revenue: 204000000 },
+                { name: 'Château Margaux Premier 2018', revenue: 168000000 },
+                { name: 'Hennessy X.O Cognac Extra Old', revenue: 134400000 },
+                { name: 'Dom Pérignon Vintage Brut 2012', revenue: 90000000 }
+              ]
+            };
+          }
+          if (q.includes('activityfeed') || q.includes('auditlogs')) {
+            return {
+              recordset: [
+                { id: 'ACT-101', timestamp: new Date().toISOString(), module: 'Bán Hàng', action: 'Phát hành báo giá Quotation #9001', actor: 'Trần Quản Trị', icon: 'fa-file-invoice-dollar', color: '#D4AF37' },
+                { id: 'ACT-102', timestamp: new Date().toISOString(), module: 'Tài Chính', action: 'Phê duyệt Thư tín dụng L/C +500 Tr ₫', actor: 'Lý Kế Toán', icon: 'fa-shield-check', color: '#10B981' },
+                { id: 'ACT-103', timestamp: new Date().toISOString(), module: 'Bán Hàng', action: 'Yêu cầu báo giá RFQ mới từ Lotte Saigon', actor: 'Nguyễn Mua Hàng', icon: 'fa-cart-shopping', color: '#3B82F6' },
+                { id: 'ACT-104', timestamp: new Date().toISOString(), module: 'Kho & Vận Chuyển', action: 'Vận đơn ORD-2026-8821 đã phát thành công', actor: 'Đặng Kho', icon: 'fa-truck', color: '#8B5CF6' }
+              ]
+            };
+          }
+
           // 1. Users login / getMe
           if (q.includes('users')) {
             if (inputs.Username) {
@@ -157,7 +221,7 @@ const createMockPool = () => {
             const cid = inputs.CompanyID || 1;
             let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
             if (!c) {
-              c = { CompanyID: cid, CreditLimitAmount: 1000000000, UsedAmount: 0, AvailableAmount: 1000000000 };
+              c = { CompanyID: cid, CreditLimitAmount: 1000000000, UsedAmount: 150000000, AvailableAmount: 850000000 };
               memoryDb.creditLimits.push(c);
             }
             if (q.includes('update')) {
