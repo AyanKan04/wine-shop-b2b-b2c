@@ -73,7 +73,14 @@ async function connectDB() {
         connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'DESKTOP-BFLA0CO\\SQLEXPRESS'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
       };
       
-      const altSql = useOdbc ? require('mssql') : require('mssql/msnodesqlv8');
+      let altSql = require('mssql');
+      try {
+        if (!useOdbc) {
+          altSql = require('mssql/msnodesqlv8');
+        }
+      } catch(e) {
+        altSql = require('mssql');
+      }
       mssqlPool = await altSql.connect(fallbackConfig);
       sql = altSql;
       isConnected = true;
