@@ -25,7 +25,7 @@ export default function CRMKanbanPage({ showToast }) {
       if (rfqRes && rfqRes.success && rfqRes.data) {
         rfqRes.data.forEach(rfq => {
           let status = 'new_rfq';
-          if (rfq.status === 'IN_REVIEW') status = 'in_negotiation';
+          if (rfq.status === 'IN_REVIEW' || rfq.status === 'IN_NEGOTIATION') status = 'in_negotiation';
           if (rfq.status === 'QUOTATION_SENT') return; 
           if (rfq.status === 'REJECTED') return;
           
@@ -125,14 +125,15 @@ export default function CRMKanbanPage({ showToast }) {
           
           await apiService.updateQuotationStatus(deal.originalId, beStatus);
         } else if (deal.originalType === 'RFQ') {
-          // No API available for RFQ status update directly in current implementation, 
-          // usually moving RFQ to 'quotation_sent' implies creating a quotation.
-          if (nextStatus === 'quotation_sent') {
+          if (nextStatus === 'in_negotiation') {
+            await apiService.updateRFQStatus(deal.originalId, 'IN_REVIEW');
+          } else if (nextStatus === 'quotation_sent') {
             await apiService.createQuotation({
               rfq_id: deal.originalId,
               offer_unit_price: deal.unit_price,
               quantity: deal.quantity
             });
+            await apiService.updateRFQStatus(deal.originalId, 'QUOTATION_SENT');
           }
         }
         

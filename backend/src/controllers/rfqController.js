@@ -404,9 +404,43 @@ const updateQuotationStatus = async (req, res) => {
   }
 };
 
+const updateRFQStatus = async (req, res) => {
+  const rfqId = parseInt(req.params.id);
+  const { status } = req.body;
+  if (!status) {
+    return res.status(400).json({ success: false, message: 'Thiếu trạng thái status' });
+  }
+  try {
+    const pool = await getPool();
+    const result = await pool.request()
+      .input('RFQID', sql.BigInt, rfqId)
+      .input('Status', sql.NVarChar, status)
+      .query(`UPDATE RFQs SET Status = @Status, UpdatedAt = GETDATE() WHERE RFQID = @RFQID`);
+
+    if (result.rowsAffected[0] === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy RFQ' });
+    }
+
+    // Insert Audit Log
+    await pool.request()
+      .input('UserID', sql.BigInt, req.user?.user_id || 1)
+      .input('Action', sql.NVarChar, `Chuyển cơ hội RFQ-${rfqId} sang trạng thái: ${status}`)
+      .input('TableName', sql.NVarChar, 'RFQs')
+      .input('RecordID', sql.BigInt, rfqId)
+      .input('IPAddress', sql.NVarChar, req.ip || '127.0.0.1')
+      .query(`INSERT INTO AuditLogs (UserID, Action, TableName, RecordID, IPAddress, CreatedAt) VALUES (@UserID, @Action, @TableName, @RecordID, @IPAddress, GETDATE())`);
+
+    res.json({ success: true, message: `Đã chuyển trạng thái RFQ-${rfqId} sang ${status}` });
+  } catch (err) {
+    console.error('Error updating RFQ status:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật trạng thái RFQ' });
+  }
+};
+
 module.exports = {
   getRFQs,
   createRFQ,
+  updateRFQStatus,
   getQuotations,
   createQuotation,
   updateQuotationStatus

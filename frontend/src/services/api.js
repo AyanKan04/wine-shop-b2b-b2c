@@ -52,17 +52,23 @@ export const apiService = {
     return request(`/products${query ? `?${query}` : ''}`);
   },
   getProductById: (id) => request(`/products/${id}`),
+  createProduct: (productData) => request('/products', { method: 'POST', body: JSON.stringify(productData) }),
+  updateProduct: (id, productData) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(productData) }),
+  deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
   updateBatchProductPrices: (data) => request('/products/batch-prices', { method: 'POST', body: JSON.stringify(data) }),
 
   // Companies & Licenses
   getCompanies: () => request('/companies'),
   registerCompany: (companyData) => request('/companies/register', { method: 'POST', body: JSON.stringify(companyData) }),
+  toggleCompanyStatus: (id) => request(`/companies/${id}/status`, { method: 'PUT' }),
   getAdminLicenses: () => request('/admin/licenses'),
   approveLicense: (id) => request(`/admin/licenses/${id}/approve`, { method: 'POST' }),
+  rejectLicense: (id) => request(`/admin/licenses/${id}/reject`, { method: 'POST' }),
 
   // RFQs & Quotations
   getRFQs: () => request('/rfqs'),
   createRFQ: (rfqData) => request('/rfqs', { method: 'POST', body: JSON.stringify(rfqData) }),
+  updateRFQStatus: (id, status) => request(`/rfqs/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   getQuotations: () => request('/sales/quotations'),
   createQuotation: (quotationData) => request('/sales/quotations', { method: 'POST', body: JSON.stringify(quotationData) }),
   updateQuotationStatus: (id, status) => request(`/sales/quotations/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),

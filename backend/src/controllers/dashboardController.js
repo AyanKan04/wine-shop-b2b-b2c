@@ -121,9 +121,9 @@ const getActivityFeed = async (req, res) => {
   try {
     const pool = await getPool();
     
-    // Combine AuditLogs with Orders to generate a feed
+    // Combine AuditLogs, Orders, RFQs, Invoices, and Licenses to generate a live activity feed
     const query = `
-      SELECT TOP 10 * FROM (
+      SELECT TOP 15 * FROM (
         SELECT 
           'ACT-' + CAST(LogID AS VARCHAR) as id,
           CreatedAt as timestamp,
@@ -133,6 +133,18 @@ const getActivityFeed = async (req, res) => {
           'fa-clock-rotate-left' as icon,
           '#6B7280' as color
         FROM AuditLogs
+        
+        UNION ALL
+        
+        SELECT 
+          'RFQ-' + CAST(RFQID AS VARCHAR) as id,
+          CreatedAt as timestamp,
+          N'Đàm Phán RFQ' as module,
+          N'Yêu cầu báo giá RFQ-' + CAST(RFQID AS VARCHAR) + N' (' + Status + N')' as action,
+          N'Đối Tác B2B' as actor,
+          'fa-file-signature' as icon,
+          '#F59E0B' as color
+        FROM RFQs
         
         UNION ALL
         
