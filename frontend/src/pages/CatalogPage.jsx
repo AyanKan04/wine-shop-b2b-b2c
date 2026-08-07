@@ -17,11 +17,22 @@ export default function CatalogPage({ products, onSelectProduct }) {
     return val.toLocaleString('vi-VN') + ' ₫';
   };
 
+  const getTierPrice = (p, index) => {
+    if (!p) return 0;
+    if (Array.isArray(p.tier_prices) && p.tier_prices.length > 0) {
+      if (index === 'last') {
+        return p.tier_prices[p.tier_prices.length - 1]?.price_per_unit ?? p.base_price ?? 0;
+      }
+      return p.tier_prices[index]?.price_per_unit ?? p.base_price ?? 0;
+    }
+    return p.base_price ?? p.Price ?? 0;
+  };
+
   let filtered = (products || []).filter(p => {
     const matchSearch = searchTerm === '' ||
-      p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.grape_variety.toLowerCase().includes(searchTerm.toLowerCase());
+      (p.product_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.grape_variety || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchCountry = filterCountry === 'ALL' || p.country_of_origin === filterCountry;
     const matchCategory = filterCategory === 'ALL' || p.category === filterCategory;
     return matchSearch && matchCountry && matchCategory;
@@ -30,11 +41,11 @@ export default function CatalogPage({ products, onSelectProduct }) {
   // Sort
   filtered = [...filtered].sort((a, b) => {
     switch (sortBy) {
-      case 'name_asc': return a.product_name.localeCompare(b.product_name);
-      case 'name_desc': return b.product_name.localeCompare(a.product_name);
-      case 'price_asc': return a.tier_prices[0].price_per_unit - b.tier_prices[0].price_per_unit;
-      case 'price_desc': return b.tier_prices[0].price_per_unit - a.tier_prices[0].price_per_unit;
-      case 'abv_desc': return b.alcohol_content - a.alcohol_content;
+      case 'name_asc': return (a.product_name || '').localeCompare(b.product_name || '');
+      case 'name_desc': return (b.product_name || '').localeCompare(a.product_name || '');
+      case 'price_asc': return getTierPrice(a, 0) - getTierPrice(b, 0);
+      case 'price_desc': return getTierPrice(b, 0) - getTierPrice(a, 0);
+      case 'abv_desc': return (b.alcohol_content || 0) - (a.alcohol_content || 0);
       default: return 0;
     }
   });
@@ -198,11 +209,11 @@ export default function CatalogPage({ products, onSelectProduct }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
                     <div>
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Giá Tier 1</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(p.tier_prices[0].price_per_unit)}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(getTierPrice(p, 0))}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Giá Tier 5</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#10B981' }}>{formatVND(p.tier_prices[p.tier_prices.length - 1].price_per_unit)}</div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#10B981' }}>{formatVND(getTierPrice(p, 'last'))}</div>
                     </div>
                   </div>
 
@@ -235,11 +246,11 @@ export default function CatalogPage({ products, onSelectProduct }) {
                   <div style={{ display: 'flex', gap: '25px', alignItems: 'center', flexShrink: 0 }}>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Tier 1</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(p.tier_prices[0].price_per_unit)}</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(getTierPrice(p, 0))}</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Tier 5</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#10B981' }}>{formatVND(p.tier_prices[p.tier_prices.length - 1].price_per_unit)}</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#10B981' }}>{formatVND(getTierPrice(p, 'last'))}</div>
                     </div>
                     <button className="btn-redapron-gold" style={{ padding: '8px 16px', fontSize: '0.75rem', whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); onSelectProduct(p.product_id); }}>
                       Chi Tiết

@@ -225,7 +225,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
                     <div style={{ textAlign: 'right' }}>
                       <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Giá sỉ sập sàn (Tier 5)</span>
                       <div style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-burgundy)' }}>
-                        {p.tier_prices && p.tier_prices.length > 0
+                        {p.tier_prices && p.tier_prices.length > 0 && p.tier_prices[p.tier_prices.length - 1]?.price_per_unit
                           ? `${(p.tier_prices[p.tier_prices.length - 1].price_per_unit / 1000000).toFixed(0)} Tr ₫`
                           : 'Liên hệ'}
                       </div>
