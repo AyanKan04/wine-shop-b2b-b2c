@@ -242,9 +242,33 @@ async function runLiveAudit() {
     logTest('14. Thu Tiền Hóa Đơn Hàng & Cập Nhật Trạng Thái Đã Thanh Toán (PAID)', payValid, `Invoice 8184 Status: ${inv8184?.status} | Paid: ${inv8184?.paid_amount}`);
   }
 
-  // 15. Frontend Vercel Live Page Load Check
+  // 15. Warehouse Logistics & Inventory Adjustment Persistence Check
+  if (adminToken) {
+    const resInv = await safeFetchJson(`${LIVE_BACKEND}/warehouse/inventory`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    const resShip = await safeFetchJson(`${LIVE_BACKEND}/warehouse/shipments`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    const resAdjust = await safeFetchJson(`${LIVE_BACKEND}/warehouse/inventory/adjust`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ product_id: 101, adjustment_type: 'IMPORT', quantity: 10, reason: 'E2E Test Import' })
+    });
+
+    const invList = resInv.data?.inventory || [];
+    const shipList = resShip.data?.data || resShip.data || [];
+    const whValid = resInv.ok && invList.length > 0 && invList.every(i => i.product_name && i.sku) && resShip.ok && shipList.length > 0 && resAdjust.ok;
+
+    logTest('15. Kho Hàng & Logistics (Tồn Kho Thực Tế, Nhập/Xuất & Vận Chuyển Realtime)', whValid, `Inv Count: ${invList.length} | Ship Count: ${shipList.length} | Adjust: ${resAdjust.data?.message}`);
+  }
+
+  // 16. Frontend Vercel Live Page Load Check
   const resFe = await safeFetchJson(LIVE_FRONTEND);
-  logTest('15. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
+  logTest('16. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
 
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KẾT QUẢ KIỂM THỬ: ${report.passed}/${report.tests.length} TEST CASES THÀNH CÔNG (PASS)`);

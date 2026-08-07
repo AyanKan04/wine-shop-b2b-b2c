@@ -5,9 +5,12 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const [inventoryData, setInventoryData] = useState(
     (inventory || []).map(item => ({
       ...item,
-      product_name: item.product_name || item.sku,
+      product_name: item.product_name || item.ProductName || item.sku || item.SKU || `Sản phẩm #${item.product_id || item.ProductID}`,
+      sku: item.sku || item.SKU || `SKU-${item.product_id || item.ProductID}`,
+      stock_on_hand: item.stock_on_hand !== undefined ? item.stock_on_hand : (item.QuantityOnHand || 0),
+      reserved: item.reserved !== undefined ? item.reserved : (item.ReservedQuantity || 0),
       min_stock_level: item.min_stock_level || 30,
-      location: item.location || 'Kho A1'
+      location: item.location || 'Kho A1 (Chính)'
     }))
   );
 
@@ -25,9 +28,12 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
       if (res.success && res.inventory) {
         setInventoryData(res.inventory.map(item => ({
           ...item,
-          product_name: item.product_name || item.sku,
+          product_name: item.product_name || item.ProductName || item.sku || item.SKU || `Sản phẩm #${item.product_id || item.ProductID}`,
+          sku: item.sku || item.SKU || `SKU-${item.product_id || item.ProductID}`,
+          stock_on_hand: item.stock_on_hand !== undefined ? item.stock_on_hand : (item.QuantityOnHand || 0),
+          reserved: item.reserved !== undefined ? item.reserved : (item.ReservedQuantity || 0),
           min_stock_level: item.min_stock_level || 30,
-          location: item.location || 'Kho A1'
+          location: item.location || 'Kho A1 (Chính)'
         })));
       }
     } catch (err) {
@@ -57,46 +63,51 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const [shipmentForm, setShipmentForm] = useState({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
 
   const formatVND = (val) => {
+    if (!val) return '0 ₫';
     if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
     if (val >= 1000000) return (val / 1000000).toFixed(0) + ' Tr ₫';
-    return val.toLocaleString('vi-VN') + ' ₫';
+    return Number(val).toLocaleString('vi-VN') + ' ₫';
   };
 
-  const totalStock = inventoryData.reduce((sum, i) => sum + i.stock_on_hand, 0);
-  const totalReserved = inventoryData.reduce((sum, i) => sum + i.reserved, 0);
-  const totalAvailable = inventoryData.reduce((sum, i) => sum + (i.stock_on_hand - i.reserved), 0);
-  const lowStockCount = inventoryData.filter(i => (i.stock_on_hand - i.reserved) <= i.min_stock_level).length;
+  const totalStock = inventoryData.reduce((sum, i) => sum + Number(i.stock_on_hand || 0), 0);
+  const totalReserved = inventoryData.reduce((sum, i) => sum + Number(i.reserved || 0), 0);
+  const totalAvailable = inventoryData.reduce((sum, i) => sum + (Number(i.stock_on_hand || 0) - Number(i.reserved || 0)), 0);
+  const lowStockCount = inventoryData.filter(i => (Number(i.stock_on_hand || 0) - Number(i.reserved || 0)) <= Number(i.min_stock_level || 30)).length;
 
-  const filteredInventory = inventoryData.filter(item =>
-    item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.product_name && item.product_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredInventory = inventoryData.filter(item => {
+    const skuStr = (item.sku || item.SKU || '').toLowerCase();
+    const nameStr = (item.product_name || item.ProductName || '').toLowerCase();
+    const searchStr = (searchTerm || '').toLowerCase();
+    return skuStr.includes(searchStr) || nameStr.includes(searchStr);
+  });
 
-  const handleAdjustStock = (e) => {
+  const handleAdjustStock = async (e) => {
     e.preventDefault();
-    const item = inventoryData.find(i => i.product_id === parseInt(adjustForm.product_id));
-    if (!item) { showToast('Vui lòng chọn sản phẩm!'); return; }
+    const pId = parseInt(adjustForm.product_id);
+    const item = inventoryData.find(i => (i.product_id || i.ProductID) === pId);
+    if (!item) { if (showToast) showToast('Vui lòng chọn sản phẩm!'); return; }
     const qty = parseInt(adjustForm.quantity);
-    if (!qty || qty <= 0) { showToast('Số lượng phải lớn hơn 0'); return; }
+    if (!qty || qty <= 0) { if (showToast) showToast('Số lượng phải lớn hơn 0'); return; }
 
-    setInventoryData(prev => prev.map(inv => {
-      if (inv.product_id === parseInt(adjustForm.product_id)) {
-        if (adjustForm.adjustment_type === 'IMPORT') {
-          return { ...inv, stock_on_hand: inv.stock_on_hand + qty };
-        } else {
-          if (qty > (inv.stock_on_hand - inv.reserved)) {
-            showToast(`Không đủ hàng khả dụng! Chỉ còn ${inv.stock_on_hand - inv.reserved} thùng.`);
-            return inv;
-          }
-          return { ...inv, stock_on_hand: inv.stock_on_hand - qty };
-        }
+    try {
+      const res = await apiService.adjustStock({
+        product_id: pId,
+        adjustment_type: adjustForm.adjustment_type,
+        quantity: qty,
+        reason: adjustForm.reason
+      });
+
+      if (res.success) {
+        if (showToast) showToast(res.message || `Đã ${adjustForm.adjustment_type === 'IMPORT' ? 'nhập' : 'xuất'} kho thành công!`);
+        setShowAdjustModal(false);
+        setAdjustForm({ product_id: '', adjustment_type: 'IMPORT', quantity: '', reason: '' });
+        fetchInventory(); // Refresh from backend
+      } else {
+        if (showToast) showToast(res.message || 'Lỗi điều chỉnh tồn kho');
       }
-      return inv;
-    }));
-
-    showToast(`Đã ${adjustForm.adjustment_type === 'IMPORT' ? 'nhập' : 'xuất'} kho ${qty} thùng ${item.sku} thành công!`);
-    setShowAdjustModal(false);
-    setAdjustForm({ product_id: '', adjustment_type: 'IMPORT', quantity: '', reason: '' });
+    } catch (err) {
+      if (showToast) showToast(err.message || 'Lỗi khi cập nhật tồn kho');
+    }
   };
 
   const handleCreateShipment = async (e) => {

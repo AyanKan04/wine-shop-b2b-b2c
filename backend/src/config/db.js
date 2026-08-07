@@ -414,9 +414,81 @@ const createMockPool = () => {
             return { recordset: msgs };
           }
 
-          // 11. Companies & Licenses & Inventory
+          // 11. Warehouse Inventories Persistence
+          if (q.includes('inventories')) {
+            if (q.includes('update')) {
+              const pid = inputs.ProductID;
+              const inv = memoryDb.inventory.find(x => x.ProductID == pid);
+              if (inv) {
+                if (q.includes('+')) {
+                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) + Number(inputs.Qty || 0);
+                } else if (q.includes('-')) {
+                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) - Number(inputs.Qty || 0);
+                }
+              }
+              return { recordset: [] };
+            }
+            if (q.includes('insert')) {
+              const pid = inputs.ProductID;
+              if (pid && !memoryDb.inventory.some(x => x.ProductID == pid)) {
+                memoryDb.inventory.push({ ProductID: pid, QuantityOnHand: 0, ReservedQuantity: 0 });
+              }
+              return { recordset: [] };
+            }
+            const invs = memoryDb.inventory.map(inv => {
+              const p = memoryDb.products.find(x => x.ProductID == inv.ProductID);
+              const qoh = Number(inv.QuantityOnHand || 0);
+              const res = Number(inv.ReservedQuantity || 0);
+              return {
+                InventoryID: inv.InventoryID || inv.ProductID,
+                ProductID: inv.ProductID,
+                QuantityOnHand: qoh,
+                ReservedQuantity: res,
+                ProductName: p ? p.ProductName : `Sản Phẩm #${inv.ProductID}`,
+                SKU: p ? p.SKU : `SKU-${inv.ProductID}`,
+                ImageUrl: p ? (p.ImageURL || p.image_url) : '/assets/images/macallen.png',
+                available: qoh - res > 0 ? qoh - res : 0,
+                stock_status: (qoh - res <= 30) ? 'LOW' : 'OK'
+              };
+            });
+            return { recordset: invs };
+          }
+
+          // 12. Shipments Persistence
+          if (q.includes('shipments')) {
+            if (!memoryDb.shipments) {
+              memoryDb.shipments = [
+                { ShipmentID: 701, TrackingNumber: 'GHN-8842-VN', OrderNumber: 'ORD-2026-8842', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Giao Hàng Nhanh (GHN)', ShipmentStatus: 'IN_TRANSIT', EstimatedDeliveryDate: new Date('2026-08-10') },
+                { ShipmentID: 702, TrackingNumber: 'VT-8821-VN', OrderNumber: 'ORD-2026-8821', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Viettel Post', ShipmentStatus: 'DELIVERED', EstimatedDeliveryDate: new Date('2026-07-20') }
+              ];
+            }
+            if (q.includes('insert')) {
+              const newId = 700 + memoryDb.shipments.length + 1;
+              const newShipment = {
+                ShipmentID: newId,
+                TrackingNumber: `GHN-${Date.now().toString().slice(-6)}-VN`,
+                OrderNumber: inputs.OrderNumber || 'ORD-2026-8842',
+                buyer_company: inputs.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+                Carrier: inputs.Carrier || 'Giao Hàng Nhanh (GHN)',
+                ShipmentStatus: 'PICKING',
+                EstimatedDeliveryDate: inputs.EstimatedDeliveryDate ? new Date(inputs.EstimatedDeliveryDate) : new Date()
+              };
+              memoryDb.shipments.push(newShipment);
+              return { recordset: [{ ShipmentID: newId }] };
+            }
+            if (q.includes('update')) {
+              const shipId = inputs.ShipmentID || inputs.id;
+              const ship = memoryDb.shipments.find(x => x.ShipmentID == shipId);
+              if (ship && inputs.Status) {
+                ship.ShipmentStatus = inputs.Status;
+              }
+              return { recordset: [] };
+            }
+            return { recordset: memoryDb.shipments };
+          }
+
+          // 13. Companies & Licenses
           if (q.includes('companylicenses')) return { recordset: memoryDb.licenses };
-          if (q.includes('inventories')) return { recordset: memoryDb.inventory };
           if (q.includes('companies')) return { recordset: memoryDb.companies };
 
           return { recordset: [] };

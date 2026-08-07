@@ -78,6 +78,7 @@ export const apiService = {
 
   // Warehouse
   getInventory: () => request('/warehouse/inventory'),
+  adjustStock: (data) => request('/warehouse/inventory/adjust', { method: 'POST', body: JSON.stringify(data) }),
   getShipments: () => request('/warehouse/shipments'),
   createShipment: (shipmentData) => request('/warehouse/shipments', { method: 'POST', body: JSON.stringify(shipmentData) }),
   updateShipmentStatus: (id, status) => request(`/warehouse/shipments/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
