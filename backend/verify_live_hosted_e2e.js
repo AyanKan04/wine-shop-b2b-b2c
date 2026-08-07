@@ -222,7 +222,7 @@ async function runLiveAudit() {
 
   // 14. Invoice Payment Collection Persistence Check
   if (adminToken) {
-    const resPay = await safeFetchJson(`${LIVE_BACKEND}/finance/invoices/8184/pay`, {
+    const resPay = await safeFetchJson(`${LIVE_BACKEND}/finance/pay-invoice/8184`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -239,7 +239,7 @@ async function runLiveAudit() {
     const inv8184 = invs.find(i => (i.invoice_id || i.InvoiceID) == 8184);
     const payValid = inv8184 && (inv8184.status === 'PAID' || Number(inv8184.paid_amount) > 0);
 
-    logTest('14. Thu Tiền Hóa Đơn Hàng & Cập Nhật Trạng Thái Đã Thanh Toán (PAID)', payValid, `Pay Response: ${resPay.status} ${JSON.stringify(resPay.data)} | Inv8184: ${JSON.stringify(inv8184)}`);
+    logTest('14. Thu Tiền Hóa Đơn Hàng & Cập Nhật Trạng Thái Đã Thanh Toán (PAID)', payValid, `Invoice 8184 Status: ${inv8184?.status} | Paid: ${inv8184?.paid_amount}`);
   }
 
   // 15. Frontend Vercel Live Page Load Check

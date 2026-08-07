@@ -9,6 +9,7 @@ router.use(authenticateToken);
 router.get('/orders', getOrders);
 router.get('/finance/credit-limit', getCreditLimit);
 router.post('/finance/pay-invoice/:id', payInvoice);
+router.post('/finance/invoices/:id/pay', payInvoice);
 router.put('/finance/credit-limit', updateCreditLimit);
 router.get('/finance/summary', getFinancialSummary);
 router.get('/finance/overdue-invoices', getOverdueInvoices);
