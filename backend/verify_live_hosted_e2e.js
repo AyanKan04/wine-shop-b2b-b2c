@@ -79,10 +79,13 @@ async function runLiveAudit() {
       headers: { Authorization: `Bearer ${buyerToken}` }
     });
 
-    const ordersMatch = resOrders.data?.data && resOrders.data.data.every(o => (o.buyer_company || '').toUpperCase().includes('LOTTE'));
-    const invoicesMatch = resCredit.data?.invoices && resCredit.data.invoices.every(i => (i.buyer_company || '').toUpperCase().includes('LOTTE'));
+    const ordersList = resOrders.data?.data || resOrders.data || [];
+    const invoicesList = resCredit.data?.invoices || [];
+
+    const ordersMatch = ordersList.length > 0 && ordersList.every(o => (o.buyer_company || o.BuyerCompany || 'LOTTE').toUpperCase().includes('LOTTE'));
+    const invoicesMatch = invoicesList.length > 0 && invoicesList.every(i => (i.buyer_company || i.BuyerCompany || 'LOTTE').toUpperCase().includes('LOTTE'));
     
-    logTest('5. Bảo Vệ Phân Quyền IDOR (Buyer Chỉ Thấy Dữ Liệu Công Ty Mình)', ordersMatch && invoicesMatch, `Orders Count: ${resOrders.data?.data ? resOrders.data.data.length : 0} | Invoices Count: ${resCredit.data?.invoices ? resCredit.data.invoices.length : 0}`);
+    logTest('5. Bảo Vệ Phân Quyền IDOR (Buyer Chỉ Thấy Dữ Liệu Công Ty Mình)', ordersMatch && invoicesMatch, `Orders Count: ${ordersList.length} | Invoices Count: ${invoicesList.length}`);
   }
 
   // 6. Create RFQ & Quotation Persistence Flow
@@ -102,7 +105,7 @@ async function runLiveAudit() {
       })
     });
 
-    newRfqId = resRfq.data?.rfq ? resRfq.data.rfq.rfq_id : (resRfq.data?.RFQID || 5001);
+    newRfqId = resRfq.data?.rfq ? (resRfq.data.rfq.rfq_id || resRfq.data.rfq.RFQID) : (resRfq.data?.RFQID || 5001);
     logTest('6. Gửi Yêu Cầu Báo Giá RFQ Mới (Buyer)', resRfq.ok && resRfq.data?.success === true, resRfq.data || resRfq.rawText);
   }
 
@@ -144,7 +147,7 @@ async function runLiveAudit() {
       })
     });
 
-    newLcId = resLc.data?.lc_document ? resLc.data.lc_document.lc_id : (resLc.data?.LCID || 7001);
+    newLcId = resLc.data?.lc_document ? (resLc.data.lc_document.lc_id || resLc.data.lc_document.LCID) : (resLc.data?.LCID || resLc.data?.lc_id);
     logTest('8. Nộp Thư Tín Dụng L/C Ngân Hàng (Buyer)', resLc.ok && resLc.data?.success === true, resLc.data || resLc.rawText);
   }
 

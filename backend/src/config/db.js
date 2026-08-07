@@ -256,7 +256,11 @@ const createMockPool = () => {
               }
               return { recordset: [] };
             }
-            return { recordset: memoryDb.lcDocuments };
+            let docs = memoryDb.lcDocuments;
+            if (inputs.LCID) {
+              docs = docs.filter(x => x.LCID == inputs.LCID);
+            }
+            return { recordset: docs };
           }
 
           // 9. Companies & Licenses & Inventory
