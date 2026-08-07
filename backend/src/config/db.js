@@ -113,6 +113,7 @@ const createMockPool = () => {
   };
 
   const poolObj = {
+    isMock: true,
     transaction: transactionMock,
     request: () => {
       const inputs = {};
@@ -196,15 +197,15 @@ const createMockPool = () => {
                 RFQID: newId,
                 BuyerCompanyID: inputs.BuyerCompanyID || 1,
                 title: inputs.Title || 'RFQ Mua Sỉ Rượu',
-                product_name: inputs.ProductName || 'Hennessy XO',
+                product_name: inputs.ProductName || inputs.Description || 'Hennessy XO',
                 quantity: inputs.RequestedQuantity || 10,
-                target_price: inputs.TargetUnitPrice || 45000000,
+                target_price: inputs.TargetPrice || inputs.TargetUnitPrice || 45000000,
                 buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-                status: 'PENDING',
+                status: 'SUBMITTED',
                 created_at: new Date().toISOString()
               };
               memoryDb.rfqs.push(newRfq);
-              return { recordset: [{ RFQID: newId }] };
+              return { recordset: [{ RFQID: newId, CreatedAt: new Date() }] };
             }
             return { recordset: memoryDb.rfqs.map(r => ({ ...r, RFQID: r.rfq_id || r.RFQID, BuyerCompany: r.buyer_company })) };
           }
@@ -226,7 +227,7 @@ const createMockPool = () => {
                 valid_until: '2026-12-31'
               };
               memoryDb.quotations.push(newQ);
-              return { recordset: [{ QuotationID: newId }] };
+              return { recordset: [{ QuotationID: newId, CreatedAt: new Date() }] };
             }
             return { recordset: memoryDb.quotations };
           }
@@ -271,6 +272,20 @@ const createMockPool = () => {
   };
   return poolObj;
 };
+
+// Safe Transaction class override for Cloud Mock Mode
+const OriginalTransaction = sql.Transaction;
+function CustomTransaction(pool) {
+  if (pool && pool.isMock) {
+    this.begin = async () => {};
+    this.commit = async () => {};
+    this.rollback = async () => {};
+    this.request = () => pool.request();
+    return this;
+  }
+  return new OriginalTransaction(pool);
+}
+sql.Transaction = CustomTransaction;
 
 const getPool = async () => {
   if (!isConnected || !mssqlPool) {

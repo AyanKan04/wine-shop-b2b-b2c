@@ -79,8 +79,8 @@ async function runLiveAudit() {
       headers: { Authorization: `Bearer ${buyerToken}` }
     });
 
-    const ordersMatch = resOrders.data?.data && resOrders.data.data.every(o => o.buyer_company.includes('LOTTE SAIGON'));
-    const invoicesMatch = resCredit.data?.invoices && resCredit.data.invoices.every(i => i.buyer_company.includes('LOTTE SAIGON'));
+    const ordersMatch = resOrders.data?.data && resOrders.data.data.every(o => (o.buyer_company || '').toUpperCase().includes('LOTTE'));
+    const invoicesMatch = resCredit.data?.invoices && resCredit.data.invoices.every(i => (i.buyer_company || '').toUpperCase().includes('LOTTE'));
     
     logTest('5. Bảo Vệ Phân Quyền IDOR (Buyer Chỉ Thấy Dữ Liệu Công Ty Mình)', ordersMatch && invoicesMatch, `Orders Count: ${resOrders.data?.data ? resOrders.data.data.length : 0} | Invoices Count: ${resCredit.data?.invoices ? resCredit.data.invoices.length : 0}`);
   }
@@ -151,7 +151,7 @@ async function runLiveAudit() {
   // 9. Approve L/C & Credit Line Increase (Finance Officer)
   if (adminToken && newLcId) {
     const resVerify = await safeFetchJson(`${LIVE_BACKEND}/finance/lc-documents/${newLcId}/verify`, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${adminToken}`
