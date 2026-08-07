@@ -148,7 +148,7 @@ const getShipments = async (req, res) => {
 // Create new shipment
 const createShipment = async (req, res) => {
   const { order_number, buyer_company, carrier, items_summary, estimated_delivery } = req.body;
-  const trackingNumber = `VN-SHIP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 1000)}`;
+  const trackingNumber = `GHN-${Date.now().toString().slice(-6)}-VN`;
 
   try {
     const pool = await getPool();
@@ -167,6 +167,9 @@ const createShipment = async (req, res) => {
       .input('OrderID', sql.BigInt, orderId)
       .input('TrackingNumber', sql.NVarChar, trackingNumber)
       .input('EstimatedDeliveryDate', sql.DateTime, estimated_delivery ? new Date(estimated_delivery) : null)
+      .input('BuyerCompany', sql.NVarChar, buyer_company || 'Doanh nghiệp')
+      .input('Carrier', sql.NVarChar, carrier || 'Giao Hàng Nhanh (GHN)')
+      .input('ItemsSummary', sql.NVarChar, items_summary || 'Rượu nhập khẩu')
       .query(`
         INSERT INTO Shipments (OrderID, TrackingNumber, ShipmentStatus, EstimatedDeliveryDate)
         OUTPUT INSERTED.ShipmentID
@@ -179,14 +182,15 @@ const createShipment = async (req, res) => {
       order_number: order_number,
       buyer_company: buyer_company || 'Doanh nghiệp',
       carrier: carrier || 'Giao Hàng Nhanh (GHN)',
+      items_summary: items_summary || 'Rượu nhập khẩu',
       shipment_status: 'PICKING',
       estimated_delivery: estimated_delivery
     };
 
-    res.status(201).json({ success: true, message: 'Đã tạo vận đơn thành công!', shipment: newShipment });
+    res.status(201).json({ success: true, message: 'Đã tạo phiếu vận chuyển thành công!', shipment: newShipment });
   } catch (err) {
     console.error('Error creating shipment:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi tạo vận đơn' });
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo vận đơn: ' + err.message });
   }
 };
 

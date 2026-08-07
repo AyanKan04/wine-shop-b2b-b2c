@@ -65,9 +65,22 @@ const memoryDb = {
     }
   ],
   users: [
-    { UserID: 1, CompanyID: 1, Username: 'lotte_buyer', Email: 'buyer@lottesaigon.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Nguyễn', LastName: 'Mua Hàng' },
-    { UserID: 2, CompanyID: 2, Username: 'admin_user', Email: 'admin@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Trần', LastName: 'Quản Trị' },
-    { UserID: 3, CompanyID: 3, Username: 'continental_buyer', Email: 'purchasing@continental.vn', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Lê', LastName: 'Hải' }
+    { UserID: 1, CompanyID: 1, Username: 'lotte_buyer', Email: 'buyer@lottesaigon.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Nguyễn', LastName: 'Mua Hàng', PhoneNumber: null, CreatedAt: new Date('2026-07-30'), CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON' },
+    { UserID: 2, CompanyID: 2, Username: 'admin_user', Email: 'admin@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Trần', LastName: 'Quản Trị', PhoneNumber: null, CreatedAt: new Date('2026-07-30'), CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY' },
+    { UserID: 3, CompanyID: 3, Username: 'continental_buyer', Email: 'purchasing@continental.vn', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Lê', LastName: 'Hải', PhoneNumber: null, CreatedAt: new Date('2026-07-30'), CompanyName: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL' },
+    { UserID: 64, CompanyID: 1, Username: 'b2b_buyer_64', Email: 'b2b_buyer_64@lottesaigon.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Buyer', LastName: 'Lotte 64', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON' },
+    { UserID: 65, CompanyID: 4, Username: 'b2b_buyer_65', Email: 'b2b_buyer_65@furama.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Buyer', LastName: 'Furama 65', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'CÔNG TY CP KHÁCH SẠN FURAMA ĐÀ NẴNG' },
+    { UserID: 66, CompanyID: 5, Username: 'b2b_buyer_66', Email: 'b2b_buyer_66@saigoncoop.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Buyer', LastName: 'Saigon Coop 66', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'LIÊN HIỆP HTX THƯƠNG MẠI TP.HCM - SAIGON CO.OP' },
+    { UserID: 67, CompanyID: 3, Username: 'b2b_buyer_67', Email: 'b2b_buyer_67@continental.vn', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Buyer', LastName: 'Continental 67', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'CÔNG TY TNHH KHÁCH SẠN CONTINENTAL' },
+    { UserID: 68, CompanyID: 2, Username: 'company_admin_68', Email: 'company_admin_68@redapron.vn', PasswordHash: passwordHash, UserType: 'COMPANY_ADMIN', Role: 'COMPANY_ADMIN', Status: 'ACTIVE', FirstName: 'Trần Văn', LastName: 'Quản Lý Kho', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY' },
+    { UserID: 69, CompanyID: 1, Username: 'buyer_staff_69', Email: 'buyer_staff_69@lottesaigon.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Lê Thu', LastName: 'Nhân Viên Mua', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON' },
+    { UserID: 83, CompanyID: null, Username: 'buyer_17854192', Email: 'buyer_17854192@test.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Test', LastName: 'Buyer', PhoneNumber: null, CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 84, CompanyID: null, Username: 'admin_subuser_84', Email: 'admin_subuser_84@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 85, CompanyID: null, Username: 'admin_subuser_85', Email: 'admin_subuser_85@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 86, CompanyID: null, Username: 'admin_subuser_86', Email: 'admin_subuser_86@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 87, CompanyID: null, Username: 'admin_subuser_87', Email: 'admin_subuser_87@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 88, CompanyID: null, Username: 'admin_subuser_88', Email: 'admin_subuser_88@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null },
+    { UserID: 89, CompanyID: null, Username: 'admin_subuser_89', Email: 'admin_subuser_89@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Quản Trị Cao Cấp', LastName: 'Viên Phú', PhoneNumber: '0988777666', CreatedAt: new Date('2026-08-01'), CompanyName: null }
   ],
   companies: [
     { CompanyID: 1, CompanyCode: 'COMP-LOTTE', CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', CompanyType: 'BUYER', Status: 'ACTIVE' },
@@ -199,17 +212,89 @@ const createMockPool = () => {
             };
           }
 
-          // 1. Users login / getMe
+          // 1. Users login / getMe / CRUD
           if (q.includes('users')) {
-            if (inputs.Username) {
-              const u = memoryDb.users.find(x => x.Username.toLowerCase() === String(inputs.Username).toLowerCase());
+            // INSERT new user
+            if (q.includes('insert')) {
+              const newId = Math.max(...memoryDb.users.map(u => u.UserID)) + 1;
+              // Check duplicate email/username
+              const dup = memoryDb.users.find(u =>
+                u.Email === inputs.Email || u.Username === inputs.Username
+              );
+              if (dup) return { recordset: [] }; // controller handles 400
+              const newUser = {
+                UserID: newId,
+                CompanyID: inputs.CompanyID || null,
+                Username: inputs.Username,
+                Email: inputs.Email,
+                PasswordHash: inputs.PasswordHash,
+                FirstName: inputs.FirstName || null,
+                LastName: inputs.LastName || null,
+                PhoneNumber: inputs.PhoneNumber || null,
+                UserType: inputs.UserType || 'BUYER_REP',
+                Role: inputs.UserType || 'BUYER_REP',
+                Status: 'ACTIVE',
+                CreatedAt: new Date(),
+                CompanyName: memoryDb.companies.find(c => c.CompanyID == inputs.CompanyID)?.CompanyName || null
+              };
+              memoryDb.users.push(newUser);
+              return { recordset: [{ UserID: newId }] };
+            }
+            // UPDATE user
+            if (q.includes('update')) {
+              const uid = inputs.UserID;
+              const u = memoryDb.users.find(x => x.UserID == uid);
+              if (u) {
+                if (inputs.FirstName !== undefined) u.FirstName = inputs.FirstName;
+                if (inputs.LastName !== undefined) u.LastName = inputs.LastName;
+                if (inputs.PhoneNumber !== undefined) u.PhoneNumber = inputs.PhoneNumber;
+                if (inputs.UserType !== undefined) { u.UserType = inputs.UserType; u.Role = inputs.UserType; }
+                if (inputs.Status !== undefined) u.Status = inputs.Status;
+                if (inputs.PasswordHash !== undefined) u.PasswordHash = inputs.PasswordHash;
+              }
+              return { recordset: [] };
+            }
+            // DELETE user
+            if (q.includes('delete')) {
+              const uid = inputs.UserID;
+              const idx = memoryDb.users.findIndex(x => x.UserID == uid);
+              if (idx >= 0) memoryDb.users.splice(idx, 1);
+              return { recordset: [] };
+            }
+            // SELECT by username (login) - only Username, no Email
+            if (inputs.Username && !inputs.Email && !inputs.UserID) {
+              const u = memoryDb.users.find(x => x.Username && x.Username.toLowerCase() === String(inputs.Username).toLowerCase());
               return { recordset: u ? [u] : [] };
             }
+            // SELECT duplicate check (Email OR Username) - for createUser pre-check
+            if (inputs.Email && inputs.Username && !inputs.UserID) {
+              const found = memoryDb.users.filter(x =>
+                x.Email === inputs.Email ||
+                (x.Username && x.Username.toLowerCase() === String(inputs.Username).toLowerCase())
+              );
+              return { recordset: found };
+            }
+            // SELECT by UserID (getMe / permission check)
             if (inputs.UserID) {
               const u = memoryDb.users.find(x => x.UserID == inputs.UserID);
               return { recordset: u ? [u] : [] };
             }
-            return { recordset: memoryDb.users };
+            // SELECT all (getUsers with optional Search/CompanyID filter)
+            let users = [...memoryDb.users].filter(u => u.Status !== 'DELETED');
+            if (inputs.Search) {
+              const s = String(inputs.Search).replace(/%/g, '').toLowerCase();
+              users = users.filter(u =>
+                (u.Username || '').toLowerCase().includes(s) ||
+                (u.Email || '').toLowerCase().includes(s) ||
+                (u.CompanyName || '').toLowerCase().includes(s)
+              );
+            }
+            if (inputs.CompanyID) {
+              users = users.filter(u => u.CompanyID == inputs.CompanyID);
+            }
+            // Sort newest first
+            users.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+            return { recordset: users };
           }
 
           // 2. ProductTierPrices & ProductPrices Persistence (Mock Engine SQL Handler)
