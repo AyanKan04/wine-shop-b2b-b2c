@@ -212,7 +212,44 @@ const createMockPool = () => {
             return { recordset: memoryDb.users };
           }
 
-          // 2. Products query
+          // 2. ProductTierPrices & ProductPrices Persistence (Mock Engine SQL Handler)
+          if (q.includes('producttierprices')) {
+            const pid = inputs.ProductID || 101;
+            const p = memoryDb.products.find(x => x.ProductID == pid);
+            if (p) {
+              let currentTiers = [];
+              try {
+                currentTiers = typeof p.tier_prices === 'string' ? JSON.parse(p.tier_prices) : (p.tier_prices || []);
+              } catch(e) { currentTiers = []; }
+
+              if (q.includes('delete')) {
+                currentTiers = [];
+              } else if (q.includes('insert')) {
+                const newT = {
+                  TierLevel: Number(inputs.TierLevel || 1),
+                  MinQuantity: Number(inputs.MinQuantity || 1),
+                  PricePerUnit: Number(inputs.PricePerUnit || 0)
+                };
+                currentTiers = currentTiers.filter(t => Number(t.TierLevel || t.tier_level) !== newT.TierLevel);
+                currentTiers.push(newT);
+                currentTiers.sort((a,b) => Number(a.TierLevel || a.tier_level) - Number(b.TierLevel || b.tier_level));
+              }
+              p.tier_prices = JSON.stringify(currentTiers);
+            }
+            return { recordset: [] };
+          }
+
+          if (q.includes('productprices')) {
+            const pid = inputs.ProductID || 101;
+            const p = memoryDb.products.find(x => x.ProductID == pid);
+            if (p) {
+              if (inputs.CostPrice !== undefined) p.CostPrice = Number(inputs.CostPrice);
+              if (inputs.BasePrice !== undefined) p.BasePrice = Number(inputs.BasePrice);
+            }
+            return { recordset: [] };
+          }
+
+          // 3. Products query
           if (q.includes('products')) {
             if (inputs.ProductID) {
               const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
@@ -226,7 +263,7 @@ const createMockPool = () => {
             return { recordset: prods };
           }
 
-          // 3. CreditLimits
+          // 4. CreditLimits
           if (q.includes('creditlimits')) {
             const cid = inputs.CompanyID || 1;
             let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
@@ -243,7 +280,7 @@ const createMockPool = () => {
             return { recordset: [c] };
           }
 
-          // 4. Invoices
+          // 5. Invoices
           if (q.includes('invoices')) {
             let invs = [...memoryDb.invoices];
             if (inputs.BuyerCompanyID) {
@@ -252,7 +289,7 @@ const createMockPool = () => {
             return { recordset: invs };
           }
 
-          // 5. Orders
+          // 6. Orders
           if (q.includes('orders')) {
             let ords = [...memoryDb.orders];
             if (inputs.CompanyID || inputs.BuyerCompanyID) {
@@ -262,7 +299,7 @@ const createMockPool = () => {
             return { recordset: ords };
           }
 
-          // 6. RFQs
+          // 7. RFQs
           if (q.includes('insert into rfqs') || q.includes('rfqs')) {
             if (q.includes('insert')) {
               const newId = 5000 + memoryDb.rfqs.length + 1;
@@ -284,7 +321,7 @@ const createMockPool = () => {
             return { recordset: memoryDb.rfqs.map(r => ({ ...r, RFQID: r.rfq_id || r.RFQID, BuyerCompany: r.buyer_company })) };
           }
 
-          // 7. Quotations
+          // 8. Quotations
           if (q.includes('insert into quotations') || q.includes('quotations')) {
             if (q.includes('insert')) {
               const newId = 9000 + memoryDb.quotations.length + 1;
@@ -306,7 +343,7 @@ const createMockPool = () => {
             return { recordset: memoryDb.quotations };
           }
 
-          // 8. LCDocuments
+          // 9. LCDocuments
           if (q.includes('lcdocuments')) {
             if (q.includes('insert')) {
               const newId = Math.floor(7000 + Math.random() * 100000);
@@ -337,7 +374,7 @@ const createMockPool = () => {
             return { recordset: docs };
           }
 
-          // 9. RFQMessages (Chatbot & AI Sommelier Channel Messages)
+          // 10. RFQMessages (Chatbot & AI Sommelier Channel Messages)
           if (q.includes('rfqmessages')) {
             if (q.includes('insert')) {
               const newId = memoryDb.rfqMessages.length + 1;
@@ -359,7 +396,7 @@ const createMockPool = () => {
             return { recordset: msgs };
           }
 
-          // 10. Companies & Licenses & Inventory
+          // 11. Companies & Licenses & Inventory
           if (q.includes('companylicenses')) return { recordset: memoryDb.licenses };
           if (q.includes('inventories')) return { recordset: memoryDb.inventory };
           if (q.includes('companies')) return { recordset: memoryDb.companies };

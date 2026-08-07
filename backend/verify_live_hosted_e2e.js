@@ -191,9 +191,38 @@ async function runLiveAudit() {
   const chatValid = resChat.ok && resChat.data?.success === true && Array.isArray(resChat.data.data) && resChat.data.data.some(m => m.sender_role === 'AI_ASSISTANT');
   logTest('12. Chatbot AI Sommelier Phản Hồi Tự Động Realtime (Trích Xuất AI Reply)', chatValid, resChat.data);
 
-  // 13. Frontend Vercel Live Page Load Check
+  // 13. Batch Tier Price Configuration Persistence Check (Tier 1-5 Save)
+  if (adminToken) {
+    const resSaveTiers = await safeFetchJson(`${LIVE_BACKEND}/products/batch-prices`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        product_ids: [101],
+        priceType: 'TIER',
+        prices: [
+          { tier_level: 1, min_quantity: 5, price_per_unit: 68000000 },
+          { tier_level: 2, min_quantity: 20, price_per_unit: 65000000 },
+          { tier_level: 3, min_quantity: 12, price_per_unit: 62000000 },
+          { tier_level: 4, min_quantity: 24, price_per_unit: 59000000 },
+          { tier_level: 5, min_quantity: 60, price_per_unit: 55000000 }
+        ]
+      })
+    });
+
+    const resGetProd = await safeFetchJson(`${LIVE_BACKEND}/products/101`);
+    const pData = resGetProd.data?.data || resGetProd.data;
+    const tiersList = pData?.tier_prices || [];
+    const tierMatch = resSaveTiers.ok && tiersList.length >= 5;
+
+    logTest('13. Lưu & Lưu Trữ Cấu Hình Giá Sỉ Tier 1-5 Vào DB (ProductTierPrices Persistence)', tierMatch, `Tier Count: ${tiersList.length} | Response: ${resSaveTiers.data?.message}`);
+  }
+
+  // 14. Frontend Vercel Live Page Load Check
   const resFe = await safeFetchJson(LIVE_FRONTEND);
-  logTest('13. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
+  logTest('14. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
 
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KẾT QUẢ KIỂM THỬ: ${report.passed}/${report.tests.length} TEST CASES THÀNH CÔNG (PASS)`);

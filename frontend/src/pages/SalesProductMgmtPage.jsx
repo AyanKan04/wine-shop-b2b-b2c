@@ -449,7 +449,7 @@ export default function SalesProductMgmtPage({ showToast }) {
                         <label style={{ fontSize: '0.7rem', color: '#4B5563' }}>Số lượng tối thiểu</label>
                         <input type="number" className="form-control" style={{ marginBottom: '6px', padding: '6px' }} value={t.min_quantity} onChange={e => {
                           const newTiers = [...tierPrices]; newTiers[idx].min_quantity = e.target.value; setTierPrices(newTiers);
-                        }} required />
+                        }} />
                         <label style={{ fontSize: '0.7rem', color: '#4B5563' }}>Giá / Đơn vị (VNĐ)</label>
                         <input 
                           type="text" 
@@ -460,7 +460,6 @@ export default function SalesProductMgmtPage({ showToast }) {
                             const rawValue = e.target.value.replace(/\D/g, '');
                             const newTiers = [...tierPrices]; newTiers[idx].price_per_unit = rawValue; setTierPrices(newTiers);
                           }} 
-                          required 
                         />
                       </div>
                     ))}
