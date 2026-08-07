@@ -26,7 +26,7 @@ const authenticateToken = (req, res, next) => {
 
   // Real JWT Validation
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_if_env_missing');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024');
     req.user = decoded; // Contains user_id, username, user_type, company_id
     next();
   } catch (err) {
