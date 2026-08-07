@@ -20,11 +20,21 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
       </a>
 
       <div className="nav-links" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        {/* BUYER / CUSTOMER ROUTES */}
-        <button className={currentRoute === 'home' ? 'active' : ''} onClick={() => setCurrentRoute('home')}>1. Trang Chủ</button>
-        <button className={currentRoute === 'catalog' ? 'active' : ''} onClick={() => setCurrentRoute('catalog')}>2. Catalog & Lọc</button>
-        <button className={currentRoute === 'product-detail' ? 'active' : ''} onClick={() => setCurrentRoute('product-detail')}>3. Chi Tiết Rượu</button>
-        <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>4. Đơn Hàng & Nợ</button>
+        {/* PUBLIC & BUYER ROUTES */}
+        <button className={currentRoute === 'home' ? 'active' : ''} onClick={() => setCurrentRoute('home')}>Trang Chủ</button>
+        <button className={currentRoute === 'catalog' ? 'active' : ''} onClick={() => setCurrentRoute('catalog')}>Catalog & Sản Phẩm</button>
+        
+        {/* BUYER REP: Đơn Hàng & Công Nợ Cá Nhân */}
+        {(!currentUser || currentUser.role === 'BUYER_REP') && (
+          <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>Đơn Hàng & Nợ</button>
+        )}
+
+        {/* ADMIN / STAFF ROLE: Dẫn thẳng vào Trang Quản Trị Admin */}
+        {currentUser && currentUser.role !== 'BUYER_REP' && (
+          <button className={`zone-admin ${currentRoute === 'master-admin' ? 'active' : ''}`} onClick={() => setCurrentRoute('master-admin')}>
+            <i className="fa-solid fa-crown"></i> Quản Trị Admin
+          </button>
+        )}
 
         {/* NOTIFICATION CENTER */}
         <NotificationCenter />
