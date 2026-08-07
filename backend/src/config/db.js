@@ -463,33 +463,40 @@ const createMockPool = () => {
           if (q.includes('shipments')) {
             if (!memoryDb.shipments) {
               memoryDb.shipments = [
-                { ShipmentID: 701, TrackingNumber: 'GHN-8842-VN', OrderNumber: 'ORD-2026-8842', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Giao Hàng Nhanh (GHN)', ShipmentStatus: 'IN_TRANSIT', EstimatedDeliveryDate: new Date('2026-08-10') },
-                { ShipmentID: 702, TrackingNumber: 'VT-8821-VN', OrderNumber: 'ORD-2026-8821', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Viettel Post', ShipmentStatus: 'DELIVERED', EstimatedDeliveryDate: new Date('2026-07-20') }
+                { ShipmentID: 701, TrackingNumber: 'GHN-8842-VN', OrderNumber: 'ORD-2026-8842', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Giao Hàng Nhanh (GHN)', items_summary: 'Macallan 18 x 20 thùng', ShipmentStatus: 'IN_TRANSIT', EstimatedDeliveryDate: new Date('2026-08-10') },
+                { ShipmentID: 702, TrackingNumber: 'VT-8821-VN', OrderNumber: 'ORD-2026-8821', buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', Carrier: 'Viettel Post', items_summary: 'Château Margaux x 10 thùng', ShipmentStatus: 'DELIVERED', EstimatedDeliveryDate: new Date('2026-07-20'), ActualDeliveryDate: new Date('2026-07-19') }
               ];
             }
             if (q.includes('insert')) {
               const newId = 700 + memoryDb.shipments.length + 1;
+              const trackNum = inputs.TrackingNumber || `GHN-${Date.now().toString().slice(-6)}-VN`;
               const newShipment = {
                 ShipmentID: newId,
-                TrackingNumber: `GHN-${Date.now().toString().slice(-6)}-VN`,
-                OrderNumber: inputs.OrderNumber || 'ORD-2026-8842',
-                buyer_company: inputs.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-                Carrier: inputs.Carrier || 'Giao Hàng Nhanh (GHN)',
+                TrackingNumber: trackNum,
+                OrderNumber: inputs.OrderNumber || `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+                buyer_company: inputs.BuyerCompany || inputs.buyer_company || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+                Carrier: inputs.Carrier || inputs.carrier || 'Giao Hàng Nhanh (GHN)',
+                items_summary: inputs.ItemsSummary || inputs.items_summary || 'Vang & Whisky Nhập Khẩu',
                 ShipmentStatus: 'PICKING',
-                EstimatedDeliveryDate: inputs.EstimatedDeliveryDate ? new Date(inputs.EstimatedDeliveryDate) : new Date()
+                EstimatedDeliveryDate: inputs.EstimatedDeliveryDate ? new Date(inputs.EstimatedDeliveryDate) : new Date(Date.now() + 3*86400000)
               };
               memoryDb.shipments.push(newShipment);
-              return { recordset: [{ ShipmentID: newId }] };
+              return { recordset: [{ ShipmentID: newId, TrackingNumber: trackNum }] };
             }
             if (q.includes('update')) {
               const shipId = inputs.ShipmentID || inputs.id;
               const ship = memoryDb.shipments.find(x => x.ShipmentID == shipId);
-              if (ship && inputs.Status) {
-                ship.ShipmentStatus = inputs.Status;
+              if (ship) {
+                if (inputs.Status) ship.ShipmentStatus = inputs.Status;
+                if (inputs.Status === 'DELIVERED') ship.ActualDeliveryDate = new Date();
               }
               return { recordset: [] };
             }
-            return { recordset: memoryDb.shipments };
+            let ships = memoryDb.shipments;
+            if (inputs.ShipmentID) {
+              ships = ships.filter(x => x.ShipmentID == inputs.ShipmentID);
+            }
+            return { recordset: ships };
           }
 
           // 13. Companies & Licenses

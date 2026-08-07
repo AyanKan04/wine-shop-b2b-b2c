@@ -5,6 +5,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const [inventoryData, setInventoryData] = useState(
     (inventory || []).map(item => ({
       ...item,
+      product_id: item.product_id || item.ProductID,
       product_name: item.product_name || item.ProductName || item.sku || item.SKU || `Sản phẩm #${item.product_id || item.ProductID}`,
       sku: item.sku || item.SKU || `SKU-${item.product_id || item.ProductID}`,
       stock_on_hand: item.stock_on_hand !== undefined ? item.stock_on_hand : (item.QuantityOnHand || 0),
@@ -28,6 +29,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
       if (res.success && res.inventory) {
         setInventoryData(res.inventory.map(item => ({
           ...item,
+          product_id: item.product_id || item.ProductID,
           product_name: item.product_name || item.ProductName || item.sku || item.SKU || `Sản phẩm #${item.product_id || item.ProductID}`,
           sku: item.sku || item.SKU || `SKU-${item.product_id || item.ProductID}`,
           stock_on_hand: item.stock_on_hand !== undefined ? item.stock_on_hand : (item.QuantityOnHand || 0),
@@ -62,13 +64,6 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const [adjustForm, setAdjustForm] = useState({ product_id: '', adjustment_type: 'IMPORT', quantity: '', reason: '' });
   const [shipmentForm, setShipmentForm] = useState({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
 
-  const formatVND = (val) => {
-    if (!val) return '0 ₫';
-    if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
-    if (val >= 1000000) return (val / 1000000).toFixed(0) + ' Tr ₫';
-    return Number(val).toLocaleString('vi-VN') + ' ₫';
-  };
-
   const totalStock = inventoryData.reduce((sum, i) => sum + Number(i.stock_on_hand || 0), 0);
   const totalReserved = inventoryData.reduce((sum, i) => sum + Number(i.reserved || 0), 0);
   const totalAvailable = inventoryData.reduce((sum, i) => sum + (Number(i.stock_on_hand || 0) - Number(i.reserved || 0)), 0);
@@ -85,7 +80,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
     e.preventDefault();
     const pId = parseInt(adjustForm.product_id);
     const item = inventoryData.find(i => (i.product_id || i.ProductID) === pId);
-    if (!item) { if (showToast) showToast('Vui lòng chọn sản phẩm!'); return; }
+    if (!item) { if (showToast) showToast('Vui lòng chọn sản phẩm hợp lệ!'); return; }
     const qty = parseInt(adjustForm.quantity);
     if (!qty || qty <= 0) { if (showToast) showToast('Số lượng phải lớn hơn 0'); return; }
 
@@ -98,10 +93,10 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
       });
 
       if (res.success) {
-        if (showToast) showToast(res.message || `Đã ${adjustForm.adjustment_type === 'IMPORT' ? 'nhập' : 'xuất'} kho thành công!`);
+        if (showToast) showToast(res.message || `Đã ${adjustForm.adjustment_type === 'IMPORT' ? 'nhập' : 'xuất'} kho ${qty} thùng thành công!`);
         setShowAdjustModal(false);
         setAdjustForm({ product_id: '', adjustment_type: 'IMPORT', quantity: '', reason: '' });
-        fetchInventory(); // Refresh from backend
+        fetchInventory(); // Refresh from DB
       } else {
         if (showToast) showToast(res.message || 'Lỗi điều chỉnh tồn kho');
       }
@@ -112,28 +107,42 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
 
   const handleCreateShipment = async (e) => {
     e.preventDefault();
+    if (!shipmentForm.buyer_company || !shipmentForm.items_summary) {
+      if (showToast) showToast('Vui lòng điền đầy đủ thông tin khách hàng và hàng hóa!');
+      return;
+    }
     try {
-      await apiService.createShipment({
-        order_id: null,
-        carrier: shipmentForm.carrier,
-        estimated_delivery_date: shipmentForm.estimated_delivery
+      const res = await apiService.createShipment({
+        buyer_company: shipmentForm.buyer_company,
+        carrier: shipmentForm.carrier || 'Giao Hàng Nhanh (GHN)',
+        items_summary: shipmentForm.items_summary,
+        estimated_delivery: shipmentForm.estimated_delivery
       });
-      showToast(`Đã tạo phiếu xuất kho!`);
-      setShowShipmentModal(false);
-      setShipmentForm({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
-      fetchShipments();
+
+      if (res.success) {
+        if (showToast) showToast(res.message || 'Đã tạo phiếu vận chuyển mới thành công!');
+        setShowShipmentModal(false);
+        setShipmentForm({ buyer_company: '', carrier: 'Giao Hàng Nhanh (GHN)', items_summary: '', estimated_delivery: '' });
+        fetchShipments(); // Refresh from DB
+      } else {
+        if (showToast) showToast(res.message || 'Lỗi khi tạo vận đơn');
+      }
     } catch (err) {
-      showToast('Lỗi khi tạo vận đơn');
+      if (showToast) showToast(err.message || 'Lỗi khi tạo vận đơn');
     }
   };
 
   const updateShipmentStatus = async (shipmentId, newStatus) => {
     try {
-      await apiService.updateShipmentStatus(shipmentId, newStatus);
-      showToast(`Đã cập nhật trạng thái vận đơn thành công`);
-      fetchShipments();
+      const res = await apiService.updateShipmentStatus(shipmentId, newStatus);
+      if (res.success) {
+        if (showToast) showToast(res.message || 'Đã cập nhật trạng thái vận đơn thành công!');
+        fetchShipments(); // Refresh from DB
+      } else {
+        if (showToast) showToast(res.message || 'Lỗi khi cập nhật trạng thái');
+      }
     } catch (err) {
-      showToast('Lỗi khi cập nhật trạng thái');
+      if (showToast) showToast('Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -156,7 +165,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   return (
     <div className="page-container" style={{ maxWidth: '1600px' }}>
       
-      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu...</div>}
+      {loading && <div style={{ color: '#FFF', padding: '10px' }}>Đang tải dữ liệu thực tế từ DB...</div>}
 
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
@@ -228,7 +237,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
             fontSize: '0.8rem', letterSpacing: '1px', cursor: 'pointer'
           }}
         >
-          <i className="fa-solid fa-truck" style={{ marginRight: '6px' }}></i> Phiếu Vận Chuyển
+          <i className="fa-solid fa-truck" style={{ marginRight: '6px' }}></i> Phiếu Vận Chuyển ({shipments.length})
         </button>
       </div>
 
@@ -262,18 +271,23 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
             </thead>
             <tbody>
               {filteredInventory.map(inv => {
-                const available = inv.stock_on_hand - inv.reserved;
-                const isLow = available <= inv.min_stock_level;
-                const stockPercent = inv.min_stock_level > 0 ? Math.min(100, Math.round((available / (inv.min_stock_level * 5)) * 100)) : 100;
+                const pId = inv.product_id || inv.ProductID;
+                const stockOnHand = inv.stock_on_hand !== undefined ? inv.stock_on_hand : (inv.QuantityOnHand || 0);
+                const reservedStock = inv.reserved !== undefined ? inv.reserved : (inv.ReservedQuantity || 0);
+                const available = stockOnHand - reservedStock;
+                const minLevel = inv.min_stock_level || 30;
+                const isLow = available <= minLevel;
+                const stockPercent = minLevel > 0 ? Math.min(100, Math.round((available / (minLevel * 5)) * 100)) : 100;
+                
                 return (
-                  <tr key={inv.product_id}>
-                    <td><code style={{ color: 'var(--accent-gold)' }}>{inv.sku}</code></td>
-                    <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '250px' }}>{inv.product_name}</td>
-                    <td><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{inv.location}</span></td>
-                    <td>{inv.stock_on_hand} thùng</td>
-                    <td style={{ color: '#F59E0B' }}>{inv.reserved} thùng</td>
+                  <tr key={pId}>
+                    <td><code style={{ color: 'var(--accent-gold)' }}>{inv.sku || inv.SKU}</code></td>
+                    <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '250px' }}>{inv.product_name || inv.ProductName}</td>
+                    <td><span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{inv.location || 'Kho A1 (Chính)'}</span></td>
+                    <td><strong>{stockOnHand} thùng</strong></td>
+                    <td style={{ color: '#F59E0B' }}>{reservedStock} thùng</td>
                     <td className="gold-text"><strong>{available} thùng</strong></td>
-                    <td>{inv.min_stock_level} thùng</td>
+                    <td>{minLevel} thùng</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '60px', height: '6px', borderRadius: '3px', background: 'rgba(0,0,0,0.1)' }}>
@@ -316,47 +330,55 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
               </tr>
             </thead>
             <tbody>
-              {shipments.map(s => (
-                <tr key={s.shipment_id}>
-                  <td><code style={{ color: 'var(--accent-gold)' }}>{s.tracking_number || 'Chưa cấp'}</code></td>
-                  <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '200px', fontSize: '0.8rem' }}>{s.buyer_company}</td>
-                  <td style={{ fontSize: '0.8rem' }}>{s.carrier || '—'}</td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{s.items_summary}</td>
-                  <td>{s.estimated_delivery || '—'}</td>
-                  <td>{s.actual_delivery || '—'}</td>
-                  <td>
-                    <span style={{
-                      color: statusColors[s.shipment_status] || '#FFF',
-                      background: `${statusColors[s.shipment_status]}15`,
-                      padding: '4px 10px',
-                      borderRadius: '12px',
-                      fontSize: '0.75rem',
-                      border: `1px solid ${statusColors[s.shipment_status]}40`
-                    }}>
-                      {statusLabels[s.shipment_status] || s.shipment_status}
-                    </span>
-                  </td>
-                  <td>
-                    {s.shipment_status !== 'DELIVERED' && (
+              {shipments.map(s => {
+                const sId = s.shipment_id || s.ShipmentID;
+                const tracking = s.tracking_number || s.TrackingNumber || `GHN-${sId}-VN`;
+                const company = s.buyer_company || s.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON';
+                const carrier = s.carrier || s.Carrier || 'Giao Hàng Nhanh (GHN)';
+                const itemsSummary = s.items_summary || s.ItemsSummary || 'Rượu Vang & Whisky Sỉ';
+                const estDate = s.estimated_delivery || (s.EstimatedDeliveryDate ? new Date(s.EstimatedDeliveryDate).toISOString().split('T')[0] : '2026-08-10');
+                const actDate = s.actual_delivery || (s.ActualDeliveryDate ? new Date(s.ActualDeliveryDate).toISOString().split('T')[0] : '—');
+                const st = s.shipment_status || s.ShipmentStatus || 'PICKING';
+
+                return (
+                  <tr key={sId}>
+                    <td><code style={{ color: 'var(--accent-gold)', fontWeight: '700' }}>{tracking}</code></td>
+                    <td style={{ fontWeight: '600', color: 'var(--text-main)', maxWidth: '200px', fontSize: '0.8rem' }}>{company}</td>
+                    <td style={{ fontSize: '0.8rem' }}>{carrier}</td>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{itemsSummary}</td>
+                    <td>{estDate}</td>
+                    <td>{actDate}</td>
+                    <td>
+                      <span style={{
+                        color: statusColors[st] || '#3B82F6',
+                        background: `${statusColors[st] || '#3B82F6'}15`,
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        border: `1px solid ${statusColors[st] || '#3B82F6'}40`
+                      }}>
+                        {statusLabels[st] || st}
+                      </span>
+                    </td>
+                    <td>
                       <select
                         className="form-control"
-                        style={{ width: '140px', padding: '4px 8px', fontSize: '0.75rem' }}
+                        style={{ width: '150px', padding: '4px 8px', fontSize: '0.75rem' }}
                         value=""
-                        onChange={(e) => { if (e.target.value) updateShipmentStatus(s.shipment_id, e.target.value); }}
+                        onChange={(e) => { if (e.target.value) updateShipmentStatus(sId, e.target.value); }}
                       >
                         <option value="">Cập nhật...</option>
-                        {s.shipment_status === 'PICKING' && <option value="PACKED">→ Đã Đóng Gói</option>}
-                        {(s.shipment_status === 'PICKING' || s.shipment_status === 'PACKED') && <option value="IN_TRANSIT">→ Đang Vận Chuyển</option>}
-                        {s.shipment_status === 'IN_TRANSIT' && <option value="DELIVERED">→ Đã Giao Hàng</option>}
+                        <option value="PICKING">→ Đang Lấy Hàng</option>
+                        <option value="PACKED">→ Đã Đóng Gói</option>
+                        <option value="IN_TRANSIT">→ Đang Vận Chuyển</option>
+                        <option value="DELIVERED">→ Đã Giao Hàng</option>
                         <option value="RETURNED">→ Hoàn Trả</option>
                       </select>
-                    )}
-                    {s.shipment_status === 'DELIVERED' && (
-                      <span style={{ fontSize: '0.75rem', color: '#10B981' }}>✓ Hoàn tất</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -367,17 +389,30 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '500px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Nhập/Xuất Kho</h3>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Nhập/Xuất Kho Thực Tế</h3>
               <button onClick={() => setShowAdjustModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleAdjustStock}>
               <div className="form-group">
-                <label>Sản Phẩm *</label>
-                <select className="form-control" value={adjustForm.product_id} onChange={e => setAdjustForm({ ...adjustForm, product_id: e.target.value })} required>
+                <label>Sản Phẩm Cần Điều Chỉnh *</label>
+                <select
+                  className="form-control"
+                  value={adjustForm.product_id}
+                  onChange={e => setAdjustForm({ ...adjustForm, product_id: e.target.value })}
+                  required
+                >
                   <option value="">-- Chọn sản phẩm --</option>
-                  {inventoryData.map(inv => (
-                    <option key={inv.product_id} value={inv.product_id}>{inv.sku} — {inv.product_name} (Tồn: {inv.stock_on_hand})</option>
-                  ))}
+                  {inventoryData.map(inv => {
+                    const pid = inv.product_id || inv.ProductID;
+                    const sku = inv.sku || inv.SKU;
+                    const pname = inv.product_name || inv.ProductName;
+                    const stock = inv.stock_on_hand !== undefined ? inv.stock_on_hand : (inv.QuantityOnHand || 0);
+                    return (
+                      <option key={pid} value={pid}>
+                        {sku} — {pname} (Tồn: {stock} thùng)
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -399,7 +434,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setShowAdjustModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
-                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>XÁC NHẬN</button>
+                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>XÁC NHẬN CẬP NHẬT DB</button>
               </div>
             </form>
           </div>
@@ -411,7 +446,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Tạo Phiếu Vận Chuyển</h3>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0 }}>Tạo Phiếu Vận Chuyển Mới</h3>
               <button onClick={() => setShowShipmentModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleCreateShipment}>
@@ -438,7 +473,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '20px' }}>
                 <button type="button" onClick={() => setShowShipmentModal(false)} className="btn-redapron-burgundy" style={{ padding: '10px 20px' }}>HỦY</button>
-                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>TẠO PHIẾU</button>
+                <button type="submit" className="btn-redapron-gold" style={{ padding: '10px 20px' }}>TẠO PHIẾU VÀO DB</button>
               </div>
             </form>
           </div>
