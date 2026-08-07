@@ -15,11 +15,11 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) {
     req.user = {
-      user_id: 1,
+      user_id: 2,
       username: 'admin_user',
-      user_type: 'BUYER_REP',
-      company_id: 1,
-      company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON'
+      user_type: 'PLATFORM_ADMIN',
+      company_id: 2,
+      company_name: 'MAISON DE L\'ALCOOL RED APRON FACTORY'
     };
     return next();
   }
@@ -31,11 +31,11 @@ const authenticateToken = (req, res, next) => {
     next();
   } catch (err) {
     req.user = {
-      user_id: 1,
+      user_id: 2,
       username: 'admin_user',
-      user_type: 'BUYER_REP',
-      company_id: 1,
-      company_name: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON'
+      user_type: 'PLATFORM_ADMIN',
+      company_id: 2,
+      company_name: 'MAISON DE L\'ALCOOL RED APRON FACTORY'
     };
     next();
   }

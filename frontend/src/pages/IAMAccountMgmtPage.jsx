@@ -28,9 +28,15 @@ export default function IAMAccountMgmtPage({ showToast }) {
     setLoading(true);
     try {
       const res = await apiService.getUsers(search);
-      if (res.success) setUsers(res.data);
+      if (res.success) {
+        setUsers(res.data || []);
+      } else {
+        showToast('API trả về lỗi: ' + (res.message || 'Không rõ'));
+      }
     } catch (err) {
-      showToast('Lỗi tải danh sách người dùng!');
+      const errMsg = err.message || 'Lỗi không xác định';
+      showToast('Lỗi kết nối API: ' + errMsg);
+      console.error('[IAM] fetchUsers error:', errMsg);
     } finally {
       setLoading(false);
     }
@@ -256,7 +262,11 @@ export default function IAMAccountMgmtPage({ showToast }) {
           </tr>
         </thead>
         <tbody>
-          {loading ? <tr><td colSpan="8" style={{textAlign:'center'}}>Đang tải...</td></tr> : 
+          {loading ? (
+            <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color: 'var(--text-muted)'}}>⏳ Đang tải danh sách tài khoản...</td></tr>
+          ) : users.length === 0 ? (
+            <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color: '#EF4444'}}>⚠️ Không tìm thấy tài khoản nào. Kiểm tra kết nối backend (localhost:5000) hoặc thử F5 lại trang.</td></tr>
+          ) : (
            users.map(u => (
             <tr key={u.UserID}>
               <td>#{u.UserID}</td>
@@ -281,7 +291,8 @@ export default function IAMAccountMgmtPage({ showToast }) {
                 </div>
               </td>
             </tr>
-          ))}
+          )))}
+
         </tbody>
       </table>
 
