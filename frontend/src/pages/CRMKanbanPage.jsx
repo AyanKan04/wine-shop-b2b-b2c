@@ -116,16 +116,23 @@ export default function CRMKanbanPage({ showToast }) {
     const newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     if (newIndex >= 0 && newIndex < columnOrder.length) {
       const nextStatus = columnOrder[newIndex];
+      const previousStatus = deal.status;
+
+      // 1. Optimistic UI update for instant feedback
+      setDeals(prevDeals => prevDeals.map(d => d.id === dealId ? { ...d, status: nextStatus } : d));
       
       try {
         if (deal.originalType === 'QUOTATION') {
           let beStatus = 'PENDING';
           if (nextStatus === 'closed_won') beStatus = 'ACCEPTED';
           else if (nextStatus === 'fulfillment_credit') beStatus = 'FULFILLED';
+          else if (nextStatus === 'quotation_sent') beStatus = 'PENDING';
           
           await apiService.updateQuotationStatus(deal.originalId, beStatus);
         } else if (deal.originalType === 'RFQ') {
-          if (nextStatus === 'in_negotiation') {
+          if (nextStatus === 'new_rfq') {
+            await apiService.updateRFQStatus(deal.originalId, 'SUBMITTED');
+          } else if (nextStatus === 'in_negotiation') {
             await apiService.updateRFQStatus(deal.originalId, 'IN_REVIEW');
           } else if (nextStatus === 'quotation_sent') {
             await apiService.createQuotation({
@@ -140,6 +147,8 @@ export default function CRMKanbanPage({ showToast }) {
         showToast(`Đã chuyển cơ hội ${deal.id} sang trạng thái: ${columns.find(c => c.id === nextStatus).title}`);
         fetchDeals(); // Refresh from server
       } catch(err) {
+        // Rollback state on error
+        setDeals(prevDeals => prevDeals.map(d => d.id === dealId ? { ...d, status: previousStatus } : d));
         showToast('Lỗi cập nhật trạng thái');
       }
     }
