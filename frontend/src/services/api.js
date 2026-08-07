@@ -1,5 +1,5 @@
 // Centralized API Service Client for RuuBusiness Frontend with Resilient Offline Fallbacks
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 /**
  * Resilient Fetch Helper with Graceful Offline Fallback
