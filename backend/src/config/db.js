@@ -249,7 +249,47 @@ const createMockPool = () => {
             return { recordset: [] };
           }
 
-          // 3. Products query
+          // 3. Warehouse Inventories Persistence
+          if (q.includes('inventories')) {
+            if (q.includes('update')) {
+              const pid = inputs.ProductID;
+              const inv = memoryDb.inventory.find(x => x.ProductID == pid);
+              if (inv) {
+                if (q.includes('+')) {
+                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) + Number(inputs.Qty || 0);
+                } else if (q.includes('-')) {
+                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) - Number(inputs.Qty || 0);
+                }
+              }
+              return { recordset: [] };
+            }
+            if (q.includes('insert')) {
+              const pid = inputs.ProductID;
+              if (pid && !memoryDb.inventory.some(x => x.ProductID == pid)) {
+                memoryDb.inventory.push({ ProductID: pid, QuantityOnHand: 0, ReservedQuantity: 0 });
+              }
+              return { recordset: [] };
+            }
+            const invs = memoryDb.inventory.map(inv => {
+              const p = memoryDb.products.find(x => x.ProductID == inv.ProductID);
+              const qoh = Number(inv.QuantityOnHand || 0);
+              const res = Number(inv.ReservedQuantity || 0);
+              return {
+                InventoryID: inv.InventoryID || inv.ProductID,
+                ProductID: inv.ProductID,
+                QuantityOnHand: qoh,
+                ReservedQuantity: res,
+                ProductName: p ? p.ProductName : `Sản Phẩm #${inv.ProductID}`,
+                SKU: p ? p.SKU : `SKU-${inv.ProductID}`,
+                ImageUrl: p ? (p.ImageURL || p.image_url) : '/assets/images/macallen.png',
+                available: qoh - res > 0 ? qoh - res : 0,
+                stock_status: (qoh - res <= 30) ? 'LOW' : 'OK'
+              };
+            });
+            return { recordset: invs };
+          }
+
+          // 4. Products query
           if (q.includes('products')) {
             if (inputs.ProductID) {
               const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
@@ -414,45 +454,6 @@ const createMockPool = () => {
             return { recordset: msgs };
           }
 
-          // 11. Warehouse Inventories Persistence
-          if (q.includes('inventories')) {
-            if (q.includes('update')) {
-              const pid = inputs.ProductID;
-              const inv = memoryDb.inventory.find(x => x.ProductID == pid);
-              if (inv) {
-                if (q.includes('+')) {
-                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) + Number(inputs.Qty || 0);
-                } else if (q.includes('-')) {
-                  inv.QuantityOnHand = (inv.QuantityOnHand || 0) - Number(inputs.Qty || 0);
-                }
-              }
-              return { recordset: [] };
-            }
-            if (q.includes('insert')) {
-              const pid = inputs.ProductID;
-              if (pid && !memoryDb.inventory.some(x => x.ProductID == pid)) {
-                memoryDb.inventory.push({ ProductID: pid, QuantityOnHand: 0, ReservedQuantity: 0 });
-              }
-              return { recordset: [] };
-            }
-            const invs = memoryDb.inventory.map(inv => {
-              const p = memoryDb.products.find(x => x.ProductID == inv.ProductID);
-              const qoh = Number(inv.QuantityOnHand || 0);
-              const res = Number(inv.ReservedQuantity || 0);
-              return {
-                InventoryID: inv.InventoryID || inv.ProductID,
-                ProductID: inv.ProductID,
-                QuantityOnHand: qoh,
-                ReservedQuantity: res,
-                ProductName: p ? p.ProductName : `Sản Phẩm #${inv.ProductID}`,
-                SKU: p ? p.SKU : `SKU-${inv.ProductID}`,
-                ImageUrl: p ? (p.ImageURL || p.image_url) : '/assets/images/macallen.png',
-                available: qoh - res > 0 ? qoh - res : 0,
-                stock_status: (qoh - res <= 30) ? 'LOW' : 'OK'
-              };
-            });
-            return { recordset: invs };
-          }
 
           // 12. Shipments Persistence
           if (q.includes('shipments')) {
