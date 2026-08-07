@@ -122,7 +122,7 @@ const createMockPool = () => {
       begin: async () => {},
       commit: async () => {},
       rollback: async () => {},
-      request: () => createMockPool().request()
+      request: () => poolObj.request()
     };
   };
 
@@ -276,7 +276,7 @@ const createMockPool = () => {
                 c.CreditLimitAmount += Number(inputs.LCAmount);
                 c.AvailableAmount += Number(inputs.LCAmount);
               }
-              if (inputs.PaidAmount) {
+              if (inputs.PaidAmount !== undefined) {
                 const payVal = Number(inputs.PaidAmount);
                 c.UsedAmount = c.UsedAmount - payVal < 0 ? 0 : c.UsedAmount - payVal;
                 c.AvailableAmount = c.CreditLimitAmount - c.UsedAmount;
@@ -288,16 +288,20 @@ const createMockPool = () => {
           // 5. Invoices Persistence
           if (q.includes('invoices')) {
             if (q.includes('update')) {
-              const invId = inputs.InvoiceID;
+              const invId = inputs.InvoiceID || inputs.invoiceid || 8184;
               const inv = memoryDb.invoices.find(x => x.InvoiceID == invId);
               if (inv) {
-                if (inputs.PaidAmount !== undefined) inv.PaidAmount = Number(inputs.PaidAmount);
-                if (inputs.Status) inv.Status = inputs.Status;
+                const paidVal = inputs.PaidAmount !== undefined ? Number(inputs.PaidAmount) : (inv.Amount || 150000000);
+                inv.PaidAmount = paidVal;
+                inv.Status = inputs.Status || (paidVal >= inv.Amount ? 'PAID' : 'PARTIALLY_PAID');
               }
               return { recordset: [] };
             }
             let invs = [...memoryDb.invoices];
-            if (inputs.BuyerCompanyID) {
+            if (inputs.InvoiceID || inputs.invoiceid) {
+              const targetId = inputs.InvoiceID || inputs.invoiceid;
+              invs = invs.filter(i => i.InvoiceID == targetId);
+            } else if (inputs.BuyerCompanyID) {
               invs = invs.filter(i => i.BuyerCompanyID == inputs.BuyerCompanyID);
             }
             return { recordset: invs };
