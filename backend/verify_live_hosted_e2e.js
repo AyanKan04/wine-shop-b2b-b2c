@@ -220,9 +220,31 @@ async function runLiveAudit() {
     logTest('13. Lưu & Lưu Trữ Cấu Hình Giá Sỉ Tier 1-5 Vào DB (ProductTierPrices Persistence)', tierMatch, `Tier Count: ${tiersList.length} | Response: ${resSaveTiers.data?.message}`);
   }
 
-  // 14. Frontend Vercel Live Page Load Check
+  // 14. Invoice Payment Collection Persistence Check
+  if (adminToken) {
+    const resPay = await safeFetchJson(`${LIVE_BACKEND}/finance/invoices/8184/pay`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ paid_amount: 150000000 })
+    });
+
+    const resCredit = await safeFetchJson(`${LIVE_BACKEND}/finance/credit-limit`, {
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+
+    const invs = resCredit.data?.invoices || [];
+    const inv8184 = invs.find(i => (i.invoice_id || i.InvoiceID) == 8184);
+    const payValid = resPay.ok && inv8184 && inv8184.status === 'PAID' && Number(inv8184.paid_amount) === 150000000;
+
+    logTest('14. Thu Tiền Hóa Đơn Hàng & Cập Nhật Trạng Thái Đã Thanh Toán (PAID)', payValid, `Invoice 8184 Status: ${inv8184?.status} | Paid: ${inv8184?.paid_amount}`);
+  }
+
+  // 15. Frontend Vercel Live Page Load Check
   const resFe = await safeFetchJson(LIVE_FRONTEND);
-  logTest('14. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
+  logTest('15. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
 
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KẾT QUẢ KIỂM THỬ: ${report.passed}/${report.tests.length} TEST CASES THÀNH CÔNG (PASS)`);

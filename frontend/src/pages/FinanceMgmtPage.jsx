@@ -121,8 +121,30 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
       if (res.success) {
         if (showToast) showToast(res.message || 'Ghi nhận thanh toán thành công!');
         setShowPaymentModal(false);
+
+        // Optimistic UI state update so invoice list and payment totals update immediately on screen
+        setInvoicesList(prev => prev.map(inv => {
+          if (inv.invoice_id === selectedInvoice.invoice_id) {
+            const newPaid = (inv.paid_amount || 0) + val;
+            const newRem = inv.amount - newPaid > 0 ? inv.amount - newPaid : 0;
+            return {
+              ...inv,
+              paid_amount: newPaid,
+              remaining_amount: newRem,
+              status: newRem === 0 ? 'PAID' : 'PARTIALLY_PAID'
+            };
+          }
+          return inv;
+        }));
+
+        setCreditData(prev => ({
+          ...prev,
+          used_amount: (prev.used_amount - val < 0) ? 0 : (prev.used_amount - val),
+          available_balance: (prev.available_balance + val > prev.total_limit) ? prev.total_limit : (prev.available_balance + val)
+        }));
+
         setSelectedInvoice(null);
-        fetchData(); // Refresh invoice list & credit limits
+        fetchData(); // Refresh from backend
       } else {
         if (showToast) showToast(res.message || 'Thanh toán thất bại');
       }

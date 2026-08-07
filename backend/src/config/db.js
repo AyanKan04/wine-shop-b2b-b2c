@@ -276,12 +276,26 @@ const createMockPool = () => {
                 c.CreditLimitAmount += Number(inputs.LCAmount);
                 c.AvailableAmount += Number(inputs.LCAmount);
               }
+              if (inputs.PaidAmount) {
+                const payVal = Number(inputs.PaidAmount);
+                c.UsedAmount = c.UsedAmount - payVal < 0 ? 0 : c.UsedAmount - payVal;
+                c.AvailableAmount = c.CreditLimitAmount - c.UsedAmount;
+              }
             }
             return { recordset: [c] };
           }
 
-          // 5. Invoices
+          // 5. Invoices Persistence
           if (q.includes('invoices')) {
+            if (q.includes('update')) {
+              const invId = inputs.InvoiceID;
+              const inv = memoryDb.invoices.find(x => x.InvoiceID == invId);
+              if (inv) {
+                if (inputs.PaidAmount !== undefined) inv.PaidAmount = Number(inputs.PaidAmount);
+                if (inputs.Status) inv.Status = inputs.Status;
+              }
+              return { recordset: [] };
+            }
             let invs = [...memoryDb.invoices];
             if (inputs.BuyerCompanyID) {
               invs = invs.filter(i => i.BuyerCompanyID == inputs.BuyerCompanyID);

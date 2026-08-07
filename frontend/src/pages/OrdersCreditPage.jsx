@@ -91,8 +91,30 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
       if (res.success) {
         showToast(res.message || 'Ghi nhận thanh toán thành công!');
         setShowPaymentModal(false);
+
+        // Optimistic state update for instant UI feedback
+        setInvoices(prev => prev.map(inv => {
+          if (inv.invoice_id === selectedInvoice.invoice_id) {
+            const newPaid = (inv.paid_amount || 0) + val;
+            const newRem = inv.amount - newPaid > 0 ? inv.amount - newPaid : 0;
+            return {
+              ...inv,
+              paid_amount: newPaid,
+              remaining_amount: newRem,
+              status: newRem === 0 ? 'PAID' : 'PARTIALLY_PAID'
+            };
+          }
+          return inv;
+        }));
+
+        setCreditState(prev => ({
+          ...prev,
+          used_amount: (prev.used_amount - val < 0) ? 0 : (prev.used_amount - val),
+          available_balance: (prev.available_balance + val > prev.total_limit) ? prev.total_limit : (prev.available_balance + val)
+        }));
+
         setSelectedInvoice(null);
-        fetchData(); // Refresh invoice list & credit limits
+        fetchData(); // Refresh from backend
       } else {
         showToast(res.message || 'Thanh toán thất bại');
       }
