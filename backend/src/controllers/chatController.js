@@ -30,7 +30,8 @@ Rules:
 1. Speak in a professional, polite, and luxury expert tone.
 2. Answer in Vietnamese.
 3. NEVER use any emojis in your response (emojis are strictly banned by design guidelines).
-4. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
+4. CRITICAL FORMATTING RULE: ALWAYS structure your responses with clean double line breaks (\n\n) and bullet points (• ) for each product item or category listed. Never concatenate items into a single long wall of text.
+5. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
 ${JSON.stringify(productCatalog, null, 2)}`;
 
   if (groqApiKey) {
@@ -186,20 +187,22 @@ const sendMessage = async (req, res) => {
 
       // 2b. Fallback to Local Rule-Based Sommelier Engine if AI is unavailable
       if (!aiResponseText) {
-        aiResponseText = 'Xin kính chào quý đối tác! Tôi là chuyên gia Sommelier của Red Apron. Tôi có thể hỗ trợ quý khách về nồng độ ABV, niên vụ, bảng giá chiết khấu sỉ hay hạn mức tín dụng Net-30 của dòng sản phẩm nào ạ?';
+        aiResponseText = 'Xin kính chào quý đối tác! Tôi là chuyên gia Sommelier của Red Apron.\n\nChúng tôi có thể hỗ trợ quý khách về:\n• Thông số nồng độ ABV & Niên vụ rượu\n• Bảng giá chiết khấu sỉ theo số lượng\n• Hạn mức tín dụng trả sau Net-30';
 
-        if (lowerMsg.includes('chào') || lowerMsg.includes('hello') || lowerMsg.includes('hi')) {
-          aiResponseText = 'Xin chào quý đối tác! Rất hân hạnh được tư vấn cho quý khách. Quý khách đang quan tâm đến dòng sản phẩm Vang Pháp, Whisky Scotland, Champagne hay Cognac cao cấp ạ?';
+        if (lowerMsg.includes('bán') || lowerMsg.includes('mặt hàng') || lowerMsg.includes('sản phẩm') || lowerMsg.includes('danh mục')) {
+          aiResponseText = `Chúng tôi hiện phân phối sỉ các dòng sản phẩm rượu & rượu mạnh cao cấp nhập khẩu bao gồm:\n\n• Macallan 18 Year Old Sherry Oak Single Malt (Highland Scotland, MOQ: 5 thùng)\n\n• Château Margaux Premier Grand Cru Classé 2018 (Bordeaux Pháp, MOQ: 10 thùng)\n\n• Dom Pérignon Vintage Brut Champagne 2012 (Champagne Pháp, MOQ: 8 thùng)\n\n• Hennessy X.O Cognac Extra Old Edition (Cognac Pháp, MOQ: 6 thùng)`;
+        } else if (lowerMsg.includes('chào') || lowerMsg.includes('hello') || lowerMsg.includes('hi')) {
+          aiResponseText = 'Xin chào quý đối tác! Rất hân hạnh được tư vấn cho quý khách.\n\nQuý khách đang quan tâm đến dòng sản phẩm nào dưới đây ạ?\n• Vang Pháp cao cấp\n• Whisky Scotland Single Malt\n• Champagne & Vang Sủi\n• Cognac X.O';
         } else if (lowerMsg.includes('macallan') || lowerMsg.includes('whisky')) {
-          aiResponseText = `Đối với dòng Macallan 18 Year Old Sherry Oak Single Malt (MOQ: 5 thùng, nồng độ 43% ABV): Bảng giá sỉ ưu đãi lớn khi mua số lượng từ 20 thùng trở lên. Quý khách có muốn Sales Rep soạn thảo báo giá chính thức không?`;
+          aiResponseText = `Thông tin dòng rượu Macallan 18 Year Old Sherry Oak Single Malt:\n\n• Nguồn gốc: Highland, Scotland\n• Nồng độ: 43.0% ABV | Dung tích: 700ml\n• MOQ tối thiểu: 5 thùng\n• Bảng giá chiết khấu: Tier 5 mua trên 200 thùng có giá ưu đãi đặc biệt`;
         } else if (lowerMsg.includes('margaux') || lowerMsg.includes('vang') || lowerMsg.includes('wine')) {
-          aiResponseText = `Dòng Château Margaux Premier Grand Cru Classé 2018 (Bordeaux Pháp, MOQ: 10 thùng). Mức giá niêm yết sỉ 24.000.000 ₫/chai với ưu đãi đặc biệt theo đơn hàng hợp đồng.`;
+          aiResponseText = `Thông tin Château Margaux Premier Grand Cru Classé 2018:\n\n• Xuất xứ: Margaux, Bordeaux, Pháp\n• Giống nho: Cabernet Sauvignon (13.5% ABV)\n• Xếp hạng: Premier Grand Cru Classé 1855\n• MOQ: 10 thùng. Mức ưu đãi rất tốt khi mua theo lô sỉ`;
         } else if (lowerMsg.includes('dom') || lowerMsg.includes('champagne') || lowerMsg.includes('sâm panh')) {
-          aiResponseText = `Dom Pérignon Vintage Brut Champagne 2012 (MOQ: 8 thùng, nồng độ 12.5% ABV). Tuyệt phẩm sâm-panh Pháp thích hợp cho sự kiện sang trọng và quà tặng B2B.`;
+          aiResponseText = `Thông tin Dom Pérignon Vintage Brut Champagne 2012:\n\n• Xuất xứ: Vùng Champagne, Pháp\n• Loại: Champagne & Vang sủi (12.5% ABV)\n• MOQ: 8 thùng. Thích hợp cho sự kiện doanh nghiệp và quà tặng B2B`;
         } else if (lowerMsg.includes('hennessy') || lowerMsg.includes('cognac')) {
-          aiResponseText = `Hennessy X.O Cognac Extra Old Edition (MOQ: 6 thùng, nồng độ 40% ABV). Giá sỉ niêm yết 5.600.000 ₫/chai, ủ trên 100 loại eaux-de-vie lâu năm.`;
+          aiResponseText = `Thông tin Hennessy X.O Cognac Extra Old Edition:\n\n• Xuất xứ: Cognac, Pháp (40.0% ABV)\n• Thành phần: Phối trộn hơn 100 loại eaux-de-vie lâu năm\n• MOQ: 6 thùng. Thích hợp làm quà tặng đối tác cao cấp`;
         } else if (lowerMsg.includes('hạn mức') || lowerMsg.includes('tín dụng') || lowerMsg.includes('net-30') || lowerMsg.includes('thanh toán')) {
-          aiResponseText = `Chính sách tín dụng Net-30 của Red Apron cho phép doanh nghiệp của quý khách mua sắm trả sau trong vòng 30 ngày. Hạn mức mặc định là 1.000.000.000 ₫ và có thể nâng hạn mức bằng Thư tín dụng L/C ngân hàng.`;
+          aiResponseText = `Chính sách tín dụng Net-30 của Red Apron:\n\n• Mua sắm trả sau trong vòng 30 ngày\n• Hạn mức mặc định: 1.000.000.000 ₫\n• Nâng hạn mức: Nộp Thư tín dụng L/C ngân hàng trực tiếp trên hệ thống để tăng hạn mức tự động`;
         }
       }
 

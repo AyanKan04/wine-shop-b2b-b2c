@@ -400,7 +400,10 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                       borderRadius: '8px',
                       color: isSystem ? 'var(--text-muted)' : (isSales ? '#FFFFFF' : 'var(--text-main)'),
                       fontSize: '0.8rem',
-                      fontStyle: isSystem ? 'italic' : 'normal'
+                      fontStyle: isSystem ? 'italic' : 'normal',
+                      lineHeight: '1.6',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
                     }}>
                       {msg.message_text}
                     </div>

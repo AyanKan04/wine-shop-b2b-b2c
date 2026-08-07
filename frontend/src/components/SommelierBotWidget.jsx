@@ -197,7 +197,9 @@ export default function SommelierBotWidget() {
                     borderRadius: isAi ? '12px 12px 12px 0' : '12px 12px 0 12px',
                     color: isAi ? 'var(--text-main)' : '#FFFFFF',
                     fontSize: '0.8rem',
-                    lineHeight: '1.5'
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word'
                   }}>
                     {msg.message_text}
                   </div>
