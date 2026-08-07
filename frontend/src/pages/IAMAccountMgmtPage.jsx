@@ -191,6 +191,131 @@ export default function IAMAccountMgmtPage({ showToast }) {
     );
   });
 
+  const getRoleBadge = (userType) => {
+    switch (userType) {
+      case 'PLATFORM_ADMIN':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(212, 175, 55, 0.18)',
+            color: '#996515',
+            border: '1px solid #D4AF37',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            boxShadow: '0 1px 2px rgba(212, 175, 55, 0.2)'
+          }}>
+            <i className="fa-solid fa-crown" style={{ color: '#D4AF37' }}></i> PLATFORM_ADMIN
+          </span>
+        );
+      case 'COMPANY_ADMIN':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(159, 47, 45, 0.12)',
+            color: '#800020',
+            border: '1px solid #9F2F2D',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-building-user" style={{ color: '#9F2F2D' }}></i> COMPANY_ADMIN
+          </span>
+        );
+      case 'BUYER_REP':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(37, 99, 235, 0.12)',
+            color: '#1D4ED8',
+            border: '1px solid #2563EB',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-cart-shopping" style={{ color: '#2563EB' }}></i> BUYER_REP
+          </span>
+        );
+      case 'SALES_REP':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(147, 51, 234, 0.12)',
+            color: '#7E22CE',
+            border: '1px solid #9333EA',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-briefcase" style={{ color: '#9333EA' }}></i> SALES_REP
+          </span>
+        );
+      case 'FINANCE_OFFICER':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(16, 185, 129, 0.15)',
+            color: '#047857',
+            border: '1px solid #10B981',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-scale-balanced" style={{ color: '#10B981' }}></i> FINANCE_OFFICER
+          </span>
+        );
+      case 'WAREHOUSE_STAFF':
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(217, 119, 6, 0.15)',
+            color: '#B45309',
+            border: '1px solid #F59E0B',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-boxes-stacked" style={{ color: '#F59E0B' }}></i> WAREHOUSE_STAFF
+          </span>
+        );
+      default:
+        return (
+          <span style={{ 
+            padding: '4px 10px', 
+            borderRadius: '20px', 
+            fontSize: '0.72rem', 
+            fontWeight: '700',
+            background: 'rgba(100, 116, 139, 0.15)',
+            color: '#334155',
+            border: '1px solid #64748B',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <i className="fa-solid fa-user" style={{ color: '#64748B' }}></i> {userType}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="card-box">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -341,17 +466,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
               <td>{u.FirstName} {u.LastName}</td>
               <td style={{ color: 'var(--accent-gold)' }}>{u.CompanyName || 'N/A'}</td>
               <td>
-                <span style={{ 
-                  padding: '3px 8px', 
-                  borderRadius: '4px', 
-                  fontSize: '0.75rem', 
-                  fontWeight: '600',
-                  background: u.UserType === 'PLATFORM_ADMIN' ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                  color: u.UserType === 'PLATFORM_ADMIN' ? '#D4AF37' : '#E2E8F0',
-                  border: u.UserType === 'PLATFORM_ADMIN' ? '1px solid #D4AF37' : '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
-                  {u.UserType}
-                </span>
+                {getRoleBadge(u.UserType)}
               </td>
               <td>
                 {u.Status === 'ACTIVE' ? <span style={{ color: '#10B981', fontWeight: '600' }}>● Hoạt động</span> : <span style={{ color: '#EF4444', fontWeight: '600' }}>● Đã khóa</span>}
