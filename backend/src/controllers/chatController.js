@@ -160,9 +160,9 @@ const sendMessage = async (req, res) => {
         VALUES (@RFQID, @SenderName, @SenderRole, @MessageText, GETDATE())
       `);
 
-    // 2. Trigger AI Sommelier if tagged "@ai" or if message is requesting Sommelier assist
+    // 2. Trigger AI Sommelier for Chatbot & Negotiation
     const lowerMsg = message_text.toLowerCase();
-    const needsAiResponse = lowerMsg.includes('@ai') || lowerMsg.includes('sommelier') || lowerMsg.includes('tư vấn') || lowerMsg.includes('chiết khấu') || lowerMsg.includes('rượu') || lowerMsg.includes('giá');
+    const needsAiResponse = true; // Always generate intelligent AI response for Chatbot channel
 
     if (needsAiResponse) {
       let aiResponseText = null;
@@ -186,18 +186,20 @@ const sendMessage = async (req, res) => {
 
       // 2b. Fallback to Local Rule-Based Sommelier Engine if AI is unavailable
       if (!aiResponseText) {
-        aiResponseText = 'Xin chào, tôi là trợ lý AI Sommelier từ Red Apron. Tôi có thể hỗ trợ quý khách về chiết khấu sỉ, kiểm tra MOQ sản phẩm hoặc giới thiệu các dòng vang/spirits đẳng cấp.';
+        aiResponseText = 'Xin kính chào quý đối tác! Tôi là chuyên gia Sommelier của Red Apron. Tôi có thể hỗ trợ quý khách về nồng độ ABV, niên vụ, bảng giá chiết khấu sỉ hay hạn mức tín dụng Net-30 của dòng sản phẩm nào ạ?';
 
-        if (lowerMsg.includes('macallan') || lowerMsg.includes('whisky')) {
-          aiResponseText = `Đối với dòng Macallan 18 Year Old Sherry Oak: Bảng giá chiết khấu: Tier 5 mua trên 200 thùng có giá ưu đãi đặc biệt. Quý khách có muốn Sales Rep soạn thảo báo giá chính thức không?`;
+        if (lowerMsg.includes('chào') || lowerMsg.includes('hello') || lowerMsg.includes('hi')) {
+          aiResponseText = 'Xin chào quý đối tác! Rất hân hạnh được tư vấn cho quý khách. Quý khách đang quan tâm đến dòng sản phẩm Vang Pháp, Whisky Scotland, Champagne hay Cognac cao cấp ạ?';
+        } else if (lowerMsg.includes('macallan') || lowerMsg.includes('whisky')) {
+          aiResponseText = `Đối với dòng Macallan 18 Year Old Sherry Oak Single Malt (MOQ: 5 thùng, nồng độ 43% ABV): Bảng giá sỉ ưu đãi lớn khi mua số lượng từ 20 thùng trở lên. Quý khách có muốn Sales Rep soạn thảo báo giá chính thức không?`;
         } else if (lowerMsg.includes('margaux') || lowerMsg.includes('vang') || lowerMsg.includes('wine')) {
-          aiResponseText = `Dòng Château Margaux Premier Grand Cru Classé 2018 là biểu tượng vùng Margaux Bordeaux Pháp. Mức ưu đãi rất tốt khi mua theo lô sỉ.`;
+          aiResponseText = `Dòng Château Margaux Premier Grand Cru Classé 2018 (Bordeaux Pháp, MOQ: 10 thùng). Mức giá niêm yết sỉ 24.000.000 ₫/chai với ưu đãi đặc biệt theo đơn hàng hợp đồng.`;
         } else if (lowerMsg.includes('dom') || lowerMsg.includes('champagne') || lowerMsg.includes('sâm panh')) {
-          aiResponseText = `Dom Pérignon Vintage Brut Champagne 2012 là sâm-panh Pháp trứ danh niên hiệu 2012. Số lượng lớn sẽ có giá sỉ cực kỳ cạnh tranh.`;
+          aiResponseText = `Dom Pérignon Vintage Brut Champagne 2012 (MOQ: 8 thùng, nồng độ 12.5% ABV). Tuyệt phẩm sâm-panh Pháp thích hợp cho sự kiện sang trọng và quà tặng B2B.`;
         } else if (lowerMsg.includes('hennessy') || lowerMsg.includes('cognac')) {
-          aiResponseText = `Hennessy X.O Cognac Extra Old Edition. Thích hợp mua số lượng lớn làm quà tặng đối tác.`;
-        } else if (lowerMsg.includes('hạn mức') || lowerMsg.includes('tín dụng') || lowerMsg.includes('net-30')) {
-          aiResponseText = `Chính sách tín dụng Net-30 của Red Apron cho phép quý khách mua sắm trả sau trong vòng 30 ngày. Hạn mức khả dụng hiện tại của quý khách được hiển thị trực tiếp trên thẻ công nợ. Vui lòng thanh toán hóa đơn đúng hạn để khôi phục hạn mức khả dụng tự động.`;
+          aiResponseText = `Hennessy X.O Cognac Extra Old Edition (MOQ: 6 thùng, nồng độ 40% ABV). Giá sỉ niêm yết 5.600.000 ₫/chai, ủ trên 100 loại eaux-de-vie lâu năm.`;
+        } else if (lowerMsg.includes('hạn mức') || lowerMsg.includes('tín dụng') || lowerMsg.includes('net-30') || lowerMsg.includes('thanh toán')) {
+          aiResponseText = `Chính sách tín dụng Net-30 của Red Apron cho phép doanh nghiệp của quý khách mua sắm trả sau trong vòng 30 ngày. Hạn mức mặc định là 1.000.000.000 ₫ và có thể nâng hạn mức bằng Thư tín dụng L/C ngân hàng.`;
         }
       }
 

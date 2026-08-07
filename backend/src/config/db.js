@@ -103,6 +103,16 @@ const memoryDb = {
     { ProductID: 102, QuantityOnHand: 80, ReservedQuantity: 10 },
     { ProductID: 103, QuantityOnHand: 60, ReservedQuantity: 8 },
     { ProductID: 104, QuantityOnHand: 120, ReservedQuantity: 15 }
+  ],
+  rfqMessages: [
+    {
+      MessageID: 1,
+      RFQID: 999,
+      SenderName: 'AI Sommelier Assistant',
+      SenderRole: 'AI_ASSISTANT',
+      MessageText: 'Xin kính chào quý đối tác. Tôi là chuyên gia thử nếm kiêm Trợ lý ảo của Red Apron. Quý đối tác cần tư vấn về niên vụ, nồng độ ABV, MOQ hay chính sách chiết khấu sỉ của dòng rượu nào?',
+      CreatedAt: new Date()
+    }
   ]
 };
 
@@ -327,7 +337,29 @@ const createMockPool = () => {
             return { recordset: docs };
           }
 
-          // 9. Companies & Licenses & Inventory
+          // 9. RFQMessages (Chatbot & AI Sommelier Channel Messages)
+          if (q.includes('rfqmessages')) {
+            if (q.includes('insert')) {
+              const newId = memoryDb.rfqMessages.length + 1;
+              const newMsg = {
+                MessageID: newId,
+                RFQID: inputs.RFQID || 999,
+                SenderName: inputs.SenderName || 'Khách hàng',
+                SenderRole: inputs.SenderRole || 'BUYER',
+                MessageText: inputs.MessageText || '',
+                CreatedAt: new Date()
+              };
+              memoryDb.rfqMessages.push(newMsg);
+              return { recordset: [{ MessageID: newId }] };
+            }
+            let msgs = memoryDb.rfqMessages;
+            if (inputs.RFQID) {
+              msgs = msgs.filter(m => m.RFQID == inputs.RFQID);
+            }
+            return { recordset: msgs };
+          }
+
+          // 10. Companies & Licenses & Inventory
           if (q.includes('companylicenses')) return { recordset: memoryDb.licenses };
           if (q.includes('inventories')) return { recordset: memoryDb.inventory };
           if (q.includes('companies')) return { recordset: memoryDb.companies };

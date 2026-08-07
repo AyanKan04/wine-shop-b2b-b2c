@@ -181,9 +181,19 @@ async function runLiveAudit() {
     logTest('11. Thống Kê Realtime Trang Tổng Quan (Doanh Thu > 0 & Số Công Ty > 0)', statsValid, resStats.data?.stats);
   }
 
-  // 12. Frontend Vercel Live Page Load Check
+  // 12. Chatbot AI Sommelier Channel Check
+  const resChat = await safeFetchJson(`${LIVE_BACKEND}/rfqs/999/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender_name: 'Khách hàng', sender_role: 'BUYER', message_text: 'chào bạn' })
+  });
+
+  const chatValid = resChat.ok && resChat.data?.success === true && Array.isArray(resChat.data.data) && resChat.data.data.some(m => m.sender_role === 'AI_ASSISTANT');
+  logTest('12. Chatbot AI Sommelier Phản Hồi Tự Động Realtime (Trích Xuất AI Reply)', chatValid, resChat.data);
+
+  // 13. Frontend Vercel Live Page Load Check
   const resFe = await safeFetchJson(LIVE_FRONTEND);
-  logTest('12. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
+  logTest('13. Frontend Live Website (Vercel HTTP Status)', resFe.status === 200, `Status: ${resFe.status}`);
 
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KẾT QUẢ KIỂM THỬ: ${report.passed}/${report.tests.length} TEST CASES THÀNH CÔNG (PASS)`);
