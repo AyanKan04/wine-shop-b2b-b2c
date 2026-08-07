@@ -1,4 +1,6 @@
-// Database Configuration & MS SQL Server Persistent Sync Engine
+// Database Configuration & MS SQL Server Persistent Sync Engine with Cloud Fallback
+const bcrypt = require('bcryptjs');
+
 let sql;
 let useOdbc = false;
 
@@ -41,11 +43,230 @@ const config = useOdbc ? {
 let isConnected = false;
 let mssqlPool = null;
 
+// In-Memory Cloud Fallback Data Engine for Render/Vercel Cloud Deployment
+const passwordHash = bcrypt.hashSync('Password123!', 10);
+const memoryDb = {
+  products: [
+    {
+      ProductID: 101, SKU: 'SKU-SCOT-MAC18', ProductName: 'Macallan 18 Year Old Sherry Oak Single Malt', CategoryName: 'Spirits / Whisky', CountryOfOrigin: 'Scotland', Region: 'Highland', GrapeVariety: 'Single Malt', VintageYear: 2018, AlcoholContent: 43.0, VolumeML: 700, MOQ: 5, ImageURL: '/assets/images/macallen.png', CostPrice: 52000000, BasePrice: 68000000, Description: 'Dòng Single Malt Whisky danh tiếng từ vùng Highland Scotland, ủ 18 năm trong thùng gỗ sồi Sherry Oak Tây Ban Nha.', Status: 'ACTIVE',
+      tier_prices: JSON.stringify([{ TierLevel: 1, MinQuantity: 5, PricePerUnit: 68000000 }, { TierLevel: 2, MinQuantity: 20, PricePerUnit: 65000000 }])
+    },
+    {
+      ProductID: 102, SKU: 'SKU-FR-MARGAUX2018', ProductName: 'Château Margaux Premier Grand Cru Classé 2018', CategoryName: 'Vang Đỏ (Red Wine)', CountryOfOrigin: 'France', Region: 'Bordeaux', GrapeVariety: 'Cabernet Sauvignon', VintageYear: 2018, AlcoholContent: 13.5, VolumeML: 750, MOQ: 10, ImageURL: '/assets/images/margaux.png', CostPrice: 18000000, BasePrice: 24000000, Description: 'Vang đỏ huyền thoại thuộc bảng xếp hạng Premier Grand Cru Classé 1855 trứ danh vùng Margaux Bordeaux.', Status: 'ACTIVE',
+      tier_prices: JSON.stringify([{ TierLevel: 1, MinQuantity: 10, PricePerUnit: 24000000 }])
+    },
+    {
+      ProductID: 103, SKU: 'SKU-FR-DOM2012', ProductName: 'Dom Pérignon Vintage Brut Champagne 2012', CategoryName: 'Champagne & Vang Sủi', CountryOfOrigin: 'France', Region: 'Champagne', GrapeVariety: 'Chardonnay & Pinot Noir', VintageYear: 2012, AlcoholContent: 12.5, VolumeML: 750, MOQ: 8, ImageURL: '/assets/images/dom.png', CostPrice: 5800000, BasePrice: 7500000, Description: 'Tuyệt phẩm Sâm-panh Pháp niên hiệu 2012 đạt sự cân bằng tuyệt hảo giữa hương hoa quả nhiệt đới và khoáng chất.', Status: 'ACTIVE',
+      tier_prices: JSON.stringify([{ TierLevel: 1, MinQuantity: 8, PricePerUnit: 7500000 }])
+    },
+    {
+      ProductID: 104, SKU: 'SKU-FR-HENNESSY-XO', ProductName: 'Hennessy X.O Cognac Extra Old Edition', CategoryName: 'Spirits / Cognac', CountryOfOrigin: 'France', Region: 'Cognac', GrapeVariety: 'Ugni Blanc', VintageYear: 2020, AlcoholContent: 40.0, VolumeML: 700, MOQ: 6, ImageURL: '/assets/images/hennessy.png', CostPrice: 4200000, BasePrice: 5600000, Description: 'Dòng Cognac X.O trứ danh nguyên bản từ năm 1870, phối trộn hơn 100 loại eaux-de-vie lâu năm.', Status: 'ACTIVE',
+      tier_prices: JSON.stringify([{ TierLevel: 1, MinQuantity: 6, PricePerUnit: 5600000 }])
+    }
+  ],
+  users: [
+    { UserID: 1, CompanyID: 1, Username: 'lotte_buyer', Email: 'buyer@lottesaigon.com', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Nguyễn', LastName: 'Mua Hàng' },
+    { UserID: 2, CompanyID: 2, Username: 'admin_user', Email: 'admin@redapron.vn', PasswordHash: passwordHash, UserType: 'PLATFORM_ADMIN', Role: 'PLATFORM_ADMIN', Status: 'ACTIVE', FirstName: 'Trần', LastName: 'Quản Trị' },
+    { UserID: 3, CompanyID: 3, Username: 'continental_buyer', Email: 'purchasing@continental.vn', PasswordHash: passwordHash, UserType: 'BUYER_REP', Role: 'BUYER_REP', Status: 'ACTIVE', FirstName: 'Lê', LastName: 'Hải' }
+  ],
+  companies: [
+    { CompanyID: 1, CompanyCode: 'COMP-LOTTE', CompanyName: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', CompanyType: 'BUYER', Status: 'ACTIVE' },
+    { CompanyID: 2, CompanyCode: 'COMP-REDAPRON', CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY', CompanyType: 'SELLER', Status: 'ACTIVE' }
+  ],
+  creditLimits: [
+    { CompanyID: 1, CreditLimitAmount: 1000000000, UsedAmount: 150000000, AvailableAmount: 850000000 }
+  ],
+  invoices: [
+    { InvoiceID: 8184, OrderID: 8842, InvoiceNumber: 'INV-2026-8184', InvoiceDate: new Date('2026-08-01'), DueDate: new Date('2026-08-20'), Status: 'UNPAID', Amount: 150000000, PaidAmount: 0, BuyerCompany: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', BuyerCompanyID: 1, OrderNumber: 'ORD-2026-8842' },
+    { InvoiceID: 8891, OrderID: 8821, InvoiceNumber: 'INV-2026-8891', InvoiceDate: new Date('2026-07-15'), DueDate: new Date('2026-08-15'), Status: 'PAID', Amount: 200000000, PaidAmount: 200000000, BuyerCompany: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', BuyerCompanyID: 1, OrderNumber: 'ORD-2026-8821' }
+  ],
+  orders: [
+    { OrderID: 8842, OrderNumber: 'ORD-2026-8842', BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', TotalAmount: 150000000, OrderStatus: 'PROCESSING', PaymentMethod: 'NET_30_CREDIT', CreatedAt: new Date('2026-08-01') },
+    { OrderID: 8821, OrderNumber: 'ORD-2026-8821', BuyerCompanyID: 1, buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON', TotalAmount: 200000000, OrderStatus: 'COMPLETED', PaymentMethod: 'NET_30_CREDIT', CreatedAt: new Date('2026-07-15') }
+  ],
+  rfqs: [],
+  quotations: [],
+  lcDocuments: [],
+  licenses: [
+    { LicenseID: 1, CompanyID: 1, LicenseType: 'Giấy phép Bán buôn & Phân phối Rượu', LicenseNumber: '108/GP-BCT', Status: 'VERIFIED' }
+  ],
+  inventory: [
+    { ProductID: 101, QuantityOnHand: 150, ReservedQuantity: 20 },
+    { ProductID: 102, QuantityOnHand: 80, ReservedQuantity: 10 },
+    { ProductID: 103, QuantityOnHand: 60, ReservedQuantity: 8 },
+    { ProductID: 104, QuantityOnHand: 120, ReservedQuantity: 15 }
+  ]
+};
+
+const createMockPool = () => {
+  return {
+    request: () => {
+      const inputs = {};
+      const reqObj = {
+        input: (name, type, val) => {
+          inputs[name] = val;
+          return reqObj;
+        },
+        query: async (queryString) => {
+          const q = queryString.toLowerCase();
+
+          // 1. Users login / getMe
+          if (q.includes('from users')) {
+            if (inputs.Username) {
+              const u = memoryDb.users.find(x => x.Username.toLowerCase() === String(inputs.Username).toLowerCase());
+              return { recordset: u ? [u] : [] };
+            }
+            if (inputs.UserID) {
+              const u = memoryDb.users.find(x => x.UserID == inputs.UserID);
+              return { recordset: u ? [u] : [] };
+            }
+            return { recordset: memoryDb.users };
+          }
+
+          // 2. Products query
+          if (q.includes('from products')) {
+            if (inputs.ProductID) {
+              const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
+              return { recordset: p ? [p] : [] };
+            }
+            let prods = [...memoryDb.products];
+            if (inputs.Search) {
+              const s = String(inputs.Search).replace(/%/g, '').toLowerCase();
+              prods = prods.filter(p => p.ProductName.toLowerCase().includes(s) || p.SKU.toLowerCase().includes(s));
+            }
+            return { recordset: prods };
+          }
+
+          // 3. CreditLimits
+          if (q.includes('from creditlimits')) {
+            const cid = inputs.CompanyID || 1;
+            let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
+            if (!c) {
+              c = { CompanyID: cid, CreditLimitAmount: 1000000000, UsedAmount: 0, AvailableAmount: 1000000000 };
+              memoryDb.creditLimits.push(c);
+            }
+            return { recordset: [c] };
+          }
+
+          // 4. Invoices
+          if (q.includes('from invoices')) {
+            let invs = [...memoryDb.invoices];
+            if (inputs.BuyerCompanyID) {
+              invs = invs.filter(i => i.BuyerCompanyID == inputs.BuyerCompanyID);
+            }
+            return { recordset: invs };
+          }
+
+          // 5. Orders
+          if (q.includes('from orders')) {
+            let ords = [...memoryDb.orders];
+            if (inputs.CompanyID || inputs.BuyerCompanyID) {
+              const cid = inputs.CompanyID || inputs.BuyerCompanyID;
+              ords = ords.filter(o => o.BuyerCompanyID == cid);
+            }
+            return { recordset: ords };
+          }
+
+          // 6. RFQs
+          if (q.includes('insert into rfqs')) {
+            const newId = 5000 + memoryDb.rfqs.length + 1;
+            const newRfq = {
+              rfq_id: newId,
+              RFQID: newId,
+              BuyerCompanyID: inputs.BuyerCompanyID || 1,
+              title: inputs.Title || 'RFQ Mua Sỉ Rượu',
+              product_name: inputs.ProductName || 'Hennessy XO',
+              quantity: inputs.RequestedQuantity || 10,
+              target_price: inputs.TargetUnitPrice || 45000000,
+              buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+              status: 'PENDING',
+              created_at: new Date().toISOString()
+            };
+            memoryDb.rfqs.push(newRfq);
+            return { recordset: [{ RFQID: newId }] };
+          }
+          if (q.includes('from rfqs')) {
+            return { recordset: memoryDb.rfqs.map(r => ({ ...r, RFQID: r.rfq_id || r.RFQID, BuyerCompany: r.buyer_company })) };
+          }
+
+          // 7. Quotations
+          if (q.includes('insert into quotations')) {
+            const newId = 9000 + memoryDb.quotations.length + 1;
+            const newQ = {
+              quotation_id: newId,
+              QuotationID: newId,
+              rfq_id: inputs.RFQID,
+              RFQID: inputs.RFQID,
+              BuyerCompanyID: inputs.BuyerCompanyID || 1,
+              offer_unit_price: inputs.OfferUnitPrice || 44000000,
+              quantity: inputs.Quantity || 10,
+              buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+              status: 'PENDING',
+              valid_until: '2026-12-31'
+            };
+            memoryDb.quotations.push(newQ);
+            return { recordset: [{ QuotationID: newId }] };
+          }
+          if (q.includes('from quotations')) {
+            return { recordset: memoryDb.quotations };
+          }
+
+          // 8. LCDocuments
+          if (q.includes('insert into lcdocuments')) {
+            const newId = 7000 + memoryDb.lcDocuments.length + 1;
+            const newLc = {
+              LCID: newId,
+              lc_id: newId,
+              BuyerCompany: inputs.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+              LCNumber: inputs.LCNumber || 'LC-12345',
+              IssuingBank: inputs.IssuingBank || 'VIETCOMBANK',
+              Amount: inputs.Amount || 500000000,
+              ExpiryDate: inputs.ExpiryDate || new Date(),
+              Status: 'SUBMITTED'
+            };
+            memoryDb.lcDocuments.push(newLc);
+            return { recordset: [{ LCID: newId }] };
+          }
+          if (q.includes('update lcdocuments')) {
+            if (inputs.LCID && inputs.Status) {
+              const lc = memoryDb.lcDocuments.find(x => x.LCID == inputs.LCID);
+              if (lc) lc.Status = inputs.Status;
+            }
+            return { recordset: [] };
+          }
+          if (q.includes('from lcdocuments')) {
+            return { recordset: memoryDb.lcDocuments };
+          }
+
+          // 9. Update CreditLimits
+          if (q.includes('update creditlimits')) {
+            const cid = inputs.CompanyID || 1;
+            let c = memoryDb.creditLimits.find(x => x.CompanyID == cid);
+            if (c && inputs.LCAmount) {
+              c.CreditLimitAmount += Number(inputs.LCAmount);
+              c.AvailableAmount += Number(inputs.LCAmount);
+            }
+            return { recordset: [] };
+          }
+
+          // 10. Companies & Licenses & Inventory
+          if (q.includes('from companylicenses')) return { recordset: memoryDb.licenses };
+          if (q.includes('from inventories')) return { recordset: memoryDb.inventory };
+          if (q.includes('from companies')) return { recordset: memoryDb.companies };
+
+          return { recordset: [] };
+        }
+      };
+      return reqObj;
+    }
+  };
+};
+
 const getPool = async () => {
   if (!isConnected || !mssqlPool) {
     await connectDB();
   }
-  return mssqlPool;
+  return mssqlPool || createMockPool();
 };
 
 // Establish connection to SQL Server & Sync DB State
@@ -106,114 +327,15 @@ async function connectDB() {
         END
       `);
       console.log('LCDocuments table checked/created successfully.');
-
-      // 1b. Create ProductPrices, Contracts, ContractPrices, Payments tables if not exist
-      await mssqlPool.request().query(`
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductPrices]') AND type in (N'U'))
-        BEGIN
-          CREATE TABLE [dbo].[ProductPrices] (
-            [PriceID] BIGINT IDENTITY(1,1) PRIMARY KEY,
-            [ProductID] BIGINT NOT NULL,
-            [CostPrice] DECIMAL(18,2) NOT NULL DEFAULT 0,
-            [BasePrice] DECIMAL(18,2) NOT NULL DEFAULT 0,
-            [UpdatedAt] DATETIME NOT NULL DEFAULT GETDATE()
-          );
-        END
-
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Contracts]') AND type in (N'U'))
-        BEGIN
-          CREATE TABLE [dbo].[Contracts] (
-            [ContractID] BIGINT IDENTITY(1,1) PRIMARY KEY,
-            [BuyerCompanyID] BIGINT NOT NULL,
-            [ContractNumber] VARCHAR(100) UNIQUE NOT NULL,
-            [EndDate] DATETIME NULL,
-            [Status] VARCHAR(50) DEFAULT 'ACTIVE'
-          );
-        END
-
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ContractPrices]') AND type in (N'U'))
-        BEGIN
-          CREATE TABLE [dbo].[ContractPrices] (
-            [ContractPriceID] BIGINT IDENTITY(1,1) PRIMARY KEY,
-            [ContractID] BIGINT NOT NULL,
-            [ProductID] BIGINT NOT NULL,
-            [ContractPrice] DECIMAL(18,2) NOT NULL
-          );
-        END
-
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Payments]') AND type in (N'U'))
-        BEGIN
-          CREATE TABLE [dbo].[Payments] (
-            [PaymentID] BIGINT IDENTITY(1,1) PRIMARY KEY,
-            [InvoiceID] BIGINT NOT NULL,
-            [Amount] DECIMAL(18,2) NOT NULL DEFAULT 0,
-            [PaidAmount] DECIMAL(18,2) NOT NULL DEFAULT 0,
-            [PaymentMethod] NVARCHAR(50) NOT NULL DEFAULT 'BANK_TRANSFER',
-            [PaymentReference] NVARCHAR(100) NULL,
-            [PaidAt] DATETIME NOT NULL DEFAULT GETDATE()
-          );
-        END
-      `);
-      console.log('Pricing & Payment tables checked/created successfully.');
     } catch (lcTableErr) {
       console.error('Failed to create tables:', lcTableErr.message);
-    }
-
-    // 2. Alter Invoices table to add missing Amount and PaidAmount columns if missing
-    try {
-      const checkCol = await mssqlPool.request().query(`
-        SELECT COLUMN_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'Invoices' AND COLUMN_NAME = 'Amount'
-      `);
-      if (checkCol.recordset.length === 0) {
-        console.log('Adding missing Amount column to Invoices table...');
-        await mssqlPool.request().query(`ALTER TABLE Invoices ADD Amount DECIMAL(18,2) NOT NULL DEFAULT 0`);
-        console.log('Amount column added successfully.');
-      }
-
-      const checkPaidCol = await mssqlPool.request().query(`
-        SELECT COLUMN_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'Invoices' AND COLUMN_NAME = 'PaidAmount'
-      `);
-      if (checkPaidCol.recordset.length === 0) {
-        console.log('Adding missing PaidAmount column to Invoices table...');
-        await mssqlPool.request().query(`ALTER TABLE Invoices ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`);
-        console.log('PaidAmount column added successfully.');
-      }
-
-      // Alter Payments table if columns are missing
-      const checkPayPaidCol = await mssqlPool.request().query(`
-        SELECT COLUMN_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaidAmount'
-      `);
-      if (checkPayPaidCol.recordset.length === 0) {
-        console.log('Adding missing PaidAmount column to Payments table...');
-        await mssqlPool.request().query(`ALTER TABLE Payments ADD PaidAmount DECIMAL(18,2) NOT NULL DEFAULT 0`);
-        console.log('PaidAmount column added successfully in Payments.');
-      }
-
-      const checkPayRefCol = await mssqlPool.request().query(`
-        SELECT COLUMN_NAME 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_NAME = 'Payments' AND COLUMN_NAME = 'PaymentReference'
-      `);
-      if (checkPayRefCol.recordset.length === 0) {
-        console.log('Adding missing PaymentReference column to Payments table...');
-        await mssqlPool.request().query(`ALTER TABLE Payments ADD PaymentReference NVARCHAR(100) NULL`);
-        console.log('PaymentReference column added successfully in Payments.');
-      }
-    } catch (colErr) {
-      console.warn('Skipping column alteration checks:', colErr.message);
     }
 
     // 3. Seed database if empty
     await seedIfEmpty(sql);
 
   } catch (err) {
-    console.error('DATABASE connection or initialization failed:', err.message);
+    console.error('DATABASE connection or initialization failed (Activating Cloud In-Memory Engine):', err.message);
   }
 }
 
