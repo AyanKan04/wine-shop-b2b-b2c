@@ -213,7 +213,7 @@ const createMockPool = () => {
           }
 
           // 2. ProductTierPrices & ProductPrices Persistence (Mock Engine SQL Handler)
-          if (q.includes('producttierprices')) {
+          if (q.includes('delete from producttierprices') || q.includes('insert into producttierprices')) {
             const pid = inputs.ProductID || 101;
             const p = memoryDb.products.find(x => x.ProductID == pid);
             if (p) {
@@ -239,7 +239,7 @@ const createMockPool = () => {
             return { recordset: [] };
           }
 
-          if (q.includes('productprices')) {
+          if (q.includes('update productprices') || q.includes('insert into productprices')) {
             const pid = inputs.ProductID || 101;
             const p = memoryDb.products.find(x => x.ProductID == pid);
             if (p) {
@@ -249,8 +249,8 @@ const createMockPool = () => {
             return { recordset: [] };
           }
 
-          // 3. Products query (Exclude tier & price tables)
-          if (q.includes('products') && !q.includes('producttierprices') && !q.includes('productprices')) {
+          // 3. Products query
+          if (q.includes('products')) {
             if (inputs.ProductID) {
               const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
               return { recordset: p ? [p] : [] };
