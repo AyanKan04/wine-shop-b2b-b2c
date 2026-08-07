@@ -8,9 +8,9 @@ export default function ProductDetailPage({ productId, products, showToast }) {
 
   if (!prod) return <div className="page-container">Đang tải chi tiết sản phẩm...</div>;
 
-  let currentTierPrice = prod.tier_prices ? prod.tier_prices[0].price_per_unit : 85000000;
+  let currentTierPrice = (prod.tier_prices && prod.tier_prices.length > 0) ? prod.tier_prices[0].price_per_unit : (prod.base_price || 68000000);
   let currentTierLevel = 1;
-  if (prod.tier_prices) {
+  if (prod.tier_prices && prod.tier_prices.length > 0) {
     for (let t of prod.tier_prices) {
       if (qty >= t.min_quantity) {
         currentTierPrice = t.price_per_unit;
@@ -19,7 +19,7 @@ export default function ProductDetailPage({ productId, products, showToast }) {
     }
   }
 
-  const maxTierDiscount = prod.tier_prices
+  const maxTierDiscount = (prod.tier_prices && prod.tier_prices.length > 0 && prod.tier_prices[0].price_per_unit > 0)
     ? Math.round((1 - prod.tier_prices[prod.tier_prices.length - 1].price_per_unit / prod.tier_prices[0].price_per_unit) * 100)
     : 0;
 

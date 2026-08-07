@@ -48,7 +48,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      showToast('Lỗi tải dữ liệu Đơn hàng & Công nợ');
+      if (showToast) showToast('Lỗi tải dữ liệu Đơn hàng & Công nợ');
     } finally {
       setLoading(false);
     }
