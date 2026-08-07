@@ -26,7 +26,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [createFormData, setCreateFormData] = useState({
     username: '',
     email: '',
     password: '',
@@ -34,6 +34,15 @@ export default function IAMAccountMgmtPage({ showToast }) {
     first_name: '',
     last_name: '',
     company_id: ''
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    username: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    user_type: 'BUYER_REP',
+    status: 'ACTIVE'
   });
 
   const [showEditModal, setShowEditModal] = useState(false);
@@ -48,7 +57,6 @@ export default function IAMAccountMgmtPage({ showToast }) {
     try {
       const res = await apiService.getUsers(search);
       if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        // Map backend returned user records ensuring proper format
         const fetched = res.data.map(u => ({
           UserID: u.UserID || u.user_id,
           Username: u.Username || u.username,
@@ -70,34 +78,36 @@ export default function IAMAccountMgmtPage({ showToast }) {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    try {
+      const res = await apiService.createUser(createFormData);
+      if (res && res.success) {
+        showToast(res.message || `Đã khởi tạo thành công tài khoản ${createFormData.username}!`);
+      } else {
+        showToast(`Khởi tạo tài khoản ${createFormData.username} thành công!`);
+      }
+    } catch (err) {
+      showToast(err.message || 'Lỗi server khi tạo tài khoản');
+    }
+
     const newId = Math.max(...users.map(u => u.UserID), 100) + 1;
     const newUserObj = {
       UserID: newId,
-      Username: formData.username,
-      Email: formData.email,
-      FirstName: formData.first_name || 'User',
-      LastName: formData.last_name || 'Mới',
-      UserType: formData.user_type,
+      Username: createFormData.username,
+      Email: createFormData.email,
+      FirstName: createFormData.first_name || 'User',
+      LastName: createFormData.last_name || 'Mới',
+      UserType: createFormData.user_type,
       Status: 'ACTIVE',
       CompanyName: 'Doanh Nghiệp Đăng Ký'
     };
 
-    // Immediate optimistic state update
     setUsers(prev => [newUserObj, ...prev]);
-    showToast(`Đã khởi tạo thành công tài khoản ${formData.username}!`);
     setShowModal(false);
-    setFormData({ username: '', email: '', password: '', user_type: 'BUYER_REP', first_name: '', last_name: '', company_id: '' });
-
-    // Sync with backend API silently
-    try {
-      await apiService.createUser(formData);
-    } catch (err) {
-      console.warn('[IAM] Background API createUser notice:', err.message);
-    }
+    setCreateFormData({ username: '', email: '', password: '', user_type: 'BUYER_REP', first_name: '', last_name: '', company_id: '' });
   };
 
   const handleEditClick = (user) => {
-    setFormData({
+    setEditFormData({
       username: user.Username,
       email: user.Email,
       first_name: user.FirstName || '',
@@ -112,38 +122,34 @@ export default function IAMAccountMgmtPage({ showToast }) {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     
-    // Immediate optimistic state update
     setUsers(prev => prev.map(u => u.UserID === editUserId ? {
       ...u,
-      FirstName: formData.first_name,
-      LastName: formData.last_name,
-      UserType: formData.user_type,
-      Status: formData.status
+      FirstName: editFormData.first_name,
+      LastName: editFormData.last_name,
+      UserType: editFormData.user_type,
+      Status: editFormData.status
     } : u));
 
-    showToast('Đã cập nhật thông tin tài khoản thành công!');
     setShowEditModal(false);
 
-    // Sync with backend API silently
     try {
-      await apiService.updateUser(editUserId, formData);
+      const res = await apiService.updateUser(editUserId, editFormData);
+      showToast(res.message || 'Đã cập nhật thông tin tài khoản thành công!');
     } catch (err) {
-      console.warn('[IAM] Background API updateUser notice:', err.message);
+      showToast(err.message || 'Lỗi server khi cập nhật tài khoản');
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa tài khoản này không?')) return;
 
-    // Immediate optimistic state update
     setUsers(prev => prev.filter(u => u.UserID !== id));
-    showToast('Đã xóa tài khoản thành công khỏi danh sách!');
 
-    // Sync with backend API silently
     try {
-      await apiService.deleteUser(id);
+      const res = await apiService.deleteUser(id);
+      showToast(res.message || 'Đã xóa tài khoản thành công!');
     } catch (err) {
-      console.warn('[IAM] Background API deleteUser notice:', err.message);
+      showToast(err.message || 'Lỗi server khi xóa tài khoản');
     }
   };
 
@@ -152,16 +158,13 @@ export default function IAMAccountMgmtPage({ showToast }) {
     if (!window.confirm(`Bạn có chắc chắn muốn ${action} tài khoản này không?`)) return;
 
     const nextStatus = currentStatus === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
-    
-    // Immediate optimistic state update
     setUsers(prev => prev.map(u => u.UserID === id ? { ...u, Status: nextStatus } : u));
-    showToast(`Đã ${action} tài khoản thành công!`);
 
-    // Sync with backend API silently
     try {
-      await apiService.lockUser(id);
+      const res = await apiService.lockUser(id);
+      showToast(res.message || `Đã ${action} tài khoản thành công!`);
     } catch (err) {
-      console.warn('[IAM] Background API lockUser notice:', err.message);
+      showToast(err.message || `Lỗi server khi ${action} tài khoản`);
     }
   };
 
@@ -357,23 +360,23 @@ export default function IAMAccountMgmtPage({ showToast }) {
             <form onSubmit={handleAddSubmit}>
               <div className="form-group">
                 <label>Username *</label>
-                <input className="form-control" value={formData.username} onChange={e=>setFormData({...formData, username: e.target.value})} required />
+                <input className="form-control" value={createFormData.username} onChange={e=>setCreateFormData({...createFormData, username: e.target.value})} required />
               </div>
               <div className="form-group">
                 <label>Email *</label>
-                <input type="email" className="form-control" value={formData.email} onChange={e=>setFormData({...formData, email: e.target.value})} required />
+                <input type="email" className="form-control" value={createFormData.email} onChange={e=>setCreateFormData({...createFormData, email: e.target.value})} required />
               </div>
               <div className="form-group">
                 <label>Password *</label>
-                <input type="password" className="form-control" value={formData.password} onChange={e=>setFormData({...formData, password: e.target.value})} required />
+                <input type="password" className="form-control" value={createFormData.password} onChange={e=>setCreateFormData({...createFormData, password: e.target.value})} required />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group"><label>Tên</label><input className="form-control" value={formData.first_name} onChange={e=>setFormData({...formData, first_name: e.target.value})} /></div>
-                <div className="form-group"><label>Họ</label><input className="form-control" value={formData.last_name} onChange={e=>setFormData({...formData, last_name: e.target.value})} /></div>
+                <div className="form-group"><label>Tên</label><input className="form-control" value={createFormData.first_name} onChange={e=>setCreateFormData({...createFormData, first_name: e.target.value})} /></div>
+                <div className="form-group"><label>Họ</label><input className="form-control" value={createFormData.last_name} onChange={e=>setCreateFormData({...createFormData, last_name: e.target.value})} /></div>
               </div>
               <div className="form-group">
                 <label>Vai Trò (Role) *</label>
-                <select className="form-control" value={formData.user_type} onChange={e=>setFormData({...formData, user_type: e.target.value})}>
+                <select className="form-control" value={createFormData.user_type} onChange={e=>setCreateFormData({...createFormData, user_type: e.target.value})}>
                   <option value="BUYER_REP">BUYER_REP</option>
                   <option value="SALES_REP">SALES_REP</option>
                   <option value="COMPANY_ADMIN">COMPANY_ADMIN</option>
@@ -402,19 +405,19 @@ export default function IAMAccountMgmtPage({ showToast }) {
             <form onSubmit={handleEditSubmit}>
               <div className="form-group">
                 <label>Username</label>
-                <input className="form-control" value={formData.username} disabled style={{ opacity: 0.5 }} />
+                <input className="form-control" value={editFormData.username} disabled style={{ opacity: 0.5 }} />
               </div>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" className="form-control" value={formData.email} disabled style={{ opacity: 0.5 }} />
+                <input type="email" className="form-control" value={editFormData.email} disabled style={{ opacity: 0.5 }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                <div className="form-group"><label>Tên</label><input className="form-control" value={formData.first_name} onChange={e=>setFormData({...formData, first_name: e.target.value})} /></div>
-                <div className="form-group"><label>Họ</label><input className="form-control" value={formData.last_name} onChange={e=>setFormData({...formData, last_name: e.target.value})} /></div>
+                <div className="form-group"><label>Tên</label><input className="form-control" value={editFormData.first_name} onChange={e=>setEditFormData({...editFormData, first_name: e.target.value})} /></div>
+                <div className="form-group"><label>Họ</label><input className="form-control" value={editFormData.last_name} onChange={e=>setEditFormData({...editFormData, last_name: e.target.value})} /></div>
               </div>
               <div className="form-group">
                 <label>Vai Trò (Role) *</label>
-                <select className="form-control" value={formData.user_type} onChange={e=>setFormData({...formData, user_type: e.target.value})}>
+                <select className="form-control" value={editFormData.user_type} onChange={e=>setEditFormData({...editFormData, user_type: e.target.value})}>
                   <option value="BUYER_REP">BUYER_REP</option>
                   <option value="SALES_REP">SALES_REP</option>
                   <option value="COMPANY_ADMIN">COMPANY_ADMIN</option>
@@ -425,7 +428,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
               </div>
               <div className="form-group">
                 <label>Trạng Thái *</label>
-                <select className="form-control" value={formData.status} onChange={e=>setFormData({...formData, status: e.target.value})}>
+                <select className="form-control" value={editFormData.status} onChange={e=>setEditFormData({...editFormData, status: e.target.value})}>
                   <option value="ACTIVE">Hoạt động</option>
                   <option value="LOCKED">Khóa</option>
                 </select>
@@ -473,10 +476,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
               </td>
               <td>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => {
-                    handleEditClick(u);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Sửa</button>
+                  <button onClick={() => handleEditClick(u)} style={{ background: 'transparent', border: '1px solid var(--border-gold)', color: 'var(--accent-gold)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Sửa</button>
                   <button onClick={() => handleLock(u.UserID, u.Status)} style={{ background: 'transparent', border: '1px solid #F59E0B', color: '#F59E0B', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>
                     {u.Status === 'LOCKED' ? 'Mở Khóa' : 'Khóa'}
                   </button>

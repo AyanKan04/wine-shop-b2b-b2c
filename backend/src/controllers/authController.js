@@ -41,7 +41,7 @@ const login = async (req, res) => {
         user_type: user.UserType,
         company_id: user.CompanyID 
       }, 
-      process.env.JWT_SECRET || 'fallback_secret_key_if_env_missing',
+      process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024',
       { expiresIn: '24h' }
     );
 

@@ -127,7 +127,8 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User không tồn tại' });
     }
 
-    if (req.user.user_type !== 'PLATFORM_ADMIN' && userCheck.recordset[0].CompanyID !== req.user.company_id) {
+    const targetCompanyId = userCheck.recordset[0].CompanyID;
+    if (req.user.user_type !== 'PLATFORM_ADMIN' && targetCompanyId && targetCompanyId !== req.user.company_id) {
       return res.status(403).json({ success: false, message: 'Không có quyền cập nhật User này' });
     }
 
@@ -151,7 +152,7 @@ const updateUser = async (req, res) => {
   }
 };
 
-// DELETE /api/users/:id - Xóa người dùng (hoặc Lock)
+// DELETE /api/users/:id - Xóa người dùng (Hard delete với Soft Delete Fallback)
 const deleteUser = async (req, res) => {
   const userId = req.params.id;
 
@@ -167,16 +168,26 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User không tồn tại' });
     }
 
-    if (req.user.user_type !== 'PLATFORM_ADMIN' && userCheck.recordset[0].CompanyID !== req.user.company_id) {
+    const targetCompanyId = userCheck.recordset[0].CompanyID;
+    if (req.user.user_type !== 'PLATFORM_ADMIN' && targetCompanyId && targetCompanyId !== req.user.company_id) {
       return res.status(403).json({ success: false, message: 'Không có quyền xóa User này' });
     }
 
-    // Xóa cứng (Hard Delete) theo yêu cầu
-    await pool.request()
-      .input('UserID', sql.BigInt, userId)
-      .query("DELETE FROM Users WHERE UserID = @UserID");
+    try {
+      // 1. Thử Xóa cứng (Hard Delete)
+      await pool.request()
+        .input('UserID', sql.BigInt, userId)
+        .query("DELETE FROM Users WHERE UserID = @UserID");
 
-    res.json({ success: true, message: 'Đã xóa tài khoản thành công (Hard delete)' });
+      return res.json({ success: true, message: 'Đã xóa hoàn toàn tài khoản khỏi hệ thống.' });
+    } catch (delErr) {
+      // 2. Nếu vướng rào cản Foreign Key (Đơn hàng/Lịch sử), tự động chuyển sang Soft Delete
+      await pool.request()
+        .input('UserID', sql.BigInt, userId)
+        .query("UPDATE Users SET Status = 'DELETED', UpdatedAt = GETDATE() WHERE UserID = @UserID");
+
+      return res.json({ success: true, message: 'Tài khoản đã được lưu vết và chuyển sang trạng thái Đã Xóa (Soft Delete).' });
+    }
   } catch (err) {
     console.error('Error deleting user:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi xóa tài khoản' });
@@ -199,7 +210,8 @@ const lockUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User không tồn tại' });
     }
 
-    if (req.user.user_type !== 'PLATFORM_ADMIN' && userCheck.recordset[0].CompanyID !== req.user.company_id) {
+    const targetCompanyId = userCheck.recordset[0].CompanyID;
+    if (req.user.user_type !== 'PLATFORM_ADMIN' && targetCompanyId && targetCompanyId !== req.user.company_id) {
       return res.status(403).json({ success: false, message: 'Không có quyền khóa User này' });
     }
 

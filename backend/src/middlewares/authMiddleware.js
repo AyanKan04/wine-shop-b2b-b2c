@@ -4,9 +4,14 @@ const jwt = require('jsonwebtoken');
 /**
  * Authenticate JWT Token or Development Mock Token
  */
+const JWT_SECRET = process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024';
+
+/**
+ * Authenticate JWT Token securely
+ */
 const authenticateToken = (req, res, next) => {
   if (process.env.NODE_ENV === 'test') {
-    req.user = { id: 1, company_id: 1, role: 'PLATFORM_ADMIN' };
+    req.user = { id: 1, company_id: 1, role: 'PLATFORM_ADMIN', user_type: 'PLATFORM_ADMIN' };
     return next();
   }
 
@@ -14,30 +19,22 @@ const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    req.user = {
-      user_id: 2,
-      username: 'admin_user',
-      user_type: 'PLATFORM_ADMIN',
-      company_id: 2,
-      company_name: 'MAISON DE L\'ALCOOL RED APRON FACTORY'
-    };
-    return next();
+    return res.status(401).json({
+      success: false,
+      message: 'Truy cập bị từ chối. Vui lòng đăng nhập để tiếp tục.'
+    });
   }
 
   // Real JWT Validation
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024');
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded; // Contains user_id, username, user_type, company_id
     next();
   } catch (err) {
-    req.user = {
-      user_id: 2,
-      username: 'admin_user',
-      user_type: 'PLATFORM_ADMIN',
-      company_id: 2,
-      company_name: 'MAISON DE L\'ALCOOL RED APRON FACTORY'
-    };
-    next();
+    return res.status(401).json({
+      success: false,
+      message: 'Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.'
+    });
   }
 };
 
@@ -50,7 +47,7 @@ const optionalAuth = (req, res, next) => {
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key_if_env_missing');
+      const decoded = jwt.verify(token, JWT_SECRET);
       req.user = decoded;
     } catch (err) {
       // Ignore invalid token for optional auth

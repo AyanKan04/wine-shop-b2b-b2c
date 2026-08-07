@@ -165,6 +165,10 @@ const createQuotation = async (req, res) => {
   const price = parseFloat(offer_unit_price);
   const qty = parseInt(quantity);
 
+  if (!rfqId || isNaN(price) || price <= 0) {
+    return res.status(400).json({ success: false, message: 'Đơn giá báo giá phải lớn hơn 0 VNĐ.' });
+  }
+
   try {
     const pool = await getPool();
     const transaction = new sql.Transaction(pool);
@@ -310,31 +314,21 @@ const updateQuotationStatus = async (req, res) => {
           return res.status(400).json({ success: false, message: 'Tài khoản sỉ bị tạm khóa chức năng mua nợ Net-30 do có hóa đơn quá hạn chưa thanh toán.' });
         }
 
-        // 3. Verify stock availability
+        // 3. Verify & Reserve stock atomically (Conforms to E-Commerce Overselling Invariants)
         const prodId = qData.ProductID || 101;
-        const invCheck = await transaction.request()
-          .input('ProductID', sql.BigInt, prodId)
-          .query('SELECT QuantityOnHand, ReservedQuantity FROM Inventories WHERE ProductID = @ProductID');
-        
-        let available = 0;
-        if (invCheck.recordset.length > 0) {
-          available = (invCheck.recordset[0].QuantityOnHand || 0) - (invCheck.recordset[0].ReservedQuantity || 0);
-        }
-        
-        if (available < qData.Quantity) {
-          await transaction.rollback();
-          return res.status(400).json({ success: false, message: `Số lượng hàng tồn kho khả dụng không đủ. Chỉ còn lại ${available} thùng.` });
-        }
-
-        // 4. Reserve stock
-        await transaction.request()
+        const stockReserveResult = await transaction.request()
           .input('ProductID', sql.BigInt, prodId)
           .input('Quantity', sql.Int, qData.Quantity)
           .query(`
             UPDATE Inventories 
             SET ReservedQuantity = ReservedQuantity + @Quantity 
-            WHERE ProductID = @ProductID
+            WHERE ProductID = @ProductID AND (QuantityOnHand - ReservedQuantity) >= @Quantity
           `);
+
+        if (stockReserveResult.rowsAffected[0] === 0) {
+          await transaction.rollback();
+          return res.status(400).json({ success: false, message: 'Số lượng hàng tồn kho khả dụng không đủ để đáp ứng đơn hàng này.' });
+        }
 
         const orderNumber = `ORD-2026-${8800 + quotationId}`;
         const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;

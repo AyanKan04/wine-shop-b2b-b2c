@@ -236,16 +236,39 @@ const updateProduct = async (req, res) => {
 
 // DELETE /api/products/:id
 const deleteProduct = async (req, res) => {
+  const productId = req.params.id;
+
   try {
     const pool = await getPool();
-    await pool.request()
-      .input('ProductID', sql.BigInt, req.params.id)
-      .query(`DELETE FROM Products WHERE ProductID = @ProductID`);
-      
-    res.json({ success: true, message: 'Xóa sản phẩm thành công' });
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      // 1. Dọn dẹp các bảng con liên quan đến giá và tồn kho
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductPrices WHERE ProductID = @ProductID');
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ContractPrices WHERE ProductID = @ProductID');
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM CustomerPrices WHERE ProductID = @ProductID');
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM Inventories WHERE ProductID = @ProductID AND ReservedQuantity = 0');
+
+      // 2. Thử xóa cứng sản phẩm khỏi bảng Products
+      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM Products WHERE ProductID = @ProductID');
+
+      await transaction.commit();
+      res.json({ success: true, message: 'Đã xóa hoàn tất sản phẩm khỏi danh mục.' });
+    } catch (delErr) {
+      await transaction.rollback();
+
+      // 3. Nếu vướng Foreign Key ở OrderItems/RFQs, tự động chuyển sang Soft Delete (Status = 'DELETED')
+      await pool.request()
+        .input('ProductID', sql.BigInt, productId)
+        .query("UPDATE Products SET Status = 'DELETED' WHERE ProductID = @ProductID");
+
+      res.json({ success: true, message: 'Sản phẩm có đơn hàng lịch sử đã được lưu vết và đánh dấu Đã Xóa (Soft Delete).' });
+    }
   } catch (err) {
     console.error('Error deleting product:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi xóa sản phẩm. Có thể do ràng buộc dữ liệu.' });
+    res.status(500).json({ success: false, message: 'Lỗi server khi xóa sản phẩm.' });
   }
 };
 
