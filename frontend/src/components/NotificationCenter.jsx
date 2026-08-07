@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-
 import apiService from '../services/api';
 
 export default function NotificationCenter() {
@@ -18,7 +17,6 @@ export default function NotificationCenter() {
       }
     };
     fetchNotifs();
-    // In a real app, we might poll this or use WebSockets
     const interval = setInterval(fetchNotifs, 60000); // 1 phút check 1 lần
     return () => clearInterval(interval);
   }, []);
@@ -34,10 +32,15 @@ export default function NotificationCenter() {
   };
 
   const typeIcons = {
-    warning: { icon: 'fa-triangle-exclamation', color: '#F59E0B', bg: 'rgba(245,158,11,0.15)' },
-    info: { icon: 'fa-circle-info', color: '#3B82F6', bg: 'rgba(59,130,246,0.15)' },
-    success: { icon: 'fa-circle-check', color: '#10B981', bg: 'rgba(16,185,129,0.15)' },
-    error: { icon: 'fa-circle-xmark', color: '#EF4444', bg: 'rgba(239,68,68,0.15)' }
+    warning: { icon: 'fa-triangle-exclamation', color: '#F59E0B', bg: 'rgba(245,158,11,0.2)' },
+    info: { icon: 'fa-circle-info', color: '#3B82F6', bg: 'rgba(59,130,246,0.2)' },
+    success: { icon: 'fa-circle-check', color: '#10B981', bg: 'rgba(16,185,129,0.2)' },
+    error: { icon: 'fa-circle-xmark', color: '#EF4444', bg: 'rgba(239,68,68,0.2)' }
+  };
+
+  const formatTimestamp = (ts) => {
+    if (!ts || ts === 'Invalid Date' || ts.includes('NaN')) return 'Vừa xong';
+    return ts;
   };
 
   return (
@@ -47,8 +50,8 @@ export default function NotificationCenter() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           background: isOpen ? 'rgba(212,175,55,0.15)' : 'transparent',
-          border: '1px solid var(--border-subtle)',
-          color: 'var(--text-main)',
+          border: '1px solid rgba(212,175,55,0.3)',
+          color: 'var(--text-main, #E5E7EB)',
           padding: '8px 12px',
           borderRadius: '6px',
           cursor: 'pointer',
@@ -73,7 +76,7 @@ export default function NotificationCenter() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            border: '2px solid var(--bg-primary)',
+            border: '2px solid #120D0F',
             animation: 'pulse-notification 2s infinite'
           }}>
             {unreadCount}
@@ -95,10 +98,10 @@ export default function NotificationCenter() {
             right: 0,
             width: '360px',
             maxHeight: '450px',
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-gold)',
+            background: '#1A1215',
+            border: '1px solid #D4AF37',
             borderRadius: '8px',
-            boxShadow: '0 15px 50px rgba(0,0,0,0.8)',
+            boxShadow: '0 15px 50px rgba(0,0,0,0.9)',
             zIndex: 2000,
             overflow: 'hidden',
             animation: 'fadeSlideDown 0.2s ease-out'
@@ -109,10 +112,10 @@ export default function NotificationCenter() {
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '14px 16px',
-              borderBottom: '1px solid var(--border-subtle)',
+              borderBottom: '1px solid rgba(212,175,55,0.2)',
               background: '#120D0F'
             }}>
-              <span style={{ fontFamily: 'var(--font-brand)', fontSize: '0.8rem', letterSpacing: '1px', color: 'var(--accent-gold)' }}>
+              <span style={{ fontFamily: 'var(--font-brand)', fontSize: '0.8rem', letterSpacing: '1px', color: '#D4AF37', fontWeight: '700' }}>
                 THÔNG BÁO
               </span>
               {unreadCount > 0 && (
@@ -121,7 +124,7 @@ export default function NotificationCenter() {
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: '#3B82F6',
+                    color: '#60A5FA',
                     fontSize: '0.75rem',
                     cursor: 'pointer',
                     textDecoration: 'underline'
@@ -134,53 +137,59 @@ export default function NotificationCenter() {
 
             {/* NOTIFICATION LIST */}
             <div style={{ maxHeight: '380px', overflowY: 'auto' }}>
-              {notifications.map(notif => {
-                const typeStyle = typeIcons[notif.type] || typeIcons.info;
-                return (
-                  <div
-                    key={notif.id}
-                    onClick={() => markRead(notif.id)}
-                    style={{
-                      display: 'flex',
-                      gap: '12px',
-                      padding: '12px 16px',
-                      borderBottom: '1px solid var(--border-subtle)',
-                      background: notif.read ? 'transparent' : 'rgba(212,175,55,0.03)',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s'
-                    }}
-                  >
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: typeStyle.bg,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <i className={`fa-solid ${typeStyle.icon}`} style={{ color: typeStyle.color, fontSize: '0.8rem' }}></i>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <strong style={{ fontSize: '0.8rem', color: notif.read ? 'var(--text-muted)' : '#FFF' }}>
-                          {notif.title}
-                        </strong>
-                        {!notif.read && (
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6', flexShrink: 0 }}></span>
-                        )}
+              {notifications.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#9CA3AF', fontSize: '0.85rem' }}>
+                  Không có thông báo mới
+                </div>
+              ) : (
+                notifications.map(notif => {
+                  const typeStyle = typeIcons[notif.type] || typeIcons.info;
+                  return (
+                    <div
+                      key={notif.id}
+                      onClick={() => markRead(notif.id)}
+                      style={{
+                        display: 'flex',
+                        gap: '12px',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        background: notif.read ? '#1A1215' : 'rgba(212,175,55,0.1)',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s'
+                      }}
+                    >
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: typeStyle.bg,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <i className={`fa-solid ${typeStyle.icon}`} style={{ color: typeStyle.color, fontSize: '0.85rem' }}></i>
                       </div>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '3px 0 0 0', lineHeight: '1.4' }}>
-                        {notif.message}
-                      </p>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px', display: 'inline-block' }}>
-                        {notif.timestamp}
-                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong style={{ fontSize: '0.85rem', color: notif.read ? '#9CA3AF' : '#FFFFFF', fontWeight: '600' }}>
+                            {notif.title}
+                          </strong>
+                          {!notif.read && (
+                            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6', flexShrink: 0 }}></span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '0.78rem', color: '#D1D5DB', margin: '4px 0 0 0', lineHeight: '1.4' }}>
+                          {notif.message}
+                        </p>
+                        <span style={{ fontSize: '0.7rem', color: '#9CA3AF', marginTop: '6px', display: 'inline-block' }}>
+                          {formatTimestamp(notif.timestamp)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </>

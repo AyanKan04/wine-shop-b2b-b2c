@@ -225,13 +225,16 @@ const getNotifications = async (req, res) => {
         if (rfq.Status === 'QUOTED') statusText = 'đã có Báo giá mới từ Sales!';
         if (rfq.Status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
         
+        const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
+        const timeStr = isNaN(rfqDate.getTime()) ? new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : rfqDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+
         notifications.push({
           id: 'NOTIF-BUYER-RFQ-' + index,
           type: rfq.Status === 'QUOTED' ? 'success' : 'info',
           title: `Cập nhật báo giá RFQ-${rfq.RFQID}`,
           message: `Yêu cầu báo giá "${rfq.Title || 'Báo giá Rượu'}" ${statusText}`,
           read: false,
-          timestamp: new Date(rfq.CreatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+          timestamp: timeStr
         });
       });
 
@@ -265,13 +268,16 @@ const getNotifications = async (req, res) => {
       });
       
       rfqRes.recordset.forEach((rfq, index) => {
+        const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
+        const timeStr = isNaN(rfqDate.getTime()) ? new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : rfqDate.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+
         notifications.push({
           id: 'NOTIF-ADM-RFQ-' + index,
           type: 'info',
           title: 'RFQ mới cần báo giá',
           message: `RFQ-${rfq.RFQID} từ ${rfq.CompanyName || 'Khách B2B'} đang chờ phát hành quotation`,
           read: false,
-          timestamp: new Date(rfq.CreatedAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})
+          timestamp: timeStr
         });
       });
     }
