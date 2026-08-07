@@ -544,3 +544,51 @@ footer {
   }
 }
 
+/* 8. Mobile Responsive Styles */
+@media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+  }
+
+  .nav-container {
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+  }
+
+  .nav-links {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  .nav-links button {
+    font-size: 0.7rem !important;
+    padding: 5px 8px !important;
+  }
+
+  .hero-title {
+    font-size: 2rem !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.9rem !important;
+  }
+
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    width: 100% !important;
+  }
+
+  .bento-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bento-item-large {
+    grid-column: span 1 !important;
+  }
+}
+
+

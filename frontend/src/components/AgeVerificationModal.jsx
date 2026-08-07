@@ -32,15 +32,17 @@ export default function AgeVerificationModal() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '20px'
+      padding: '12px',
+      boxSizing: 'border-box'
     }}>
       <div style={{
         background: '#FFFFFF',
         border: '1px solid var(--border-gold)',
         borderRadius: '12px',
-        padding: '45px 35px',
-        maxWidth: '520px',
-        width: '100%',
+        padding: '32px 20px',
+        maxWidth: '500px',
+        width: '92vw',
+        boxSizing: 'border-box',
         textAlign: 'center',
         boxShadow: 'none'
       }}>
