@@ -249,8 +249,8 @@ const createMockPool = () => {
             return { recordset: [] };
           }
 
-          // 3. Products query
-          if (q.includes('products')) {
+          // 3. Products query (Exclude tier & price tables)
+          if (q.includes('products') && !q.includes('producttierprices') && !q.includes('productprices')) {
             if (inputs.ProductID) {
               const p = memoryDb.products.find(x => x.ProductID == inputs.ProductID);
               return { recordset: p ? [p] : [] };
