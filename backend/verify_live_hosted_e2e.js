@@ -263,7 +263,7 @@ async function runLiveAudit() {
     const shipList = resShip.data?.data || resShip.data || [];
     const whValid = resInv.ok && invList.length > 0 && invList.every(i => i.product_name && i.sku) && resShip.ok && shipList.length > 0 && resAdjust.ok;
 
-    logTest('15. Kho Hàng & Logistics (Tồn Kho Thực Tế, Nhập/Xuất & Vận Chuyển Realtime)', whValid, `Inv Count: ${invList.length} | Ship Count: ${shipList.length} | Adjust: ${resAdjust.data?.message}`);
+    logTest('15. Kho Hàng & Logistics (Tồn Kho Thực Tế, Nhập/Xuất & Vận Chuyển Realtime)', whValid, `Inv Raw: ${JSON.stringify(invList)} | Ship Count: ${shipList.length} | Adjust: ${resAdjust.data?.message}`);
   }
 
   // 16. Frontend Vercel Live Page Load Check

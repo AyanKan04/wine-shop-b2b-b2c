@@ -270,7 +270,11 @@ const createMockPool = () => {
               }
               return { recordset: [] };
             }
-            const invs = memoryDb.inventory.map(inv => {
+            let targetList = memoryDb.inventory;
+            if (inputs.ProductID) {
+              targetList = targetList.filter(x => x.ProductID == inputs.ProductID);
+            }
+            const invs = targetList.map(inv => {
               const p = memoryDb.products.find(x => x.ProductID == inv.ProductID);
               const qoh = Number(inv.QuantityOnHand || 0);
               const res = Number(inv.ReservedQuantity || 0);
