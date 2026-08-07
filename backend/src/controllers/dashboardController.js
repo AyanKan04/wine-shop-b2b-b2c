@@ -193,8 +193,11 @@ const getActivityFeed = async (req, res) => {
 const getNotifications = async (req, res) => {
   try {
     const pool = await getPool();
+    const companyId = req.user?.company_id;
+    const userId = req.user?.user_id;
     const userType = req.user?.user_type || 'BUYER_REP';
     const isBuyerRole = userType === 'BUYER' || userType === 'BUYER_REP';
+    let notifications = [];
 
     if (isBuyerRole && companyId) {
       // 1. Unpaid invoices FOR THIS BUYER COMPANY ONLY

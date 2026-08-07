@@ -49,64 +49,116 @@ const getOrders = async (req, res) => {
 
 const getCreditLimit = async (req, res) => {
   try {
-    const company_id = (req.user && req.user.company_id) ? req.user.company_id : 1;
+    const userType = req.user?.user_type || 'BUYER_REP';
+    const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+    const companyId = req.user?.company_id;
+
     const pool = await getPool();
-    const result = await pool.request()
-      .input('CompanyID', sql.Int, company_id)
-      .query(`SELECT * FROM CreditLimits WHERE CompanyID = @CompanyID`);
-    
-    let credit_limit = { total_limit: 1000000000, used_amount: 0, available_balance: 1000000000 };
-    if (result.recordset.length > 0) {
-      const row = result.recordset[0];
-      const total = Number(row.CreditLimitAmount || 0);
-      const used = Number(row.UsedAmount || 0);
-      credit_limit = {
-        total_limit: total,
-        used_amount: used,
-        available_balance: total - used > 0 ? total - used : 0
-      };
+    let credit_limit = { total_limit: 0, used_amount: 0, available_balance: 0 };
+    let invoices = [];
+
+    if (isBuyerRole) {
+      if (companyId) {
+        // Fetch CreditLimit for this company
+        const result = await pool.request()
+          .input('CompanyID', sql.BigInt, companyId)
+          .query(`SELECT * FROM CreditLimits WHERE CompanyID = @CompanyID`);
+
+        if (result.recordset.length > 0) {
+          const row = result.recordset[0];
+          const total = Number(row.CreditLimitAmount || 0);
+          const used = Number(row.UsedAmount || 0);
+          credit_limit = {
+            total_limit: total,
+            used_amount: used,
+            available_balance: total - used > 0 ? total - used : 0
+          };
+        }
+
+        // Fetch Invoices for this company ONLY
+        const invResult = await pool.request()
+          .input('BuyerCompanyID', sql.BigInt, companyId)
+          .query(`
+            SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
+                   o.OrderNumber, bc.CompanyName as BuyerCompany
+            FROM Invoices i
+            JOIN Orders o ON i.OrderID = o.OrderID
+            LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
+            WHERE o.BuyerCompanyID = @BuyerCompanyID
+            ORDER BY i.InvoiceDate DESC
+          `);
+
+        invoices = invResult.recordset.map(row => {
+          const amt = Number(row.Amount || 0);
+          const paid = Number(row.PaidAmount || 0);
+          const remaining = amt - paid > 0 ? amt - paid : 0;
+          return {
+            invoice_id: row.InvoiceID,
+            order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
+            buyer_company: row.BuyerCompany || 'Red Apron Buyer',
+            invoice_number: row.InvoiceNumber,
+            issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
+            due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
+            status: row.Status,
+            amount: amt,
+            paid_amount: paid,
+            remaining_amount: remaining
+          };
+        });
+      }
+    } else {
+      // ADMIN / FINANCE OFFICER: Fetch summary and all invoices
+      const result = await pool.request()
+        .input('CompanyID', sql.BigInt, companyId || 1)
+        .query(`SELECT * FROM CreditLimits WHERE CompanyID = @CompanyID`);
+
+      if (result.recordset.length > 0) {
+        const row = result.recordset[0];
+        const total = Number(row.CreditLimitAmount || 0);
+        const used = Number(row.UsedAmount || 0);
+        credit_limit = {
+          total_limit: total,
+          used_amount: used,
+          available_balance: total - used > 0 ? total - used : 0
+        };
+      }
+
+      const invResult = await pool.request().query(`
+        SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
+               o.OrderNumber, bc.CompanyName as BuyerCompany
+        FROM Invoices i
+        JOIN Orders o ON i.OrderID = o.OrderID
+        LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
+        ORDER BY i.InvoiceDate DESC
+      `);
+
+      invoices = invResult.recordset.map(row => {
+        const amt = Number(row.Amount || 0);
+        const paid = Number(row.PaidAmount || 0);
+        const remaining = amt - paid > 0 ? amt - paid : 0;
+        return {
+          invoice_id: row.InvoiceID,
+          order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
+          buyer_company: row.BuyerCompany || 'Red Apron Buyer',
+          invoice_number: row.InvoiceNumber,
+          issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
+          due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
+          status: row.Status,
+          amount: amt,
+          paid_amount: paid,
+          remaining_amount: remaining
+        };
+      });
     }
 
-    const invRequest = pool.request();
-    let invQuery = `
-      SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
-             o.OrderNumber, bc.CompanyName as BuyerCompany
-      FROM Invoices i
-      JOIN Orders o ON i.OrderID = o.OrderID
-      LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-      WHERE 1=1
-    `;
-
-    if (req.user && req.user.user_type === 'BUYER_REP' && req.user.company_id) {
-      invQuery += ` AND o.BuyerCompanyID = @BuyerCompanyID `;
-      invRequest.input('BuyerCompanyID', sql.BigInt, req.user.company_id);
-    }
-    invQuery += ` ORDER BY i.InvoiceDate DESC `;
-
-    const invResult = await invRequest.query(invQuery);
-
-    const invoices = invResult.recordset.map(row => {
-      const amt = Number(row.Amount || 0);
-      const paid = Number(row.PaidAmount || 0);
-      const remaining = amt - paid > 0 ? amt - paid : 0;
-      return {
-        invoice_id: row.InvoiceID,
-        order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
-        buyer_company: row.BuyerCompany || 'Red Apron Buyer',
-        invoice_number: row.InvoiceNumber,
-        issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
-        due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
-        status: row.Status,
-        amount: amt,
-        paid_amount: paid,
-        remaining_amount: remaining
-      };
+    res.json({
+      success: true,
+      credit: credit_limit,
+      invoices
     });
-
-    res.json({ success: true, credit: credit_limit, invoices });
   } catch (err) {
     console.error('Error fetching credit limit:', err);
-    res.status(500).json({ success: false, message: 'Lỗi tải công nợ' });
+    res.status(500).json({ success: false, message: 'Lỗi tải dữ liệu Đơn hàng & Công nợ' });
   }
 };
 
@@ -350,7 +402,7 @@ const getLCDocuments = async (req, res) => {
 
     if (isBuyerRole) {
       if (companyId) {
-        query += ` AND (CompanyID = @CompanyID OR BuyerCompany IN (SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID)) `;
+        query += ` AND BuyerCompany IN (SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID) `;
         request.input('CompanyID', sql.BigInt, companyId);
       } else {
         query += ` AND 1=0 `;

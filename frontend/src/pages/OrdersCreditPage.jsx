@@ -43,7 +43,8 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
       if (ordersRes.success && ordersRes.data) setOrdersList(ordersRes.data);
       
       if (creditRes.success) {
-        if (creditRes.credit) setCreditState(creditRes.credit);
+        const creditObj = creditRes.credit || creditRes.credit_limit;
+        if (creditObj) setCreditState(creditObj);
         if (creditRes.invoices) setInvoiceList(creditRes.invoices);
       }
     } catch (err) {
