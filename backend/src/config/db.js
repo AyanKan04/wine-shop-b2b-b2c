@@ -235,7 +235,7 @@ const createMockPool = () => {
           // 8. LCDocuments
           if (q.includes('lcdocuments')) {
             if (q.includes('insert')) {
-              const newId = 7000 + memoryDb.lcDocuments.length + 1;
+              const newId = Math.floor(7000 + Math.random() * 100000);
               const newLc = {
                 LCID: newId,
                 lc_id: newId,
