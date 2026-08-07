@@ -153,7 +153,7 @@ const createMockPool = () => {
           if (q.includes('companylicenses') && q.includes('pending_verification')) {
             return { recordset: [{ count: 1 }] };
           }
-          if (q.includes('inventories') && (q.includes('sum') || q.includes('quantityonhand') || q.includes('total_inventory'))) {
+          if (q.includes('inventories') && (q.includes('total_inventory') || (q.includes('sum(') && q.includes('quantityonhand')))) {
             const totInv = memoryDb.inventory.reduce((acc, i) => acc + (Number(i.QuantityOnHand) || 0), 0);
             return { recordset: [{ total_inventory: totInv || 410 }] };
           }
