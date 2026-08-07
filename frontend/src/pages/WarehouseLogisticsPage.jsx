@@ -382,7 +382,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
                           background: isLow ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
                           color: isLow ? '#EF4444' : '#10B981'
                         }}>
-                          {isLow ? '⚠ Thấp' : '✓ OK'}
+                          {isLow ? <><i className="fa-solid fa-triangle-exclamation"></i> Thấp</> : <><i className="fa-solid fa-check"></i> OK</>}
                         </span>
                       </div>
                     </td>

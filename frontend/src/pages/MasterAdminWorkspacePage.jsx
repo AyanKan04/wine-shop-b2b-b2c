@@ -275,7 +275,7 @@ export default function MasterAdminWorkspacePage({
   const [activeAdminModule, setActiveAdminModule] = useState('overview');
 
   const adminModules = [
-    { id: 'overview', title: '📊 Tổng Quan', icon: 'fa-chart-line', desc: 'Dashboard Analytics & Activity Feed' },
+    { id: 'overview', title: 'Tổng Quan', icon: 'fa-chart-line', desc: 'Dashboard Analytics & Activity Feed' },
     { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá' },
     { id: 'executive', title: '2. Admin Duyệt Phép', icon: 'fa-shield-halved', desc: 'Thẩm định Giấy Phép Rượu & Doanh Nghiệp' },
     { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm' },

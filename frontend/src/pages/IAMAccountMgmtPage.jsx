@@ -323,7 +323,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
     <div className="card-box">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, color: '#FFF' }}>
+          <h3 style={{ fontFamily: 'var(--font-body)', fontWeight: '700', margin: 0, color: 'var(--text-main)' }}>
             <i className="fa-solid fa-users-gear gold-text"></i> Quản Lý Tài Khoản (IAM & RBAC)
           </h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Phân quyền và quản lý tài khoản người dùng hệ thống.</p>
@@ -457,7 +457,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color: 'var(--text-muted)'}}>⏳ Đang tải danh sách tài khoản...</td></tr>
+            <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color: 'var(--text-muted)'}}><i className="fa-solid fa-circle-notch fa-spin"></i> Đang tải danh sách tài khoản...</td></tr>
           ) : filteredUsers.length === 0 ? (
             <tr><td colSpan="8" style={{textAlign:'center', padding:'30px', color: 'var(--text-muted)'}}>Không có tài khoản nào trùng khớp với từ khóa tìm kiếm.</td></tr>
           ) : (

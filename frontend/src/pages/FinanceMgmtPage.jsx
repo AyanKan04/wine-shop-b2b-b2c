@@ -388,11 +388,11 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
                   <td>
                     {inv.status === 'PAID' ? (
                       <span style={{ color: '#10B981', background: 'rgba(16,185,129,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
-                        ✓ Đã Thanh Toán
+                        <i className="fa-solid fa-check"></i> Đã Thanh Toán
                       </span>
                     ) : inv.status === 'PARTIALLY_PAID' ? (
                       <span style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
-                        ⚡ Trả 1 Phần
+                        <i className="fa-solid fa-bolt"></i> Trả 1 Phần
                       </span>
                     ) : (
                       <span style={{ color: isOverdue ? '#EF4444' : '#6B7280', background: isOverdue ? 'rgba(239,68,68,0.1)' : 'rgba(107,114,128,0.1)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '600' }}>
@@ -465,7 +465,7 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
         </table>
       </div>
 
-      {/* MODAL THU TIỀN HÓA ĐƠN (Swimlane 1: Finance Officer Collection Modal) */}
+      {/* MODAL THU TIỀN HÓA ĐƠN */}
       {showPaymentModal && selectedInvoice && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#FFFFFF', border: '2px solid #D4AF37', borderRadius: '10px', padding: '30px', maxWidth: '600px', width: '100%', color: '#1A1A1A' }}>
@@ -475,7 +475,7 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
                   <i className="fa-solid fa-receipt" style={{ marginRight: '8px' }}></i> Ghi Nhận Thu Tiền Hóa Đơn - {selectedInvoice.invoice_number}
                 </h3>
                 <span style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                  Thực hiện ghi nhận dòng tiền thực tế (INSERT Payments & UPDATE CreditLimits).
+                  Thực hiện ghi nhận dòng tiền thực tế.
                 </span>
               </div>
               <button onClick={() => setShowPaymentModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#6B7280' }}>✕</button>
@@ -483,7 +483,7 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
 
             <form onSubmit={handlePaymentSubmit} style={{ marginTop: '20px' }}>
               <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '15px', marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem' }}>
-                <div><strong>Đối tác B2B:</strong> {selectedInvoice.buyer_company || 'Doanh Nghiệp B2B'}</div>
+                <div><strong>Đối tác B2B:</strong> {selectedInvoice.buyer_company || 'Lotte Mart VN'}</div>
                 <div><strong>Mã đơn hàng:</strong> <code>{selectedInvoice.order_number}</code></div>
                 <div><strong>Tổng tiền hóa đơn:</strong> <span style={{ color: '#111827', fontWeight: '700' }}>{formatVND(selectedInvoice.amount)}</span></div>
                 <div><strong>Dư nợ còn lại:</strong> <span style={{ color: '#DC2626', fontWeight: '700' }}>{formatVND(selectedInvoice.remaining_amount !== undefined ? selectedInvoice.remaining_amount : selectedInvoice.amount)}</span></div>
@@ -510,11 +510,11 @@ export default function FinanceMgmtPage({ credit, invoices, showToast }) {
               <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#374151' }}>Phương Thức Thanh Toán *</label>
                 <select className="form-control" value={payMethod} onChange={e => setPayMethod(e.target.value)} required>
-                  <option value="BANK_TRANSFER">🏦 Chuyển Khoản Ngân Hàng (Bank Transfer)</option>
-                  <option value="CASH">💵 Tiền Mặt (Cash)</option>
-                  <option value="CREDIT_CARD">💳 Thẻ Tín Dụng Doanh Nghiệp (Visa/Mastercard)</option>
-                  <option value="LC">📜 Thư Tín Dụng Bảo Lãnh Ngân Hàng (L/C)</option>
-                  <option value="CHEQUE">📑 Séc Ngân Hàng (Cheque)</option>
+                  <option value="BANK_TRANSFER">Chuyển Khoản Ngân Hàng (Bank Transfer)</option>
+                  <option value="CASH">Tiền Mặt (Cash)</option>
+                  <option value="CREDIT_CARD">Thẻ Tín Dụng Doanh Nghiệp (Visa/Mastercard)</option>
+                  <option value="LC">Thư Tín Dụng Bảo Lãnh Ngân Hàng (L/C)</option>
+                  <option value="CHEQUE">Séc Ngân Hàng (Cheque)</option>
                 </select>
               </div>
 
