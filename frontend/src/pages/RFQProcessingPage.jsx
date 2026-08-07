@@ -65,6 +65,9 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
       notes: quoteForm.notes
     };
 
+    setQuotationsSent(prev => [quotation, ...prev]);
+    setRfqList(prev => prev.map(r => r.rfq_id === selectedRfq.rfq_id ? { ...r, status: 'QUOTATION_SENT' } : r));
+
     apiService.createQuotation(payload)
       .then(res => {
         if (res.success) {
@@ -73,8 +76,6 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
         }
       })
       .catch(err => {
-        setQuotationsSent([quotation, ...quotationsSent]);
-        setRfqList(prev => prev.map(r => r.rfq_id === selectedRfq.rfq_id ? { ...r, status: 'QUOTATION_SENT' } : r));
         showToast(`Đã phát hành Báo giá Quotation #${quotation.quotation_id} cho RFQ #${selectedRfq.rfq_id}!`);
       });
 

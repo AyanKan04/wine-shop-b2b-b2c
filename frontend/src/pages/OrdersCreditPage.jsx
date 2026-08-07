@@ -93,7 +93,7 @@ export default function OrdersCreditPage({ orders, credit, invoices, showToast }
         setShowPaymentModal(false);
 
         // Optimistic state update for instant UI feedback
-        setInvoices(prev => prev.map(inv => {
+        setInvoiceList(prev => prev.map(inv => {
           if (inv.invoice_id === selectedInvoice.invoice_id) {
             const newPaid = (inv.paid_amount || 0) + val;
             const newRem = inv.amount - newPaid > 0 ? inv.amount - newPaid : 0;
