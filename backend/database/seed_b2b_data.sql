@@ -20,7 +20,7 @@ BEGIN
     -- 2. Users (B2B Test Accounts) - password is Password123!
     INSERT INTO users (user_id, company_id, email, username, password_hash, first_name, last_name, user_type, status)
     VALUES 
-    (2, 2, 'admin@redapron.vn', 'admin_user', '$2a$10$wTfO3y6w.x69.X1DqB5E/um2d0QJ4d91u6nXZH5l.9oQ4aD1k5j3C', 'Tran', 'Admin', 'COMPANY_ADMIN', 'ACTIVE'),
+    (2, 2, 'admin@redapron.vn', 'admin_user', '$2a$10$wTfO3y6w.x69.X1DqB5E/um2d0QJ4d91u6nXZH5l.9oQ4aD1k5j3C', 'Tran', 'Admin', 'PLATFORM_ADMIN', 'ACTIVE'),
     (3, 2, 'seller@redapron.vn', 'seller_user', '$2a$10$wTfO3y6w.x69.X1DqB5E/um2d0QJ4d91u6nXZH5l.9oQ4aD1k5j3C', 'Le', 'Seller', 'SALES_REP', 'ACTIVE'),
     (4, 2, 'accountant@redapron.vn', 'ketoan_user', '$2a$10$wTfO3y6w.x69.X1DqB5E/um2d0QJ4d91u6nXZH5l.9oQ4aD1k5j3C', 'Pham', 'Accountant', 'FINANCE_OFFICER', 'ACTIVE'),
     (5, 1, 'purchasing@lottesaigon.com', 'lotte_buyer', '$2a$10$wTfO3y6w.x69.X1DqB5E/um2d0QJ4d91u6nXZH5l.9oQ4aD1k5j3C', 'Nguyen', 'Buyer Lotte', 'BUYER_REP', 'ACTIVE'),
