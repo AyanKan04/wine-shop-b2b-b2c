@@ -111,11 +111,13 @@ const createRFQ = async (req, res) => {
 
       const finalTitle = title || `Yêu cầu báo giá ${finalProductName}`;
 
-      const buyerCompanyId = req.user && req.user.company_id ? parseInt(req.user.company_id) : 1;
+      const buyerCompanyId = req.user && req.user.company_id ? req.user.company_id : 1;
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
 
-      if (buyerCompanyId === parseInt(sellerCompanyId)) {
-        return res.status(400).json({ success: false, message: 'Tuyệt đối không thể giao dịch nội bộ. (Buyer và Sales không được phép thuộc cùng một công ty)' });
+      // STRICT RBAC: Prevent Intra-company RFQs
+      if (parseInt(buyerCompanyId) === parseInt(sellerCompanyId)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, message: 'Tuyệt đối không thể giao dịch nội bộ.' });
       }
 
       const rfqResult = await client.query(`
@@ -155,21 +157,6 @@ const createRFQ = async (req, res) => {
   } catch (err) {
     console.error('Error creating RFQ:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi tạo RFQ', error: err.message, stack: err.stack });
-  }
-};
-
-const rejectRFQ = async (req, res) => {
-  const { rfq_id, reason, suggested_product_ids } = req.body;
-  try {
-    const pool = await getPool();
-    await pool.query(
-      `UPDATE rfqs SET status = 'REJECTED', rejection_reason = $1, suggested_product_ids = $2 WHERE rfq_id = $3`,
-      [reason, JSON.stringify(suggested_product_ids || []), rfq_id]
-    );
-    res.json({ success: true, message: 'Đã từ chối Yêu cầu báo giá' });
-  } catch (err) {
-    console.error('Error rejecting RFQ:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi từ chối RFQ' });
   }
 };
 
@@ -489,202 +476,31 @@ const updateRFQStatus = async (req, res) => {
     res.json({ success: true, message: `Đã chuyển trạng thái RFQ-${rfqId} sang ${status}` });
   } catch (err) {
     console.error('Error updating RFQ status:', err);
-buyer_company: 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-        seller_company: "MAISON DE L'ALCOOL RED APRON FACTORY",
-        offer_unit_price: price,
-        quantity: actualQty,
-        valid_until: '2026-12-31',
-        status: 'PENDING'
-      };
-
-      res.status(201).json({ success: true, message: 'Phát hành Bảng Báo Giá (Quotation) thành công!', quotation: newQuotation });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.error('Error creating quotation:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi tạo báo giá' });
+    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật trạng thái RFQ' });
   }
 };
 
-const updateQuotationStatus = async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  const quotationId = parseInt(id);
+const rejectRFQ = async (req, res) => {
+  const { rfq_id, reason, suggested_product_ids } = req.body;
+  if (!rfq_id || !reason) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp mã RFQ và lý do từ chối.' });
+  }
 
   try {
     const pool = await getPool();
-    const client = await pool.connect();
-    
-    try {
-      await client.query('BEGIN');
-
-      const qCheck = await client.query(`
-          SELECT q.rfq_id, q.buyer_company_id, q.seller_company_id, q.status, qi.product_id, qi.offer_unit_price, qi.quantity 
-          FROM quotations q
-          LEFT JOIN quotation_items qi ON q.quotation_id = qi.quotation_id
-          WHERE q.quotation_id = $1
-        `, [quotationId]);
-      
-      if (qCheck.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ success: false, message: 'Không tìm thấy báo giá' });
-      }
-
-      const qData = qCheck.rows[0];
-
-      if (req.user?.company_id && qData.buyer_company_id !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN') {
-         await client.query('ROLLBACK');
-         return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên báo giá này.' });
-      }
-      
-      if (qData.status === 'ACCEPTED' && status !== 'FULFILLED') {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ success: false, message: 'Báo giá này đã được chấp nhận từ trước.' });
-      }
-      
-      if (qData.status === 'FULFILLED') {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ success: false, message: 'Báo giá này đã hoàn tất giao hàng.' });
-      }
-
-      const rfqId = qData.rfq_id;
-      const totalAmount = (qData.offer_unit_price || 0) * (qData.quantity || 0);
-
-      // Only restrict if we are not moving to FULFILLED
-      let updateQuery = `UPDATE quotations SET status = $1 WHERE quotation_id = $2`;
-      if (status !== 'FULFILLED' && status !== 'ACCEPTED') {
-          updateQuery += ` AND status != 'ACCEPTED' AND status != 'FULFILLED'`;
-      }
-      const statusUpdateRes = await client.query(updateQuery, [status, quotationId]);
-      
-      if (statusUpdateRes.rowCount === 0) {
-         await client.query('ROLLBACK');
-         return res.status(400).json({ success: false, message: 'Không thể cập nhật trạng thái báo giá.' });
-      }
-
-      if (status === 'ACCEPTED') {
-        const creditCheck = await client.query('SELECT credit_limit_amount, used_amount FROM credit_limits WHERE company_id = $1', [qData.buyer_company_id]);
-        
-        if (creditCheck.rows.length > 0) {
-          const limit = Number(creditCheck.rows[0].credit_limit_amount || 0);
-          const used = Number(creditCheck.rows[0].used_amount || 0);
-          if (used + totalAmount > limit) {
-            await client.query('ROLLBACK');
-            return res.status(400).json({ success: false, message: `Hạn mức tín dụng không đủ để hoàn tất đơn hàng. Còn lại: ${(limit - used).toLocaleString('vi-VN')} VNĐ.` });
-          }
-        }
-
-        const overdueCheck = await client.query(`
-            SELECT COUNT(*) as overdue_count 
-            FROM invoices i
-            JOIN orders o ON i.order_id = o.order_id
-            WHERE o.buyer_company_id = $1 AND i.status = 'UNPAID' AND i.due_date < CURRENT_TIMESTAMP
-          `, [qData.buyer_company_id]);
-        
-        if (overdueCheck.rows.length > 0 && Number(overdueCheck.rows[0].overdue_count) > 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ success: false, message: 'Tài khoản sỉ bị tạm khóa chức năng mua nợ Net-30 do có hóa đơn quá hạn chưa thanh toán.' });
-        }
-
-        let prodId = qData.product_id;
-        
-        if (!prodId || isNaN(prodId) || prodId === 101) {
-          const firstProdQuery = await client.query('SELECT product_id FROM products LIMIT 1');
-          if (firstProdQuery.rows.length > 0) {
-            prodId = firstProdQuery.rows[0].product_id;
-          }
-        }
-        const stockReserveResult = await client.query(`
-            UPDATE inventories 
-            SET reserved_quantity = reserved_quantity + $1 
-            WHERE product_id = $2 AND (quantity_on_hand - reserved_quantity) >= $1
-          `, [qData.quantity, prodId]);
-
-        if (stockReserveResult.rowCount === 0) {
-          await client.query('ROLLBACK');
-          return res.status(400).json({ success: false, message: 'Số lượng hàng tồn kho khả dụng không đủ để đáp ứng đơn hàng này.' });
-        }
-
-        const orderNumber = `ORD-2026-${8800 + quotationId}`;
-        const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
-        
-        const ordRes = await client.query(`
-            INSERT INTO orders (buyer_company_id, seller_company_id, quotation_id, order_number, order_status, payment_method, total_amount, created_by, created_at)
-            VALUES ($1, $2, $3, $4, 'PROCESSING', 'NET_30_CREDIT', $5, $6, CURRENT_TIMESTAMP)
-            RETURNING order_id
-          `, [qData.buyer_company_id, qData.seller_company_id, quotationId, orderNumber, totalAmount, createdBy]);
-        
-        const orderId = ordRes.rows[0].order_id;
-
-        await client.query(`
-            INSERT INTO order_items (order_id, product_id, quantity, unit_price)
-            VALUES ($1, $2, $3, $4)
-          `, [orderId, prodId, qData.quantity, qData.offer_unit_price]);
-
-        const invoiceNumber = `INV-2026-${8800 + quotationId}`;
-        await client.query(`
-            INSERT INTO invoices (order_id, invoice_number, invoice_date, due_date, status, amount)
-            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '30 days', 'UNPAID', $3)
-          `, [orderId, invoiceNumber, totalAmount]);
-
-        await client.query(`
-            UPDATE credit_limits 
-            SET used_amount = COALESCE(used_amount, 0) + $1
-            WHERE company_id = $2
-          `, [totalAmount, qData.buyer_company_id]);
-
-        await client.query(`UPDATE rfqs SET status = 'ACCEPTED' WHERE rfq_id = $1`, [rfqId]);
-
-      } else if (status === 'PENDING' || status === 'SUBMITTED') {
-        await client.query(`UPDATE rfqs SET status = 'SUBMITTED' WHERE rfq_id = $1`, [rfqId]);
-      } else if (status === 'FULFILLED') {
-        await client.query(`UPDATE rfqs SET status = 'FULFILLED' WHERE rfq_id = $1`, [rfqId]);
-      }
-
-      await client.query('COMMIT');
-      res.json({
-        success: true,
-        message: `Đã cập nhật trạng thái báo giá sang: ${status}`
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.error('Error updating quotation status:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
-  }
-};
-
-const updateRFQStatus = async (req, res) => {
-  const rfqId = parseInt(req.params.id);
-  const { status } = req.body;
-  if (!status) {
-    return res.status(400).json({ success: false, message: 'Thiếu trạng thái status' });
-  }
-  try {
-    const pool = await getPool();
-    const result = await pool.query(`UPDATE rfqs SET status = $1 WHERE rfq_id = $2`, [status, rfqId]);
+    const result = await pool.query(
+      `UPDATE rfqs SET status = 'REJECTED', rejection_reason = $1, suggested_product_ids = $2 WHERE rfq_id = $3`,
+      [reason, suggested_product_ids || [], rfq_id]
+    );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy RFQ' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy RFQ để từ chối.' });
     }
 
-    // Insert Audit Log (assuming audit_logs table exists)
-    try {
-      await pool.query(`INSERT INTO audit_logs (user_id, action, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)`, [req.user?.user_id || 1, `Chuyển cơ hội RFQ-${rfqId} sang trạng thái: ${status}`]);
-    } catch(e) {} // ignore if audit_logs doesn't exist
-
-    res.json({ success: true, message: `Đã chuyển trạng thái RFQ-${rfqId} sang ${status}` });
+    res.json({ success: true, message: `Đã từ chối RFQ #${rfq_id}.` });
   } catch (err) {
-    console.error('Error updating RFQ status:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi cập nhật trạng thái RFQ' });
+    console.error('Error rejecting RFQ:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server khi từ chối RFQ' });
   }
 };
 
