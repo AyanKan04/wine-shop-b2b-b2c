@@ -204,9 +204,9 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
             }}
           >
             {currentUser.role === 'PLATFORM_ADMIN' ? (
-              <><i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i> QUẢN TRỊ PLATFORM</>
+              <><i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i> TRANG QUẢN TRỊ MASTER ADMIN</>
             ) : currentUser.role === 'COMPANY_ADMIN' ? (
-              <><i className="fa-solid fa-building-user" style={{ marginRight: '6px', color: '#D4AF37' }}></i> QUẢN TRỊ COMPANY ADMIN</>
+              <><i className="fa-solid fa-building-user" style={{ marginRight: '6px', color: '#D4AF37' }}></i> TRANG QUẢN TRỊ COMPANY ADMIN</>
             ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
               <><i className="fa-solid fa-comments-dollar" style={{ marginRight: '6px', color: '#D4AF37' }}></i> XỬ LÝ BÁO GIÁ</>
             ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
