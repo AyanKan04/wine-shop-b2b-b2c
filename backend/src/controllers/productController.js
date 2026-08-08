@@ -133,11 +133,17 @@ const createProduct = async (req, res) => {
       await client.query('BEGIN');
 
       const slug = product_name.toLowerCase().replace(/ /g, '-') + '-' + sku.toLowerCase();
+      
+      const v_year = vintage_year === '' ? null : vintage_year;
+      const a_content = alcohol_content === '' ? null : alcohol_content;
+      const v_ml = volume_ml === '' ? null : volume_ml;
+      const m_q = moq === '' ? null : moq;
+
       const result = await client.query(`
           INSERT INTO products (sku, product_name, slug, category_id, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description)
           VALUES ($1, $2, $3, (SELECT category_id FROM categories WHERE category_name = $4 LIMIT 1), $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING product_id
-        `, [sku, product_name, slug, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description]);
+        `, [sku, product_name, slug, category, country_of_origin, region, grape_variety, v_year, a_content, v_ml, m_q, image_url, description]);
 
       const productId = result.rows[0].product_id;
 
@@ -181,6 +187,11 @@ const updateProduct = async (req, res) => {
       await client.query('BEGIN');
 
       const companyId = req.user?.company_id || 0;
+      const v_year = vintage_year === '' ? null : vintage_year;
+      const a_content = alcohol_content === '' ? null : alcohol_content;
+      const v_ml = volume_ml === '' ? null : volume_ml;
+      const m_q = moq === '' ? null : moq;
+
       let updateQuery = `
           UPDATE products SET 
             sku = $1, product_name = $2, category_id = (SELECT category_id FROM categories WHERE category_name = $3 LIMIT 1), 
@@ -189,7 +200,7 @@ const updateProduct = async (req, res) => {
             moq = $10, image_url = $11, description = $12
           WHERE product_id = $13 
         `;
-      let params = [sku, product_name, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description, productId];
+      let params = [sku, product_name, category, country_of_origin, region, grape_variety, v_year, a_content, v_ml, m_q, image_url, description, productId];
       
       if (req.user?.user_type === 'COMPANY_ADMIN') {
         updateQuery += ` AND seller_company_id = $14 `;
