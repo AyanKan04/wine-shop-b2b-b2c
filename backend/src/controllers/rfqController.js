@@ -116,7 +116,7 @@ const createRFQ = async (req, res) => {
     }
   } catch (err) {
     console.error('Error creating RFQ:', err);
-    res.status(500).json({ success: false, message: 'Lỗi server khi tạo RFQ' });
+    res.status(500).json({ success: false, message: 'Lỗi server khi tạo RFQ', error: err.message, stack: err.stack });
   }
 };
 
