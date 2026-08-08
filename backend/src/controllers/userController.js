@@ -18,10 +18,10 @@ const getUsers = async (req, res) => {
     let params = [];
     let paramIndex = 1;
 
-    // Nếu không phải là PLATFORM_ADMIN, chỉ cho phép xem user thuộc cùng công ty
+    // Nếu không phải là PLATFORM_ADMIN, chỉ cho phép xem user thuộc cùng công ty (Và không hiển thị chính họ)
     if (req.user.user_type !== 'PLATFORM_ADMIN') {
-      query += ` WHERE u.company_id = $${paramIndex++} AND u.status != 'DELETED'`;
-      params.push(req.user.company_id);
+      query += ` WHERE u.company_id = $${paramIndex++} AND u.status != 'DELETED' AND u.user_id != $${paramIndex++}`;
+      params.push(req.user.company_id, req.user.user_id);
       
       if (search) {
         query += ` AND (u.username ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
@@ -81,11 +81,11 @@ const createUser = async (req, res) => {
         return res.status(403).json({ success: false, message: 'Không có quyền tạo tài khoản Platform Admin' });
       }
       
-      // Giới hạn tạo tối đa 5 tài khoản nhân viên (Tổng cộng 6 tính cả admin)
-      const countResult = await pool.query(`SELECT COUNT(*) FROM users WHERE company_id = $1 AND status != 'DELETED'`, [targetCompanyId]);
+      // Giới hạn tạo tối đa 5 tài khoản nhân viên (không tính Company Admin)
+      const countResult = await pool.query(`SELECT COUNT(*) FROM users WHERE company_id = $1 AND user_type != 'COMPANY_ADMIN' AND status != 'DELETED'`, [targetCompanyId]);
       const currentCount = parseInt(countResult.rows[0].count);
-      if (currentCount >= 6) {
-        return res.status(400).json({ success: false, message: 'Doanh nghiệp đã đạt giới hạn tạo 5 tài khoản nhân viên nội bộ.' });
+      if (currentCount >= 5) {
+        return res.status(400).json({ success: false, message: 'Doanh nghiệp đã đạt giới hạn tạo tối đa 5 tài khoản nhân viên nội bộ.' });
       }
     }
 
