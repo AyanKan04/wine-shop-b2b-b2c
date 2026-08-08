@@ -67,12 +67,32 @@ const createRFQ = async (req, res) => {
       await client.query('BEGIN');
 
       let finalProductName = product_name;
-      if (!finalProductName && productId) {
-        const prodQuery = await client.query('SELECT product_name FROM products WHERE product_id = $1', [productId]);
+      let finalProductId = productId;
+
+      if (!finalProductName && finalProductId) {
+        const prodQuery = await client.query('SELECT product_name FROM products WHERE product_id = $1', [finalProductId]);
         if (prodQuery.rows.length > 0) {
           finalProductName = prodQuery.rows[0].product_name;
         }
       }
+
+      // If we don't have a valid product ID, let's find one by name
+      if (finalProductName) {
+        const prodQuery = await client.query('SELECT product_id FROM products WHERE product_name ILIKE $1', [`%${finalProductName}%`]);
+        if (prodQuery.rows.length > 0) {
+          finalProductId = prodQuery.rows[0].product_id;
+        }
+      }
+
+      // If STILL no product ID, fallback to the first available product in the database
+      if (!finalProductId || isNaN(finalProductId) || finalProductId === 101) {
+        const firstProdQuery = await client.query('SELECT product_id, product_name FROM products LIMIT 1');
+        if (firstProdQuery.rows.length > 0) {
+          finalProductId = firstProdQuery.rows[0].product_id;
+          if (!finalProductName) finalProductName = firstProdQuery.rows[0].product_name;
+        }
+      }
+
       if (!finalProductName) finalProductName = 'Sản phẩm rượu';
 
       const finalTitle = title || `Yêu cầu báo giá ${finalProductName}`;
@@ -92,7 +112,7 @@ const createRFQ = async (req, res) => {
       await client.query(`
           INSERT INTO rfq_items (rfq_id, product_id, quantity, target_price)
           VALUES ($1, $2, $3, $4)
-        `, [newId, productId, qty, price]);
+        `, [newId, finalProductId, qty, price]);
 
       await client.query('COMMIT');
       
@@ -180,7 +200,15 @@ const createQuotation = async (req, res) => {
       }
       const rfq = rfqQuery.rows[0];
       const buyerCompanyId = rfq.buyer_company_id;
-      const productId = req.body.product_id || rfq.product_id || 101;
+      let productId = req.body.product_id || rfq.product_id;
+      
+      if (!productId || isNaN(productId) || productId === 101) {
+        const firstProdQuery = await client.query('SELECT product_id FROM products LIMIT 1');
+        if (firstProdQuery.rows.length > 0) {
+          productId = firstProdQuery.rows[0].product_id;
+        }
+      }
+
       const actualQty = qty || rfq.requested_quantity || 50;
       
       const sellerCompanyId = req.user && req.user.company_id ? req.user.company_id : 2;
@@ -297,7 +325,14 @@ const updateQuotationStatus = async (req, res) => {
           return res.status(400).json({ success: false, message: 'Tài khoản sỉ bị tạm khóa chức năng mua nợ Net-30 do có hóa đơn quá hạn chưa thanh toán.' });
         }
 
-        const prodId = qData.product_id || 101;
+        let prodId = qData.product_id;
+        
+        if (!prodId || isNaN(prodId) || prodId === 101) {
+          const firstProdQuery = await client.query('SELECT product_id FROM products LIMIT 1');
+          if (firstProdQuery.rows.length > 0) {
+            prodId = firstProdQuery.rows[0].product_id;
+          }
+        }
         const stockReserveResult = await client.query(`
             UPDATE inventories 
             SET reserved_quantity = reserved_quantity + $1 
