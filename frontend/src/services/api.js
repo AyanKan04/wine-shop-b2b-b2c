@@ -79,7 +79,7 @@ export const apiService = {
   payInvoice: (id, data = {}) => request(`/finance/pay-invoice/${id}`, { method: 'POST', body: JSON.stringify(data) }),
   getLCDocuments: () => request('/finance/lc-documents'),
   submitLCDocument: (lcData) => request('/finance/lc-documents', { method: 'POST', body: JSON.stringify(lcData) }),
-  verifyLCDocument: (id) => request(`/finance/lc-documents/${id}/verify`, { method: 'POST' }),
+  verifyLCDocument: (id) => request(`/finance/lc-documents/${id}/verify`, { method: 'POST', body: JSON.stringify({ status: 'VERIFIED' }) }),
   rejectLCDocument: (id) => request(`/finance/lc-documents/${id}/reject`, { method: 'POST' }),
 
   // Warehouse

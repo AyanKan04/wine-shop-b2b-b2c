@@ -332,7 +332,16 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                 </div>
                 <div className="form-group">
                   <label>Mức Giá Mong Muốn (VNĐ/thùng) *</label>
-                  <input type="number" className="form-control" value={newRfq.target_price} onChange={e => setNewRfq({ ...newRfq, target_price: e.target.value })} required />
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    value={newRfq.target_price ? new Intl.NumberFormat('vi-VN').format(newRfq.target_price) : ''} 
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setNewRfq({ ...newRfq, target_price: val ? Number(val) : '' });
+                    }}
+                    required 
+                  />
                 </div>
               </div>
               <div className="form-group">

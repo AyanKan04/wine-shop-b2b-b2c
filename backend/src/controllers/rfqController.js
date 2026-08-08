@@ -144,7 +144,10 @@ const createRFQ = async (req, res) => {
 const getQuotations = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.query(`
+    const userType = req.user?.user_type || 'BUYER_REP';
+    const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+    
+    let query = `
       SELECT q.*, 
              bc.company_name as buyer_company, 
              sc.company_name as seller_company,
@@ -152,8 +155,21 @@ const getQuotations = async (req, res) => {
       FROM quotations q
       LEFT JOIN companies bc ON q.buyer_company_id = bc.company_id
       LEFT JOIN companies sc ON q.seller_company_id = sc.company_id
-      ORDER BY q.created_at DESC
-    `);
+      WHERE 1=1
+    `;
+
+    let params = [];
+    if (isBuyerRole) {
+      if (req.user?.company_id) {
+        query += ` AND q.buyer_company_id = $1 `;
+        params.push(req.user.company_id);
+      } else {
+        query += ` AND 1=0 `;
+      }
+    }
+
+    query += ` ORDER BY q.created_at DESC `;
+    const result = await pool.query(query, params);
     
     const quotations = result.rows.map(row => {
       let items = row.items || [];

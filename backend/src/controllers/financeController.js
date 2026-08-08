@@ -452,7 +452,8 @@ const submitLCDocument = async (req, res) => {
 };
 
 const verifyLCDocument = async (req, res) => {
-  const { status } = req.body;
+  let { status } = req.body;
+  if (!status) status = 'VERIFIED'; // Default to VERIFIED since frontend might not send body
   const lcid = parseInt(req.params.id);
   if (!['VERIFIED', 'REJECTED'].includes(status)) {
     return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ.' });

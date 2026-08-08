@@ -227,7 +227,7 @@ const getNotifications = async (req, res) => {
 
       rfqRes.rows.forEach((rfq, index) => {
         let statusText = 'đang chờ xử lý';
-        if (rfq.status === 'QUOTED') statusText = 'đã có Báo giá mới từ Sales!';
+        if (rfq.status === 'QUOTED' || rfq.status === 'QUOTATION_SENT') statusText = 'đã có Báo giá mới từ Sales!';
         if (rfq.status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
         
         const rfqDate = rfq.created_at ? new Date(rfq.created_at) : new Date();

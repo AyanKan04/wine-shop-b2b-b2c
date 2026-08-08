@@ -279,11 +279,15 @@ export default function CRMKanbanPage({ showToast }) {
                 <div className="form-group">
                   <label>Mức giá đề xuất (VNĐ) *</label>
                   <input
-                    type="number"
+                    type="text"
                     className="form-control"
                     required
-                    value={newDeal.unit_price}
-                    onChange={e => setNewDeal({ ...newDeal, unit_price: Number(e.target.value) })}
+                    value={newDeal.unit_price ? new Intl.NumberFormat('vi-VN').format(newDeal.unit_price) : ''}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setNewDeal({ ...newDeal, unit_price: val ? Number(val) : '' });
+                    }}
+                    placeholder="VD: 68,000,000"
                   />
                 </div>
               </div>
