@@ -51,7 +51,7 @@ async function connectDB() {
     }
 
     // 3. Seed database if empty
-    // await seedIfEmpty(pool); // Note: dbSeeder.js also needs migration!
+    // await seedIfEmpty(pool);
 
   } catch (err) {
     console.error('DATABASE connection failed:', err.message);

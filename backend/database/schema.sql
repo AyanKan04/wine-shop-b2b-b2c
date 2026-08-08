@@ -254,3 +254,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   action VARCHAR(500) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS customer_prices (
+    price_id BIGSERIAL PRIMARY KEY,
+    product_id BIGINT REFERENCES products(product_id) ON DELETE CASCADE,
+    buyer_company_id BIGINT REFERENCES companies(company_id) ON DELETE CASCADE,
+    price_per_unit DECIMAL(18,2) NOT NULL
+);
