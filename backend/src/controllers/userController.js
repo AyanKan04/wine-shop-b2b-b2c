@@ -29,7 +29,7 @@ const getUsers = async (req, res) => {
         paramIndex++;
       }
     } else {
-      query += ` WHERE u.status != 'DELETED'`;
+      query += ` WHERE u.user_type IN ('PLATFORM_ADMIN', 'COMPANY_ADMIN') AND u.status != 'DELETED'`;
       if (search) {
         query += ` AND (u.username ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex} OR c.company_name ILIKE $${paramIndex})`;
         params.push(`%${search}%`);
