@@ -354,9 +354,16 @@ export default function SalesProductMgmtPage({ showToast }) {
                 <div className="form-group" style={{ gridColumn: 'span 2' }}>
                   <label>Hình Ảnh Sản Phẩm</label>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input type="file" accept="image/*" className="form-control" onChange={handleImageUpload} style={{ flex: 1 }} />
-                    {formData.image_url && (
-                      <img src={formData.image_url.startsWith('http') ? formData.image_url : (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') + formData.image_url : `http://localhost:5000${formData.image_url}`)} alt="Preview" style={{ height: '40px', width: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    {formData.image_url ? (
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+                          <img src={formData.image_url.startsWith('http') ? formData.image_url : (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') + formData.image_url : `http://localhost:5000${formData.image_url}`)} alt="Preview" style={{ height: '40px', width: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} />
+                          <label style={{ cursor: 'pointer', color: '#D4AF37', border: '1px solid #D4AF37', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', margin: 0, fontWeight: 'bold' }}>
+                            Đổi Ảnh Khác
+                            <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                          </label>
+                       </div>
+                    ) : (
+                       <input type="file" accept="image/*" className="form-control" onChange={handleImageUpload} style={{ flex: 1 }} />
                     )}
                   </div>
                 </div>
@@ -500,8 +507,8 @@ export default function SalesProductMgmtPage({ showToast }) {
                       <label style={{ color: '#374151' }}>Chọn Đối Tác B2B *</label>
                       <select className="form-control" value={newContractPrice.company_id} onChange={e=>setNewContractPrice({...newContractPrice, company_id: e.target.value})}>
                         <option value="">-- Chọn Doanh Nghiệp --</option>
-                        {companies.filter(c => c.CompanyType === 'BUYER').map(c => (
-                          <option key={c.CompanyID} value={c.CompanyID}>{c.CompanyName}</option>
+                        {companies.filter(c => (c.company_type || c.CompanyType) === 'BUYER').map(c => (
+                          <option key={c.company_id || c.CompanyID} value={c.company_id || c.CompanyID}>{c.company_name || c.CompanyName}</option>
                         ))}
                       </select>
                     </div>
@@ -537,7 +544,7 @@ export default function SalesProductMgmtPage({ showToast }) {
                         {contractPrices.map((cp, idx) => (
                           <tr key={idx}>
                             <td><code>{cp.contract_number}</code></td>
-                            <td>{companies.find(c=>c.CompanyID == cp.company_id)?.CompanyName}</td>
+                            <td>{companies.find(c=>(c.company_id || c.CompanyID) == cp.company_id)?.company_name || companies.find(c=>(c.company_id || c.CompanyID) == cp.company_id)?.CompanyName}</td>
                             <td style={{ color: '#059669', fontWeight: '700' }}>{formatVND(cp.price_per_unit)}</td>
                             <td>{cp.valid_until || '2027-12-31'}</td>
                             <td><button type="button" onClick={() => setContractPrices(contractPrices.filter((_, i) => i !== idx))} style={{ color: '#DC2626', background: 'transparent', border: 'none', cursor: 'pointer' }}>Xóa</button></td>
