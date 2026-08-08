@@ -132,11 +132,12 @@ const createProduct = async (req, res) => {
     try {
       await client.query('BEGIN');
 
+      const slug = product_name.toLowerCase().replace(/ /g, '-') + '-' + sku.toLowerCase();
       const result = await client.query(`
-          INSERT INTO products (sku, product_name, category_id, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description)
-          VALUES ($1, $2, (SELECT category_id FROM categories WHERE category_name = $3 LIMIT 1), $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          INSERT INTO products (sku, product_name, slug, category_id, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description)
+          VALUES ($1, $2, $3, (SELECT category_id FROM categories WHERE category_name = $4 LIMIT 1), $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING product_id
-        `, [sku, product_name, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description]);
+        `, [sku, product_name, slug, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description]);
 
       const productId = result.rows[0].product_id;
 

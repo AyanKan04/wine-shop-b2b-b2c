@@ -74,7 +74,8 @@ const getCreditLimit = async (req, res) => {
 
         // Fetch Invoices for this company ONLY
         const invResult = await pool.query(`
-            SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, COALESCE(i.paid_amount, 0) as paid_amount,
+            SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, 
+                   COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.invoice_id), 0) as paid_amount,
                    o.order_number, bc.company_name as buyer_company
             FROM invoices i
             JOIN orders o ON i.order_id = o.order_id
@@ -117,7 +118,8 @@ const getCreditLimit = async (req, res) => {
       }
 
       const invResult = await pool.query(`
-        SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, COALESCE(i.paid_amount, 0) as paid_amount,
+        SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, 
+               COALESCE((SELECT SUM(amount) FROM payments WHERE invoice_id = i.invoice_id), 0) as paid_amount,
                o.order_number, bc.company_name as buyer_company
         FROM invoices i
         JOIN orders o ON i.order_id = o.order_id
