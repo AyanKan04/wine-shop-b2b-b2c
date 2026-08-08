@@ -101,11 +101,12 @@ const verifyAlcoholLicense = async (req, res, next) => {
     const pool = await getPool();
 
     // Check if the company is a SELLER
-    const compRes = await pool.request()
-      .input('CompanyID', companyId)
-      .query('SELECT CompanyType FROM Companies WHERE CompanyID = @CompanyID');
+    const compRes = await pool.query(
+      'SELECT company_type FROM companies WHERE company_id = $1', 
+      [companyId]
+    );
     
-    if (compRes.recordset.length > 0 && compRes.recordset[0].CompanyType === 'SELLER') {
+    if (compRes.rows.length > 0 && compRes.rows[0].company_type === 'SELLER') {
       return next();
     }
 
