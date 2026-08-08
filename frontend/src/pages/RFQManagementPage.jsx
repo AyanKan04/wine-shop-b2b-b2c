@@ -168,7 +168,6 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
 
   return (
     <div className="page-container" style={{ maxWidth: '1400px' }}>
-      {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
         <div>
           <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
@@ -183,7 +182,6 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         </button>
       </div>
 
-      {/* KPI SUMMARY */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '25px' }}>
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '16px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Tổng RFQ Đã Gửi</div>
@@ -201,7 +199,6 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         </div>
       </div>
 
-      {/* RFQ TABLE */}
       <div className="card-box" style={{ marginBottom: '25px' }}>
         <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <i className="fa-solid fa-paper-plane gold-text"></i> Danh Sách RFQ Đã Gửi
@@ -234,13 +231,26 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className="btn-redapron-gold"
-                      style={{ padding: '5px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      onClick={() => openChatForRfq(r)}
-                    >
-                      <i className="fa-solid fa-comments"></i> Trò Chuyện
-                    </button>
+                    {r.status === 'REJECTED' ? (
+                      <button
+                        className="btn-redapron-burgundy"
+                        style={{ padding: '5px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        onClick={() => {
+                          setRejectReasonData(r);
+                          setShowRejectReasonModal(true);
+                        }}
+                      >
+                        <i className="fa-solid fa-eye"></i> Xem Lý Do
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-redapron-gold"
+                        style={{ padding: '5px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        onClick={() => openChatForRfq(r)}
+                      >
+                        <i className="fa-solid fa-comments"></i> Trò Chuyện
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -249,7 +259,6 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         </table>
       </div>
 
-      {/* QUOTATION TABLE */}
       <div className="card-box">
         <h4 style={{ fontFamily: 'var(--font-heading)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <i className="fa-solid fa-file-contract gold-text"></i> Báo Giá (Quotation) Nhận Từ Sales
@@ -289,7 +298,14 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                           style={{ padding: '5px 12px', fontSize: '0.7rem' }}
                           onClick={() => handleAcceptQuotation(q.quotation_id)}
                         >
-                          <i className="fa-solid fa-check"></i> Chấp Nhận
+                          <i className="fa-solid fa-check"></i> Đồng Ý
+                        </button>
+                        <button
+                          className="btn-redapron-gold"
+                          style={{ padding: '5px 12px', fontSize: '0.7rem' }}
+                          onClick={() => openChatForRfq({ rfq_id: q.rfq_id })}
+                        >
+                          <i className="fa-solid fa-comments"></i> Đàm Phán
                         </button>
                         <button
                           onClick={() => handleRejectQuotation(q.quotation_id)}
@@ -298,7 +314,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
                             color: '#EF4444', padding: '5px 12px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer'
                           }}
                         >
-                          Từ Chối
+                          Hủy
                         </button>
                       </div>
                     ) : (
@@ -317,7 +333,6 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         )}
       </div>
 
-      {/* MODAL: NEW RFQ */}
       {showNewRfqModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '550px', width: '100%' }}>
@@ -377,11 +392,43 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         </div>
       )}
 
-      {/* MODAL: NEGOTIATION CHAT */}
+      {showRejectReasonModal && rejectReasonData && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '600px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, color: '#EF4444' }}><i className="fa-solid fa-times-circle"></i> Báo Giá Bị Từ Chối</h3>
+              <button onClick={() => setShowRejectReasonModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(239,68,68,0.1)', borderRadius: '6px', color: 'var(--text-main)' }}>
+              <strong>Lý do từ chối từ phía Sales:</strong>
+              <p style={{ marginTop: '8px', whiteSpace: 'pre-wrap' }}>{rejectReasonData.rejection_reason}</p>
+            </div>
+
+            {rejectReasonData.suggested_product_ids && rejectReasonData.suggested_product_ids.length > 0 && (
+              <div>
+                <strong style={{ display: 'block', marginBottom: '10px' }}>Sales đề xuất các sản phẩm thay thế sau:</strong>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px' }}>
+                  {availableProducts.filter(p => rejectReasonData.suggested_product_ids.includes(p.product_id)).map(p => (
+                    <div key={p.product_id} style={{ background: 'var(--bg-primary)', padding: '10px', borderRadius: '6px', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+                      <img src={apiService.getMediaUrl(p.image_url)} alt={p.product_name} style={{ width: '100%', height: '80px', objectFit: 'contain', marginBottom: '8px' }} />
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600' }}>{p.product_name}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+              <button className="btn-secondary" onClick={() => setShowRejectReasonModal(false)}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedRfqChat && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', height: '80%', display: 'flex', flexDirection: 'column' }}>
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <div>
                 <h3 style={{ fontFamily: 'var(--font-heading)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -5,6 +5,7 @@ import apiService from '../services/api.js';
 export default function ProductDetailPage({ productId, products, showToast }) {
   const prod = products.find(p => p.product_id === productId) || products[0];
   const [qty, setQty] = useState(prod ? prod.moq : 5);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   if (!prod) return <div className="page-container">Đang tải chi tiết sản phẩm...</div>;
 
@@ -167,36 +168,45 @@ export default function ProductDetailPage({ productId, products, showToast }) {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                className="btn-redapron-gold" 
-                style={{ flex: 1, padding: '14px' }} 
-                onClick={async () => {
-                  try {
-                    const res = await apiService.createRFQ({ product_id: prod.product_id, product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
-                    if(res.success) {
-                      showToast(`Đã thêm ${qty} thùng "${prod.product_name}" vào Đơn Hàng Sỉ (RFQ #${res.rfq.rfq_id})!`);
-                    }
-                  } catch (err) {
-                    showToast(err.message || 'Lỗi đặt hàng sỉ');
-                  }
-                }}>
-                <i className="fa-solid fa-cart-shopping"></i> Đặt Hàng Sỉ
-              </button>
-              <button 
-                className="btn-redapron-burgundy" 
-                style={{ flex: 1, padding: '14px' }} 
-                onClick={async () => {
-                  try {
-                    const res = await apiService.createRFQ({ product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
-                    if(res.success) {
-                      showToast(`Đã khởi tạo RFQ #${res.rfq.rfq_id} cho ${qty} thùng ${prod.product_name}`);
-                    }
-                  } catch (err) {
-                    showToast(err.message || 'Lỗi tạo RFQ');
-                  }
-                }}>
-                <i className="fa-solid fa-paper-plane"></i> Tạo RFQ Đàm Phán
-              </button>
+              {user?.company_id && parseInt(user.company_id) === parseInt(prod.seller_company_id) ? (
+                <div style={{ width: '100%', padding: '14px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '6px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <i className="fa-solid fa-lock" style={{marginRight: '8px'}}></i>
+                  Sản phẩm nội bộ (Không thể tự tạo RFQ)
+                </div>
+              ) : (
+                <>
+                  <button 
+                    className="btn-redapron-gold" 
+                    style={{ flex: 1, padding: '14px' }} 
+                    onClick={async () => {
+                      try {
+                        const res = await apiService.createRFQ({ product_id: prod.product_id, product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty, seller_company_id: prod.seller_company_id });
+                        if(res.success) {
+                          showToast(`Đã thêm ${qty} thùng "${prod.product_name}" vào Đơn Hàng Sỉ (RFQ #${res.rfq.rfq_id})!`);
+                        }
+                      } catch (err) {
+                        showToast(err.message || 'Lỗi đặt hàng sỉ');
+                      }
+                    }}>
+                    <i className="fa-solid fa-cart-shopping"></i> Đặt Hàng Sỉ
+                  </button>
+                  <button 
+                    className="btn-redapron-burgundy" 
+                    style={{ flex: 1, padding: '14px' }} 
+                    onClick={async () => {
+                      try {
+                        const res = await apiService.createRFQ({ product_id: prod.product_id, product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty, seller_company_id: prod.seller_company_id });
+                        if(res.success) {
+                          showToast(`Đã khởi tạo RFQ #${res.rfq.rfq_id} cho ${qty} thùng ${prod.product_name}`);
+                        }
+                      } catch (err) {
+                        showToast(err.message || 'Lỗi tạo RFQ');
+                      }
+                    }}>
+                    <i className="fa-solid fa-paper-plane"></i> Tạo RFQ Đàm Phán
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

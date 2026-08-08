@@ -8,6 +8,11 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [quoteForm, setQuoteForm] = useState({ offer_price: '', notes: '' });
   const [quotationsSent, setQuotationsSent] = useState([]);
+  
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [suggestedProducts, setSuggestedProducts] = useState([]);
+  const [availableProducts, setAvailableProducts] = useState([]);
 
   useEffect(() => {
     fetchRFQs();
@@ -19,8 +24,12 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
       if (res.success && res.data) {
         setRfqList(res.data);
       }
+      const prodRes = await apiService.getProducts();
+      if (prodRes.success && prodRes.data) {
+        setAvailableProducts(prodRes.data);
+      }
     } catch (err) {
-      console.error('Error fetching RFQs:', err);
+      console.error('Error fetching data:', err);
     }
   };
 
@@ -81,6 +90,36 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
 
     setShowQuoteModal(false);
     setSelectedRfq(null);
+  };
+
+  const handleOpenReject = (rfq) => {
+    setSelectedRfq(rfq);
+    setRejectReason('');
+    setSuggestedProducts([]);
+    setShowRejectModal(true);
+  };
+
+  const handleRejectRFQ = async (e) => {
+    e.preventDefault();
+    if (!rejectReason.trim()) {
+      showToast('Vui lòng nhập lý do từ chối!');
+      return;
+    }
+    try {
+      const res = await apiService.rejectRFQ({
+        rfq_id: selectedRfq.rfq_id,
+        reason: rejectReason,
+        suggested_product_ids: suggestedProducts
+      });
+      if (res.success) {
+        showToast(`Đã từ chối RFQ #${selectedRfq.rfq_id}`);
+        fetchRFQs();
+        setShowRejectModal(false);
+        setSelectedRfq(null);
+      }
+    } catch (err) {
+      showToast('Lỗi khi từ chối RFQ');
+    }
   };
 
   const [selectedRfqChat, setSelectedRfqChat] = useState(null);
@@ -226,13 +265,22 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
                 </td>
                 <td>
                   {r.status === 'SUBMITTED' ? (
-                    <button
-                      className="btn-redapron-gold"
-                      style={{ padding: '6px 14px', fontSize: '0.75rem' }}
-                      onClick={() => handleOpenQuote(r)}
-                    >
-                      <i className="fa-solid fa-paper-plane"></i> Tạo Báo Giá
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="btn-redapron-gold"
+                        style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                        onClick={() => handleOpenQuote(r)}
+                      >
+                        <i className="fa-solid fa-paper-plane"></i> Báo Giá
+                      </button>
+                      <button
+                        className="btn-redapron-burgundy"
+                        style={{ padding: '6px 14px', fontSize: '0.75rem' }}
+                        onClick={() => handleOpenReject(r)}
+                      >
+                        <i className="fa-solid fa-times"></i> Từ Chối
+                      </button>
+                    </div>
                   ) : (
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Đã xử lý</span>
                   )}
@@ -378,7 +426,62 @@ export default function RFQProcessingPage({ rfqs, showToast }) {
         </div>
       )}
 
-      {/* MODAL: NEGOTIATION CHAT */}
+      {/* REJECT MODAL */}
+      {showRejectModal && selectedRfq && (
+        <div className="modal-backdrop">
+          <div className="modal-content" style={{ maxWidth: '600px' }}>
+            <div className="modal-header">
+              <h3 style={{ fontFamily: 'var(--font-heading)' }}><i className="fa-solid fa-times-circle text-danger"></i> Từ Chối Yêu Cầu Báo Giá</h3>
+              <button className="modal-close" onClick={() => setShowRejectModal(false)}><i className="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onSubmit={handleRejectRFQ} className="modal-body">
+              <div style={{ marginBottom: '20px' }}>
+                <p><strong>Mã RFQ:</strong> #{selectedRfq.rfq_id}</p>
+                <p><strong>Sản phẩm:</strong> {selectedRfq.product_name}</p>
+              </div>
+
+              <div className="form-group">
+                <label>Lý do từ chối <span style={{color: 'red'}}>*</span></label>
+                <textarea 
+                  className="form-control" 
+                  rows="3" 
+                  placeholder="Ví dụ: Kho đã hết hàng, giá mục tiêu quá thấp..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Sản phẩm thay thế đề xuất (Tùy chọn)</label>
+                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-subtle)', padding: '10px', borderRadius: '4px' }}>
+                  {availableProducts.slice(0, 15).map(p => (
+                    <div key={p.product_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={suggestedProducts.includes(p.product_id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSuggestedProducts([...suggestedProducts, p.product_id]);
+                          else setSuggestedProducts(suggestedProducts.filter(id => id !== p.product_id));
+                        }}
+                      />
+                      <img src={apiService.getMediaUrl(p.image_url)} alt={p.product_name} style={{ width: '30px', height: '30px', objectFit: 'contain' }} />
+                      <span style={{ fontSize: '0.85rem' }}>{p.product_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ marginTop: '20px', justifyContent: 'flex-end', display: 'flex', gap: '10px' }}>
+                <button type="button" className="btn-secondary" onClick={() => setShowRejectModal(false)}>Hủy</button>
+                <button type="submit" className="btn-redapron-burgundy"><i className="fa-solid fa-paper-plane"></i> Gửi Quyết Định</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* NEGOTIATION CHAT ROOM (FLOATING) */}
       {selectedRfqChat && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-gold)', borderRadius: '8px', padding: '30px', maxWidth: '650px', width: '100%', height: '80%', display: 'flex', flexDirection: 'column' }}>
