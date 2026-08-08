@@ -356,7 +356,7 @@ export default function SalesProductMgmtPage({ showToast }) {
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     {formData.image_url ? (
                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
-                          <img src={formData.image_url.startsWith('http') ? formData.image_url : (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') + formData.image_url : `http://localhost:5000${formData.image_url}`)} alt="Preview" style={{ height: '40px', width: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} />
+                          <img src={apiService.getMediaUrl(formData.image_url)} alt="Preview" style={{ height: '40px', width: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} />
                           <label style={{ cursor: 'pointer', color: '#D4AF37', border: '1px solid #D4AF37', padding: '6px 12px', borderRadius: '4px', fontSize: '0.8rem', margin: 0, fontWeight: 'bold' }}>
                             Đổi Ảnh Khác
                             <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />

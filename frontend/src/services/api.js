@@ -112,6 +112,14 @@ export const apiService = {
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Lỗi khi tải tệp lên');
     return data;
+  },
+
+  // Get absolute URL for media files
+  getMediaUrl: (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 };
 
