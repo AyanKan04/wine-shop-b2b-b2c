@@ -32,20 +32,7 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
           </>
         )}
 
-        {/* ADMIN / STAFF ROLE: Dẫn thẳng vào Trang Không Gian Làm Việc */}
-        {currentUser && currentUser.role !== 'BUYER_REP' && (
-          <button className={`zone-admin ${currentRoute === 'master-admin' ? 'active' : ''}`} onClick={() => setCurrentRoute('master-admin')}>
-            {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
-              <><i className="fa-solid fa-crown"></i> Quản Trị Admin</>
-            ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
-              <><i className="fa-solid fa-comments-dollar"></i> Xử Lý Báo Giá</>
-            ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
-              <><i className="fa-solid fa-scale-balanced"></i> Kế Toán Nợ</>
-            ) : (
-              <><i className="fa-solid fa-boxes-stacked"></i> Quản Lý Kho</>
-            )}
-          </button>
-        )}
+
 
         {/* NOTIFICATION CENTER */}
         <NotificationCenter />
