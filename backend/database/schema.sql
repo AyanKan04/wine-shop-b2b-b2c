@@ -188,7 +188,10 @@ CREATE TABLE IF NOT EXISTS shipments (
     tracking_number VARCHAR(100),
     shipment_status VARCHAR(50) DEFAULT 'PICKING',
     delivery_note_url VARCHAR(500),
-    estimated_delivery_date TIMESTAMP
+    estimated_delivery_date TIMESTAMP,
+    buyer_company VARCHAR(255),
+    carrier VARCHAR(100),
+    items_summary TEXT
 );
 
 -- 8. ADDITIONAL PRICE TABLES
