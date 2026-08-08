@@ -118,7 +118,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
   const handleAdjustStock = async (e) => {
     e.preventDefault();
     const pId = parseInt(adjustForm.product_id);
-    const item = inventoryData.find(i => (i.product_id || i.ProductID) === pId);
+    const item = inventoryData.find(i => Number(i.product_id || i.ProductID) === pId);
     if (!item) { if (showToast) showToast('Vui lòng chọn sản phẩm hợp lệ!'); return; }
     const qty = parseInt(adjustForm.quantity);
     if (!qty || qty <= 0) { if (showToast) showToast('Số lượng phải lớn hơn 0'); return; }
@@ -127,7 +127,7 @@ export default function WarehouseLogisticsPage({ inventory, orders, showToast })
 
     // Optimistic UI state update immediately
     setInventoryData(prev => prev.map(inv => {
-      if ((inv.product_id || inv.ProductID) === pId) {
+      if (Number(inv.product_id || inv.ProductID) === pId) {
         const curStock = inv.stock_on_hand !== undefined ? inv.stock_on_hand : (inv.QuantityOnHand || 0);
         const nextStock = isImport ? curStock + qty : Math.max(0, curStock - qty);
         return {
