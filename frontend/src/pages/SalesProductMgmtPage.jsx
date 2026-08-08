@@ -143,6 +143,20 @@ export default function SalesProductMgmtPage({ showToast }) {
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const res = await apiService.uploadFile(file);
+      if (res.success) {
+        setFormData(prev => ({ ...prev, image_url: res.file_url }));
+        showToast('Tải ảnh lên thành công!');
+      }
+    } catch (err) {
+      showToast('Lỗi khi tải ảnh lên');
+    }
+  };
+
   // Open modal for single or bulk selected products
   const handleOpenPriceModal = (product = null) => {
     if (product) {
@@ -337,7 +351,15 @@ export default function SalesProductMgmtPage({ showToast }) {
                 <div className="form-group"><label>Giống Nho</label><input className="form-control" value={formData.grape_variety} onChange={e=>setFormData({...formData, grape_variety: e.target.value})} /></div>
                 <div className="form-group"><label>Nồng Độ Cồn (%)</label><input type="number" step="0.1" className="form-control" value={formData.alcohol_content} onChange={e=>setFormData({...formData, alcohol_content: e.target.value})} /></div>
                 <div className="form-group"><label>Dung Tích (ml)</label><input type="number" className="form-control" value={formData.volume_ml} onChange={e=>setFormData({...formData, volume_ml: e.target.value})} /></div>
-                <div className="form-group" style={{ gridColumn: 'span 2' }}><label>Hình Ảnh (URL)</label><input className="form-control" value={formData.image_url} onChange={e=>setFormData({...formData, image_url: e.target.value})} /></div>
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Hình Ảnh Sản Phẩm</label>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input type="file" accept="image/*" className="form-control" onChange={handleImageUpload} style={{ flex: 1 }} />
+                    {formData.image_url && (
+                      <img src={formData.image_url.startsWith('http') ? formData.image_url : (import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') + formData.image_url : `http://localhost:5000${formData.image_url}`)} alt="Preview" style={{ height: '40px', width: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                    )}
+                  </div>
+                </div>
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>

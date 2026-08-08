@@ -97,7 +97,22 @@ export const apiService = {
 
   // Negotiation & AI Sommelier Chat
   getChatMessages: (rfqId) => request(`/rfqs/${rfqId}/messages`),
-  sendChatMessage: (rfqId, msgData) => request(`/rfqs/${rfqId}/messages`, { method: 'POST', body: JSON.stringify(msgData) })
+  sendChatMessage: (rfqId, msgData) => request(`/rfqs/${rfqId}/messages`, { method: 'POST', body: JSON.stringify(msgData) }),
+
+  // File Upload
+  uploadFile: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Lỗi khi tải tệp lên');
+    return data;
+  }
 };
 
 export default apiService;
