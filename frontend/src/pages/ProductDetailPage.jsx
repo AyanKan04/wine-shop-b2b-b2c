@@ -172,7 +172,7 @@ export default function ProductDetailPage({ productId, products, showToast }) {
                 style={{ flex: 1, padding: '14px' }} 
                 onClick={async () => {
                   try {
-                    const res = await apiService.createRFQ({ product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
+                    const res = await apiService.createRFQ({ product_id: prod.product_id, product_name: prod.product_name, quantity: qty, target_price: currentTierPrice * qty });
                     if(res.success) {
                       showToast(`Đã thêm ${qty} thùng "${prod.product_name}" vào Đơn Hàng Sỉ (RFQ #${res.rfq.rfq_id})!`);
                     }
