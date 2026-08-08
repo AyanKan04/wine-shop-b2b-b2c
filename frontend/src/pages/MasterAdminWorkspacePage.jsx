@@ -333,13 +333,15 @@ export default function MasterAdminWorkspacePage({
               : 'Không Gian Làm Việc Chuyên Môn'}
             </div>
             <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', margin: '0', color: 'var(--text-main)' }}>
-              {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(userRole) 
-                ? 'Trung Tâm Quản Trị Thống Nhất (Master Admin Console)' 
-                : userRole === 'SALES_REP' || userRole === 'SALES' 
-                  ? 'Nghiệp Vụ Sales: Xử Lý Báo Giá (Quotation)'
-                  : userRole === 'FINANCE_OFFICER' || userRole === 'FINANCE'
-                    ? 'Nghiệp Vụ Kế Toán: Quản Lý Công Nợ'
-                    : 'Nghiệp Vụ Kho: Vận Hành Logistics'}
+              {userRole === 'PLATFORM_ADMIN'
+                ? 'Trung Tâm Quản Trị Nền Tảng'
+                : userRole === 'COMPANY_ADMIN'
+                  ? 'Trung Tâm Quản Trị Doanh Nghiệp'
+                  : userRole === 'SALES_REP' || userRole === 'SALES' 
+                    ? 'Nghiệp Vụ Sales: Xử Lý Báo Giá (Quotation)'
+                    : userRole === 'FINANCE_OFFICER' || userRole === 'FINANCE'
+                      ? 'Nghiệp Vụ Kế Toán: Quản Lý Công Nợ'
+                      : 'Nghiệp Vụ Kho: Vận Hành Logistics'}
             </h1>
           </div>
         </div>

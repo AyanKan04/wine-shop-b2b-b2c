@@ -109,8 +109,10 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-primary)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
-                        <><i className="fa-solid fa-crown" style={{ color: 'var(--accent-gold)' }}></i> Trang Quản Trị Admin</>
+                      {currentUser.role === 'PLATFORM_ADMIN' ? (
+                        <><i className="fa-solid fa-crown" style={{ color: 'var(--accent-gold)' }}></i> Quản Trị Platform</>
+                      ) : currentUser.role === 'COMPANY_ADMIN' ? (
+                        <><i className="fa-solid fa-building-user" style={{ color: 'var(--accent-gold)' }}></i> Quản Trị Doanh Nghiệp</>
                       ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
                         <><i className="fa-solid fa-comments-dollar" style={{ color: 'var(--accent-gold)' }}></i> Xử Lý Báo Giá</>
                       ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
@@ -201,8 +203,10 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
               }
             }}
           >
-            {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
-              <><i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i> TRANG QUẢN TRỊ MASTER ADMIN</>
+            {currentUser.role === 'PLATFORM_ADMIN' ? (
+              <><i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i> QUẢN TRỊ PLATFORM</>
+            ) : currentUser.role === 'COMPANY_ADMIN' ? (
+              <><i className="fa-solid fa-building-user" style={{ marginRight: '6px', color: '#D4AF37' }}></i> QUẢN TRỊ COMPANY ADMIN</>
             ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
               <><i className="fa-solid fa-comments-dollar" style={{ marginRight: '6px', color: '#D4AF37' }}></i> XỬ LÝ BÁO GIÁ</>
             ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
