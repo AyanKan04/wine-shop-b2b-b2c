@@ -201,7 +201,21 @@ export default function SommelierBotWidget() {
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word'
                   }}>
-                    {msg.message_text}
+                    {msg.message_text.split(/(!\[.*?\]\(.*?\))/g).map((part, i) => {
+                      const match = part.match(/!\[(.*?)\]\((.*?)\)/);
+                      if (match) {
+                        return (
+                          <img 
+                            key={i} 
+                            src={match[2]} 
+                            alt={match[1]} 
+                            style={{ maxWidth: '100%', borderRadius: '6px', marginTop: '8px', marginBottom: '8px', display: 'block', border: '1px solid var(--border-subtle)' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        );
+                      }
+                      return <span key={i}>{part}</span>;
+                    })}
                   </div>
                 </div>
               );

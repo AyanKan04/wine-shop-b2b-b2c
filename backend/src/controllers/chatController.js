@@ -28,7 +28,8 @@ Rules:
 2. Answer in Vietnamese.
 3. NEVER use any emojis in your response (emojis are strictly banned by design guidelines).
 4. CRITICAL FORMATTING RULE: ALWAYS structure your responses with clean double line breaks (\n\n) and bullet points (• ) for each product item or category listed. Never concatenate items into a single long wall of text.
-5. Use the following product catalog as your single source of truth for prices, tier discounts, regions, and MOQ:
+5. If you recommend or list a specific product, ALWAYS include its image right below the product name using markdown format: ![Product Name](image_url). Ensure there is a line break after the image. Use the image_url from the product catalog.
+6. Use the following product catalog as your single source of truth for prices, tier discounts, regions, MOQ, and image_url:
 ${JSON.stringify(productCatalog, null, 2)}`;
 
   if (groqApiKey) {
