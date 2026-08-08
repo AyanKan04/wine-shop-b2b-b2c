@@ -32,10 +32,18 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
           </>
         )}
 
-        {/* ADMIN / STAFF ROLE: Dẫn thẳng vào Trang Quản Trị Admin */}
+        {/* ADMIN / STAFF ROLE: Dẫn thẳng vào Trang Không Gian Làm Việc */}
         {currentUser && currentUser.role !== 'BUYER_REP' && (
           <button className={`zone-admin ${currentRoute === 'master-admin' ? 'active' : ''}`} onClick={() => setCurrentRoute('master-admin')}>
-            <i className="fa-solid fa-crown"></i> Quản Trị Admin
+            {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
+              <><i className="fa-solid fa-crown"></i> Quản Trị Admin</>
+            ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
+              <><i className="fa-solid fa-comments-dollar"></i> Xử Lý Báo Giá</>
+            ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
+              <><i className="fa-solid fa-scale-balanced"></i> Kế Toán Nợ</>
+            ) : (
+              <><i className="fa-solid fa-boxes-stacked"></i> Quản Lý Kho</>
+            )}
           </button>
         )}
 
@@ -101,8 +109,8 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
                     </div>
                   </div>
 
-                  {/* Admin Shortcut */}
-                  {isAdmin && (
+                  {/* Workspace Shortcut for all non-buyers */}
+                  {currentUser && currentUser.role !== 'BUYER_REP' && (
                     <button
                       onClick={() => { setCurrentRoute('master-admin'); setDropdownOpen(false); }}
                       style={{
@@ -114,8 +122,15 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-primary)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <i className="fa-solid fa-crown" style={{ color: 'var(--accent-gold)' }}></i>
-                      Trang Quản Trị Admin
+                      {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
+                        <><i className="fa-solid fa-crown" style={{ color: 'var(--accent-gold)' }}></i> Trang Quản Trị Admin</>
+                      ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
+                        <><i className="fa-solid fa-comments-dollar" style={{ color: 'var(--accent-gold)' }}></i> Xử Lý Báo Giá</>
+                      ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
+                        <><i className="fa-solid fa-scale-balanced" style={{ color: 'var(--accent-gold)' }}></i> Kế Toán Nợ</>
+                      ) : (
+                        <><i className="fa-solid fa-boxes-stacked" style={{ color: 'var(--accent-gold)' }}></i> Quản Lý Kho</>
+                      )}
                     </button>
                   )}
 
@@ -170,8 +185,8 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
           )}
         </div>
 
-        {/* UNIFIED ADMIN CONSOLE WORKSPACE ROUTE (Only visible to admin roles) */}
-        {isAdmin && (
+        {/* UNIFIED ADMIN CONSOLE WORKSPACE ROUTE (Visible to Admin & Staff) */}
+        {currentUser && currentUser.role !== 'BUYER_REP' && (
           <button
             className={`zone-admin ${currentRoute === 'master-admin' ? 'active' : ''}`}
             onClick={() => setCurrentRoute('master-admin')}
@@ -199,8 +214,15 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
               }
             }}
           >
-            <i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i>
-            TRANG QUẢN TRỊ MASTER ADMIN
+            {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(currentUser.role) ? (
+              <><i className="fa-solid fa-crown" style={{ marginRight: '6px', color: '#D4AF37' }}></i> TRANG QUẢN TRỊ MASTER ADMIN</>
+            ) : currentUser.role === 'SALES_REP' || currentUser.role === 'SALES' ? (
+              <><i className="fa-solid fa-comments-dollar" style={{ marginRight: '6px', color: '#D4AF37' }}></i> XỬ LÝ BÁO GIÁ</>
+            ) : currentUser.role === 'FINANCE_OFFICER' || currentUser.role === 'FINANCE' ? (
+              <><i className="fa-solid fa-scale-balanced" style={{ marginRight: '6px', color: '#D4AF37' }}></i> KẾ TOÁN NỢ</>
+            ) : (
+              <><i className="fa-solid fa-boxes-stacked" style={{ marginRight: '6px', color: '#D4AF37' }}></i> QUẢN LÝ KHO</>
+            )}
           </button>
         )}
       </div>

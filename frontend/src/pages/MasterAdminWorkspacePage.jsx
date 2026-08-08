@@ -327,11 +327,19 @@ export default function MasterAdminWorkspacePage({
             <i className="fa-solid fa-crown"></i>
           </div>
           <div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'var(--font-body)', fontWeight: '600' }}>
-              Red Apron Executive Suite
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+            {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(userRole) 
+              ? 'Red Apron Executive Suite' 
+              : 'Không Gian Làm Việc Chuyên Môn'}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', margin: 0, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              Trung Tâm Quản Trị Thống Nhất (Master Admin Console)
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', margin: '0', color: 'var(--text-main)' }}>
+              {['PLATFORM_ADMIN', 'COMPANY_ADMIN'].includes(userRole) 
+                ? 'Trung Tâm Quản Trị Thống Nhất (Master Admin Console)' 
+                : userRole === 'SALES_REP' || userRole === 'SALES' 
+                  ? 'Nghiệp Vụ Sales: Xử Lý Báo Giá (Quotation)'
+                  : userRole === 'FINANCE_OFFICER' || userRole === 'FINANCE'
+                    ? 'Nghiệp Vụ Kế Toán: Quản Lý Công Nợ'
+                    : 'Nghiệp Vụ Kho: Vận Hành Logistics'}
             </h1>
           </div>
         </div>
