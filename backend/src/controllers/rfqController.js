@@ -81,10 +81,10 @@ const createRFQ = async (req, res) => {
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
 
       const rfqResult = await client.query(`
-          INSERT INTO rfqs (buyer_company_id, created_by, title, description, status, created_at, product_id, requested_quantity, target_price, delivery_date)
-          VALUES ($1, $2, $3, $4, 'SUBMITTED', CURRENT_TIMESTAMP, $5, $6, $7, $8)
+          INSERT INTO rfqs (buyer_company_id, created_by, title, description, status, created_at)
+          VALUES ($1, $2, $3, $4, 'SUBMITTED', CURRENT_TIMESTAMP)
           RETURNING rfq_id, created_at
-        `, [buyerCompanyId, createdBy, finalTitle, finalProductName, productId, qty, price, req.body.delivery_date ? new Date(req.body.delivery_date) : new Date()]);
+        `, [buyerCompanyId, createdBy, finalTitle, finalProductName]);
 
       const newId = rfqResult.rows[0].rfq_id;
       const createdAt = rfqResult.rows[0].created_at;
