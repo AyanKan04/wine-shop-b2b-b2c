@@ -442,7 +442,7 @@ export default function MasterAdminWorkspacePage({
           <WarehouseLogisticsPage inventory={inventory} orders={orders} showToast={showToast} />
         )}
         {activeAdminModule === 'iam-account' && (
-          <IAMAccountMgmtPage showToast={showToast} />
+          <IAMAccountMgmtPage showToast={showToast} userRole={userRole} />
         )}
       </div>
 

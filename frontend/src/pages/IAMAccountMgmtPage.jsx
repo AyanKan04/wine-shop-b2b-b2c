@@ -20,7 +20,7 @@ const DEFAULT_USERS = [
   { UserID: 89, Username: 'admin_subuser_89', Email: 'admin_subuser_89@redapron.vn', FirstName: 'Quản Trị', LastName: 'Bán Hàng', UserType: 'PLATFORM_ADMIN', Status: 'ACTIVE', CompanyName: 'MAISON DE L\'ALCOOL RED APRON FACTORY' }
 ];
 
-export default function IAMAccountMgmtPage({ showToast }) {
+export default function IAMAccountMgmtPage({ showToast, userRole = 'COMPANY_ADMIN' }) {
   const [users, setUsers] = useState(DEFAULT_USERS);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
     setLoading(true);
     try {
       const res = await apiService.getUsers(search);
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         const fetched = res.data.map(u => ({
           UserID: u.UserID || u.user_id,
           Username: u.Username || u.username,
@@ -382,7 +382,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
                   <option value="COMPANY_ADMIN">COMPANY_ADMIN</option>
                   <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
                   <option value="WAREHOUSE_STAFF">WAREHOUSE_STAFF</option>
-                  <option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option>
+                  {userRole === 'PLATFORM_ADMIN' && <option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option>}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
@@ -423,7 +423,7 @@ export default function IAMAccountMgmtPage({ showToast }) {
                   <option value="COMPANY_ADMIN">COMPANY_ADMIN</option>
                   <option value="FINANCE_OFFICER">FINANCE_OFFICER</option>
                   <option value="WAREHOUSE_STAFF">WAREHOUSE_STAFF</option>
-                  <option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option>
+                  {userRole === 'PLATFORM_ADMIN' && <option value="PLATFORM_ADMIN">PLATFORM_ADMIN</option>}
                 </select>
               </div>
               <div className="form-group">
