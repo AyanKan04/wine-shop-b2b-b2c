@@ -286,19 +286,29 @@ const updateQuotationStatus = async (req, res) => {
          return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên báo giá này.' });
       }
       
-      if (qData.status === 'ACCEPTED') {
+      if (qData.status === 'ACCEPTED' && status !== 'FULFILLED') {
         await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Báo giá này đã được chấp nhận từ trước.' });
+      }
+      
+      if (qData.status === 'FULFILLED') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ success: false, message: 'Báo giá này đã hoàn tất giao hàng.' });
       }
 
       const rfqId = qData.rfq_id;
       const totalAmount = (qData.offer_unit_price || 0) * (qData.quantity || 0);
 
-      const statusUpdateRes = await client.query(`UPDATE quotations SET status = $1 WHERE quotation_id = $2 AND status != 'ACCEPTED'`, [status, quotationId]);
+      // Only restrict if we are not moving to FULFILLED
+      let updateQuery = `UPDATE quotations SET status = $1 WHERE quotation_id = $2`;
+      if (status !== 'FULFILLED' && status !== 'ACCEPTED') {
+          updateQuery += ` AND status != 'ACCEPTED' AND status != 'FULFILLED'`;
+      }
+      const statusUpdateRes = await client.query(updateQuery, [status, quotationId]);
       
       if (statusUpdateRes.rowCount === 0) {
          await client.query('ROLLBACK');
-         return res.status(400).json({ success: false, message: 'Báo giá này đã được xử lý (hoặc đã được chấp nhận) trước đó.' });
+         return res.status(400).json({ success: false, message: 'Không thể cập nhật trạng thái báo giá.' });
       }
 
       if (status === 'ACCEPTED') {
@@ -374,8 +384,10 @@ const updateQuotationStatus = async (req, res) => {
 
         await client.query(`UPDATE rfqs SET status = 'ACCEPTED' WHERE rfq_id = $1`, [rfqId]);
 
-      } else {
+      } else if (status === 'PENDING' || status === 'SUBMITTED') {
         await client.query(`UPDATE rfqs SET status = 'SUBMITTED' WHERE rfq_id = $1`, [rfqId]);
+      } else if (status === 'FULFILLED') {
+        await client.query(`UPDATE rfqs SET status = 'FULFILLED' WHERE rfq_id = $1`, [rfqId]);
       }
 
       await client.query('COMMIT');
