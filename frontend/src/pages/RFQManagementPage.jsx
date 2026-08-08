@@ -7,6 +7,8 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
   const [quotationList, setQuotationList] = useState(quotations || []);
   const [companies, setCompanies] = useState([]);
   const [showNewRfqModal, setShowNewRfqModal] = useState(false);
+  const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
+  const [rejectReasonData, setRejectReasonData] = useState(null);
   const [newRfq, setNewRfq] = useState({
     seller_company_id: '',
     product_name: 'Macallan 18 Year Old Sherry Oak Single Malt',
