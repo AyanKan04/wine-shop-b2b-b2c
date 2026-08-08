@@ -1,127 +1,60 @@
-// Database Configuration & MS SQL Server Persistent Sync Engine with Cloud Fallback
-const bcrypt = require('bcryptjs');
-
-let sql;
-let useOdbc = false;
-
-try {
-  const isWinAuth = process.platform === 'win32' && 
-                    (!process.env.DB_USER || process.env.DB_USER === 'sa') && 
-                    (!process.env.DB_PASSWORD || process.env.DB_PASSWORD === '123456');
-                    
-  if (isWinAuth || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('Trusted_Connection=yes'))) {
-    sql = require('mssql/msnodesqlv8');
-    useOdbc = true;
-  } else {
-    sql = require('mssql');
-  }
-} catch (e) {
-  sql = require('mssql');
-}
-
+const { Pool } = require('pg');
 const { seedIfEmpty } = require('./dbSeeder');
 
-// Configure connection parameters
-const dbServer = process.env.DB_SERVER || 'localhost\\SQLEXPRESS';
-const serverName = dbServer.includes('\\') ? dbServer.split('\\')[0] : dbServer;
-const instanceName = dbServer.includes('\\') ? dbServer.split('\\')[1] : undefined;
-const dbDatabase = process.env.DB_NAME || 'B2B_Alcohol_Ecommerce';
-
-const odbcConfig = {
-  connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${dbServer};Database=${dbDatabase};Trusted_Connection=yes;`
-};
-
-const tcpConfig = {
-  user: process.env.DB_USER || 'sa',
-  password: process.env.DB_PASSWORD || '123456',
-  server: serverName,
-  database: dbDatabase,
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
-    instanceName: instanceName
+// Neon DB requires SSL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
   }
-};
-
-const config = useOdbc ? odbcConfig : tcpConfig;
+});
 
 let isConnected = false;
-let mssqlPool = null;
-
-
 
 const getPool = async () => {
-  if (!isConnected || !mssqlPool) {
+  if (!isConnected) {
     await connectDB();
   }
-  if (!mssqlPool) {
-     throw new Error("Không thể kết nối đến Database. Dịch vụ tạm thời gián đoạn.");
-  }
-  return mssqlPool;
+  return pool;
 };
 
-// Establish connection to SQL Server & Sync DB State
+// Establish connection to PostgreSQL & Sync DB State
 async function connectDB() {
   try {
-    console.log('Connecting to MS SQL Server database...');
+    console.log('Connecting to PostgreSQL (Neon DB)...');
     
-    try {
-      mssqlPool = await sql.connect(config);
-      isConnected = true;
-      console.log('SUCCESSFULLY connected to MS SQL Server (Primary Driver)');
-    } catch (primaryErr) {
-      console.warn('Primary connection failed, trying fallback:', primaryErr.message);
-      let altSql;
-      let fallbackConfig;
+    // Test connection
+    const client = await pool.connect();
+    isConnected = true;
+    console.log('SUCCESSFULLY connected to PostgreSQL database');
 
-      try {
-        if (!useOdbc) {
-          altSql = require('mssql/msnodesqlv8');
-          fallbackConfig = odbcConfig;
-        } else {
-          altSql = require('mssql');
-          fallbackConfig = tcpConfig;
-        }
-      } catch(e) {
-        // If msnodesqlv8 fails to load (e.g., on Linux), fallback strictly to standard tcpConfig
-        altSql = require('mssql');
-        fallbackConfig = tcpConfig;
-      }
-      
-      mssqlPool = await altSql.connect(fallbackConfig);
-      sql = altSql;
-      isConnected = true;
-      console.log('SUCCESSFULLY connected to MS SQL Server (Fallback Driver)');
-    }
-
-    // 1. Create LCDocuments table if it does not exist
+    // 1. Create LCDocuments table if it does not exist (PostgreSQL syntax)
     try {
-      await mssqlPool.request().query(`
-        IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[LCDocuments]') AND type in (N'U'))
-        BEGIN
-          CREATE TABLE [dbo].[LCDocuments] (
-            [LCID] INT IDENTITY(1,1) PRIMARY KEY,
-            [BuyerCompany] NVARCHAR(255) NOT NULL,
-            [LCNumber] NVARCHAR(100) NOT NULL,
-            [IssuingBank] NVARCHAR(255) NOT NULL,
-            [Amount] DECIMAL(18,2) NOT NULL,
-            [ExpiryDate] DATE NOT NULL,
-            [DocumentUrl] NVARCHAR(500) NOT NULL,
-            [Status] NVARCHAR(50) NOT NULL DEFAULT 'SUBMITTED',
-            [CreatedAt] DATETIME NOT NULL DEFAULT GETDATE()
-          )
-        END
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS LCDocuments (
+          LCID SERIAL PRIMARY KEY,
+          BuyerCompany VARCHAR(255) NOT NULL,
+          LCNumber VARCHAR(100) NOT NULL,
+          IssuingBank VARCHAR(255) NOT NULL,
+          Amount DECIMAL(18,2) NOT NULL,
+          ExpiryDate DATE NOT NULL,
+          DocumentUrl VARCHAR(500) NOT NULL,
+          Status VARCHAR(50) NOT NULL DEFAULT 'SUBMITTED',
+          CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
       `);
       console.log('LCDocuments table checked/created successfully.');
     } catch (lcTableErr) {
       console.error('Failed to create tables:', lcTableErr.message);
+    } finally {
+      client.release();
     }
 
     // 3. Seed database if empty
-    await seedIfEmpty(sql);
+    // await seedIfEmpty(pool); // Note: dbSeeder.js also needs migration!
 
   } catch (err) {
-    console.error('DATABASE connection or initialization failed (Activating Cloud In-Memory Engine):', err.message);
+    console.error('DATABASE connection failed:', err.message);
   }
 }
 
@@ -129,6 +62,6 @@ async function connectDB() {
 connectDB();
 
 module.exports = {
-  sql,
+  pool,
   getPool
 };

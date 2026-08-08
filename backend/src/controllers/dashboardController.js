@@ -1,61 +1,63 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
 // Get dashboard KPI stats
 const getDashboardStats = async (req, res) => {
   try {
     const pool = await getPool();
 
-    const orderRes = await pool.request().query(`SELECT ISNULL(SUM(TotalAmount), 0) as total_revenue FROM Orders`);
-    const totalRevenue = orderRes.recordset[0].total_revenue;
+    const orderRes = await pool.query(`SELECT COALESCE(SUM(total_amount), 0) as total_revenue FROM orders`);
+    const totalRevenue = orderRes.rows[0].total_revenue;
 
-    const prodRes = await pool.request().query(`SELECT COUNT(*) as count FROM Products`);
-    const totalProducts = prodRes.recordset[0].count;
+    const prodRes = await pool.query(`SELECT COUNT(*) as count FROM products`);
+    const totalProducts = prodRes.rows[0].count;
 
-    const compRes = await pool.request().query(`SELECT COUNT(*) as count FROM Companies`);
-    const totalCompanies = compRes.recordset[0].count;
+    const compRes = await pool.query(`SELECT COUNT(*) as count FROM companies`);
+    const totalCompanies = compRes.rows[0].count;
 
-    const licRes = await pool.request().query(`SELECT COUNT(*) as count FROM CompanyLicenses WHERE Status = 'PENDING_VERIFICATION'`);
-    const pendingLicenses = licRes.recordset[0].count;
+    const licRes = await pool.query(`SELECT COUNT(*) as count FROM company_licenses WHERE status = 'PENDING_VERIFICATION'`);
+    const pendingLicenses = licRes.rows[0].count;
 
-    const invRes = await pool.request().query(`SELECT ISNULL(SUM(QuantityOnHand), 0) as total_inventory FROM Inventories`);
-    const totalInventory = invRes.recordset[0].total_inventory;
+    const invRes = await pool.query(`SELECT COALESCE(SUM(quantity_on_hand), 0) as total_inventory FROM inventories`);
+    const totalInventory = invRes.rows[0].total_inventory;
 
-    const rfqRes = await pool.request().query(`SELECT COUNT(*) as count FROM RFQs WHERE Status = 'SUBMITTED'`);
-    const activeRFQs = rfqRes.recordset[0].count;
+    const rfqRes = await pool.query(`SELECT COUNT(*) as count FROM rfqs WHERE status = 'SUBMITTED'`);
+    const activeRFQs = rfqRes.rows[0].count;
 
-    const invoiceRes = await pool.request().query(`
-      SELECT COUNT(*) as unpaid_invoices, ISNULL(SUM(Amount), 0) as unpaid_amount 
-      FROM Invoices WHERE Status = 'UNPAID'
+    const invoiceRes = await pool.query(`
+      SELECT COUNT(*) as unpaid_invoices, COALESCE(SUM(amount), 0) as unpaid_amount 
+      FROM invoices WHERE status = 'UNPAID'
     `);
-    const unpaidInvoices = invoiceRes.recordset[0].unpaid_invoices;
-    const unpaidAmount = invoiceRes.recordset[0].unpaid_amount;
+    const unpaidInvoices = invoiceRes.rows[0].unpaid_invoices;
+    const unpaidAmount = invoiceRes.rows[0].unpaid_amount;
 
-    const shipRes = await pool.request().query(`SELECT COUNT(*) as count FROM Shipments WHERE ShipmentStatus != 'DELIVERED'`);
-    const activeShipments = shipRes.recordset[0].count;
+    const shipRes = await pool.query(`SELECT COUNT(*) as count FROM shipments WHERE shipment_status != 'DELIVERED'`);
+    const activeShipments = shipRes.rows[0].count;
 
-    const creditRes = await pool.request().query(`SELECT * FROM CreditLimits WHERE CompanyID = 1`);
+    const creditRes = await pool.query(`SELECT * FROM credit_limits WHERE company_id = 1`);
     let credit_limit = { total_limit: 1000000000, used_amount: 0, available_balance: 1000000000 };
-    if (creditRes.recordset.length > 0) {
+    if (creditRes.rows.length > 0) {
+      const limit = Number(creditRes.rows[0].credit_limit_amount || 0);
+      const used = Number(creditRes.rows[0].used_amount || 0);
       credit_limit = {
-        total_limit: creditRes.recordset[0].CreditLimitAmount,
-        used_amount: creditRes.recordset[0].UsedAmount,
-        available_balance: creditRes.recordset[0].AvailableAmount
+        total_limit: limit,
+        used_amount: used,
+        available_balance: limit - used
       };
     }
 
     res.json({
       success: true,
       stats: {
-        total_revenue: totalRevenue,
-        total_products: totalProducts,
-        total_companies: totalCompanies,
-        pending_licenses: pendingLicenses,
-        total_inventory: totalInventory,
-        active_rfqs: activeRFQs,
-        unpaid_invoices: unpaidInvoices,
-        unpaid_amount: unpaidAmount,
+        total_revenue: Number(totalRevenue),
+        total_products: Number(totalProducts),
+        total_companies: Number(totalCompanies),
+        pending_licenses: Number(pendingLicenses),
+        total_inventory: Number(totalInventory),
+        active_rfqs: Number(activeRFQs),
+        unpaid_invoices: Number(unpaidInvoices),
+        unpaid_amount: Number(unpaidAmount),
         credit_limit: credit_limit,
-        active_shipments: activeShipments
+        active_shipments: Number(activeShipments)
       }
     });
   } catch (err) {
@@ -72,37 +74,38 @@ const getRevenueChart = async (req, res) => {
     // Doanh thu theo tháng
     const revQuery = `
       SELECT 
-        'T' + CAST(MONTH(CreatedAt) AS VARCHAR) as month,
-        SUM(TotalAmount) as revenue,
-        COUNT(OrderID) as orders
-      FROM Orders
-      WHERE YEAR(CreatedAt) = YEAR(GETDATE())
-      GROUP BY MONTH(CreatedAt)
-      ORDER BY MONTH(CreatedAt)
+        'T' || EXTRACT(MONTH FROM created_at) as month,
+        SUM(total_amount) as revenue,
+        COUNT(order_id) as orders
+      FROM orders
+      WHERE EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+      GROUP BY EXTRACT(MONTH FROM created_at)
+      ORDER BY EXTRACT(MONTH FROM created_at)
     `;
-    const revRes = await pool.request().query(revQuery);
-    let monthly = revRes.recordset;
+    const revRes = await pool.query(revQuery);
+    let monthly = revRes.rows;
 
     // Top products
     const topProdQuery = `
-      SELECT TOP 5
-        p.ProductName as name,
-        SUM(oi.Quantity * oi.UnitPrice) as revenue
-      FROM OrderItems oi
-      JOIN Products p ON oi.ProductID = p.ProductID
-      JOIN Orders o ON oi.OrderID = o.OrderID
-      GROUP BY p.ProductName
+      SELECT 
+        p.product_name as name,
+        SUM(oi.quantity * oi.unit_price) as revenue
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      JOIN orders o ON oi.order_id = o.order_id
+      GROUP BY p.product_name
       ORDER BY revenue DESC
+      LIMIT 5
     `;
-    const topProdRes = await pool.request().query(topProdQuery);
+    const topProdRes = await pool.query(topProdQuery);
     
     let totalRevenue = monthly.reduce((sum, item) => sum + Number(item.revenue), 0);
     if (totalRevenue === 0) totalRevenue = 1; 
     
-    const top_products = topProdRes.recordset.map(tp => ({
+    const top_products = topProdRes.rows.map(tp => ({
       name: tp.name.length > 20 ? tp.name.substring(0, 20) + '...' : tp.name,
-      revenue: tp.revenue,
-      percentage: Math.round((tp.revenue / totalRevenue) * 100)
+      revenue: Number(tp.revenue),
+      percentage: Math.round((Number(tp.revenue) / totalRevenue) * 100)
     }));
 
     if (monthly.length === 0) {
@@ -121,62 +124,50 @@ const getActivityFeed = async (req, res) => {
   try {
     const pool = await getPool();
     
-    // Combine AuditLogs, Orders, RFQs, Invoices, and Licenses to generate a live activity feed
     const query = `
-      SELECT TOP 15 * FROM (
+      SELECT * FROM (
         SELECT 
-          'ACT-' + CAST(LogID AS VARCHAR) as id,
-          CreatedAt as timestamp,
-          N'Hệ Thống' as module,
-          Action as action,
-          N'Quản trị viên' as actor,
-          'fa-clock-rotate-left' as icon,
-          '#6B7280' as color
-        FROM AuditLogs
-        
-        UNION ALL
-        
-        SELECT 
-          'RFQ-' + CAST(RFQID AS VARCHAR) as id,
-          CreatedAt as timestamp,
-          N'Đàm Phán RFQ' as module,
-          N'Yêu cầu báo giá RFQ-' + CAST(RFQID AS VARCHAR) + N' (' + Status + N')' as action,
-          N'Đối Tác B2B' as actor,
+          'RFQ-' || rfq_id as id,
+          created_at as timestamp,
+          'Đàm Phán RFQ' as module,
+          'Yêu cầu báo giá RFQ-' || rfq_id || ' (' || status || ')' as action,
+          'Đối Tác B2B' as actor,
           'fa-file-signature' as icon,
           '#F59E0B' as color
-        FROM RFQs
+        FROM rfqs
         
         UNION ALL
         
         SELECT 
-          'ORD-' + CAST(OrderID AS VARCHAR) as id,
-          CreatedAt as timestamp,
-          N'Bán Hàng' as module,
-          N'Đơn hàng mới ' + OrderNumber as action,
-          N'Khách hàng' as actor,
+          'ORD-' || order_id as id,
+          created_at as timestamp,
+          'Bán Hàng' as module,
+          'Đơn hàng mới ' || order_number as action,
+          'Khách hàng' as actor,
           'fa-cart-shopping' as icon,
           '#3B82F6' as color
-        FROM Orders
+        FROM orders
         
         UNION ALL
         
         SELECT 
-          'INV-' + CAST(InvoiceID AS VARCHAR) as id,
-          InvoiceDate as timestamp,
-          N'Tài Chính' as module,
-          N'Hóa đơn ' + InvoiceNumber + ' - ' + Status as action,
-          N'Hệ thống' as actor,
+          'INV-' || invoice_id as id,
+          invoice_date::timestamp as timestamp,
+          'Tài Chính' as module,
+          'Hóa đơn ' || invoice_number || ' - ' || status as action,
+          'Hệ thống' as actor,
           'fa-receipt' as icon,
           '#10B981' as color
-        FROM Invoices
+        FROM invoices
       ) as ActivityFeed
       ORDER BY timestamp DESC
+      LIMIT 15
     `;
     
-    const result = await pool.request().query(query);
+    const result = await pool.query(query);
     
     // Format timestamp
-    const activity_logs = result.recordset.map(log => {
+    const activity_logs = result.rows.map(log => {
       const d = new Date(log.timestamp);
       const timeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
       return { ...log, timestamp: timeStr };
@@ -201,60 +192,55 @@ const getNotifications = async (req, res) => {
 
     let cid = companyId;
     if (isBuyerRole && !cid && userId) {
-      const uRes = await pool.request().input('UID', sql.BigInt, userId).query('SELECT CompanyID FROM Users WHERE UserID = @UID');
-      cid = uRes.recordset[0]?.CompanyID;
+      const uRes = await pool.query('SELECT company_id FROM users WHERE user_id = $1', [userId]);
+      cid = uRes.rows[0]?.company_id;
     }
 
     if (isBuyerRole) {
       if (cid) {
       // 1. Unpaid invoices FOR THIS BUYER COMPANY ONLY
-      const invRes = await pool.request()
-        .input('CompanyID', sql.BigInt, cid)
-        .query(`
-          SELECT i.InvoiceNumber, i.DueDate, i.Amount 
-          FROM Invoices i
-          JOIN Orders o ON i.OrderID = o.OrderID
-          WHERE o.BuyerCompanyID = @CompanyID AND i.Status != 'PAID'
-        `);
+      const invRes = await pool.query(`
+          SELECT i.invoice_number, i.due_date, i.amount 
+          FROM invoices i
+          JOIN orders o ON i.order_id = o.order_id
+          WHERE o.buyer_company_id = $1 AND i.status != 'PAID'
+        `, [cid]);
 
-      invRes.recordset.forEach((inv, index) => {
-        const days = Math.round((new Date(inv.DueDate) - new Date()) / (1000 * 60 * 60 * 24));
+      invRes.rows.forEach((inv, index) => {
+        const days = Math.round((new Date(inv.due_date) - new Date()) / (1000 * 60 * 60 * 24));
         notifications.push({
           id: 'NOTIF-BUYER-INV-' + index,
           type: days < 5 ? 'warning' : 'info',
           title: 'Hóa đơn cần thanh toán Net-30',
-          message: `Hóa đơn ${inv.InvoiceNumber} (${(Number(inv.Amount)).toLocaleString('vi-VN')} đ) đến hạn trong ${days > 0 ? days : 0} ngày`,
+          message: `Hóa đơn ${inv.invoice_number} (${(Number(inv.amount)).toLocaleString('vi-VN')} đ) đến hạn trong ${days > 0 ? days : 0} ngày`,
           read: false,
           timestamp: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' })
         });
       });
 
       // 2. RFQ status updates FOR THIS BUYER USER ONLY
-      const rfqRes = await pool.request()
-        .input('UserID', sql.BigInt, userId || 0)
-        .input('CompanyID', sql.BigInt, cid)
-        .query(`
-          SELECT RFQID, Title, Status, CreatedAt 
-          FROM RFQs 
-          WHERE CreatedBy = @UserID OR BuyerCompanyID = @CompanyID
-        `);
+      const rfqRes = await pool.query(`
+          SELECT rfq_id, title, status, created_at 
+          FROM rfqs 
+          WHERE created_by = $1 OR buyer_company_id = $2
+        `, [userId || 0, cid]);
 
-      rfqRes.recordset.forEach((rfq, index) => {
+      rfqRes.rows.forEach((rfq, index) => {
         let statusText = 'đang chờ xử lý';
-        if (rfq.Status === 'QUOTED') statusText = 'đã có Báo giá mới từ Sales!';
-        if (rfq.Status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
+        if (rfq.status === 'QUOTED') statusText = 'đã có Báo giá mới từ Sales!';
+        if (rfq.status === 'ACCEPTED') statusText = 'đã được chấp nhận!';
         
-        const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
+        const rfqDate = rfq.created_at ? new Date(rfq.created_at) : new Date();
         let timeStr = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' });
-        if (rfq.CreatedAt && !isNaN(rfqDate.getTime())) {
+        if (rfq.created_at && !isNaN(rfqDate.getTime())) {
           timeStr = rfqDate.toISOString().substring(11, 16);
         }
 
         notifications.push({
           id: 'NOTIF-BUYER-RFQ-' + index,
-          type: rfq.Status === 'QUOTED' ? 'success' : 'info',
-          title: `Cập nhật báo giá RFQ-${rfq.RFQID}`,
-          message: `Yêu cầu báo giá "${rfq.Title || 'Báo giá Rượu'}" ${statusText}`,
+          type: rfq.status === 'QUOTED' ? 'success' : 'info',
+          title: `Cập nhật báo giá RFQ-${rfq.rfq_id}`,
+          message: `Yêu cầu báo giá "${rfq.title || 'Báo giá Rượu'}" ${statusText}`,
           read: false,
           timestamp: timeStr
         });
@@ -262,37 +248,37 @@ const getNotifications = async (req, res) => {
       }
     } else {
       // ADMIN / SALES_REP System Notifications
-      const invRes = await pool.request().query(`
-        SELECT i.InvoiceNumber, i.DueDate, bc.CompanyName 
-        FROM Invoices i
-        JOIN Orders o ON i.OrderID = o.OrderID
-        LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-        WHERE i.Status != 'PAID'
+      const invRes = await pool.query(`
+        SELECT i.invoice_number, i.due_date, bc.company_name 
+        FROM invoices i
+        JOIN orders o ON i.order_id = o.order_id
+        LEFT JOIN companies bc ON o.buyer_company_id = bc.company_id
+        WHERE i.status != 'PAID'
       `);
       
-      const rfqRes = await pool.request().query(`
-        SELECT r.RFQID, r.Title, r.CreatedAt, bc.CompanyName 
-        FROM RFQs r
-        LEFT JOIN Companies bc ON r.BuyerCompanyID = bc.CompanyID
-        WHERE r.Status = 'SUBMITTED'
+      const rfqRes = await pool.query(`
+        SELECT r.rfq_id, r.title, r.created_at, bc.company_name 
+        FROM rfqs r
+        LEFT JOIN companies bc ON r.buyer_company_id = bc.company_id
+        WHERE r.status = 'SUBMITTED'
       `);
 
-      invRes.recordset.forEach((inv, index) => {
-        const days = Math.round((new Date(inv.DueDate) - new Date()) / (1000 * 60 * 60 * 24));
+      invRes.rows.forEach((inv, index) => {
+        const days = Math.round((new Date(inv.due_date) - new Date()) / (1000 * 60 * 60 * 24));
         notifications.push({
           id: 'NOTIF-ADM-INV-' + index,
           type: days < 7 ? 'warning' : 'info',
           title: 'Hóa đơn chưa thu tiền',
-          message: `Hóa đơn ${inv.InvoiceNumber} (${inv.CompanyName || 'Khách B2B'}) chờ thu hồi nợ`,
+          message: `Hóa đơn ${inv.invoice_number} (${inv.company_name || 'Khách B2B'}) chờ thu hồi nợ`,
           read: false,
           timestamp: new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' })
         });
       });
       
-      rfqRes.recordset.forEach((rfq, index) => {
-        const rfqDate = rfq.CreatedAt ? new Date(rfq.CreatedAt) : new Date();
+      rfqRes.rows.forEach((rfq, index) => {
+        const rfqDate = rfq.created_at ? new Date(rfq.created_at) : new Date();
         let timeStr = new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute:'2-digit' });
-        if (rfq.CreatedAt && !isNaN(rfqDate.getTime())) {
+        if (rfq.created_at && !isNaN(rfqDate.getTime())) {
           timeStr = rfqDate.toISOString().substring(11, 16);
         }
 
@@ -300,7 +286,7 @@ const getNotifications = async (req, res) => {
           id: 'NOTIF-ADM-RFQ-' + index,
           type: 'info',
           title: 'RFQ mới cần báo giá',
-          message: `RFQ-${rfq.RFQID} từ ${rfq.CompanyName || 'Khách B2B'} đang chờ phát hành quotation`,
+          message: `RFQ-${rfq.rfq_id} từ ${rfq.company_name || 'Khách B2B'} đang chờ phát hành quotation`,
           read: false,
           timestamp: timeStr
         });
@@ -326,7 +312,6 @@ const getNotifications = async (req, res) => {
 
 // Mark notification as read
 const markNotificationRead = (req, res) => {
-  // In a dynamic setup, we might update a read status in DB, but since we generate dynamically, just return success
   res.json({ success: true, message: 'Đã đánh dấu đã đọc' });
 };
 

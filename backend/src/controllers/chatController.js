@@ -1,23 +1,20 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
-// Ensure RFQMessages table exists
+// Ensure rfq_messages table exists
 async function ensureRFQMessagesTable(pool) {
   try {
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[RFQMessages]') AND type in (N'U'))
-      BEGIN
-        CREATE TABLE [dbo].[RFQMessages] (
-          [MessageID] BIGINT IDENTITY(1,1) PRIMARY KEY,
-          [RFQID] BIGINT NOT NULL,
-          [SenderName] NVARCHAR(255) NOT NULL,
-          [SenderRole] NVARCHAR(50) NOT NULL,
-          [MessageText] NVARCHAR(MAX) NOT NULL,
-          [CreatedAt] DATETIME NOT NULL DEFAULT GETDATE()
-        )
-      END
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS rfq_messages (
+        message_id BIGSERIAL PRIMARY KEY,
+        rfq_id BIGINT NOT NULL,
+        sender_name VARCHAR(255) NOT NULL,
+        sender_role VARCHAR(50) NOT NULL,
+        message_text TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
     `);
   } catch (err) {
-    console.error('Error ensuring RFQMessages table:', err.message);
+    console.error('Error ensuring rfq_messages table:', err.message);
   }
 }
 
@@ -117,17 +114,15 @@ const getChatHistory = async (req, res) => {
     const pool = await getPool();
     await ensureRFQMessagesTable(pool);
     
-    const result = await pool.request()
-      .input('RFQID', sql.BigInt, rfqId)
-      .query('SELECT * FROM RFQMessages WHERE RFQID = @RFQID ORDER BY CreatedAt ASC');
+    const result = await pool.query('SELECT * FROM rfq_messages WHERE rfq_id = $1 ORDER BY created_at ASC', [rfqId]);
 
-    const messages = result.recordset.map(row => ({
-      message_id: row.MessageID,
-      rfq_id: row.RFQID,
-      sender_name: row.SenderName,
-      sender_role: row.SenderRole,
-      message_text: row.MessageText,
-      created_at: row.CreatedAt ? row.CreatedAt.toISOString().replace('T', ' ').slice(0, 16) : null
+    const messages = result.rows.map(row => ({
+      message_id: row.message_id,
+      rfq_id: row.rfq_id,
+      sender_name: row.sender_name,
+      sender_role: row.sender_role,
+      message_text: row.message_text,
+      created_at: row.created_at ? new Date(row.created_at).toISOString().replace('T', ' ').slice(0, 16) : null
     }));
 
     res.json({ success: true, data: messages });
@@ -151,15 +146,10 @@ const sendMessage = async (req, res) => {
     await ensureRFQMessagesTable(pool);
 
     // 1. Insert user message
-    await pool.request()
-      .input('RFQID', sql.BigInt, rfqId)
-      .input('SenderName', sql.NVarChar, sender_name || 'Khách hàng')
-      .input('SenderRole', sql.NVarChar, sender_role || 'BUYER')
-      .input('MessageText', sql.NVarChar, message_text.trim())
-      .query(`
-        INSERT INTO RFQMessages (RFQID, SenderName, SenderRole, MessageText, CreatedAt)
-        VALUES (@RFQID, @SenderName, @SenderRole, @MessageText, GETDATE())
-      `);
+    await pool.query(`
+      INSERT INTO rfq_messages (rfq_id, sender_name, sender_role, message_text, created_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+    `, [rfqId, sender_name || 'Khách hàng', sender_role || 'BUYER', message_text.trim()]);
 
     // 2. Trigger AI Sommelier for Chatbot & Negotiation
     const lowerMsg = message_text.toLowerCase();
@@ -173,13 +163,13 @@ const sendMessage = async (req, res) => {
         aiResponseText = 'Trợ lý AI Sommelier: Dòng rượu Macallan 18 Year Old Sherry Oak Single Malt có MOQ tối thiểu là 5 thùng.';
       } else {
         // Fetch products to give to AI
-        const prodRes = await pool.request().query(`
+        const prodRes = await pool.query(`
           SELECT p.*, 
-                 (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
-          FROM Products p
+                 (SELECT json_agg(t.* ORDER BY t.tier_level ASC) FROM product_tier_prices t WHERE t.product_id = p.product_id) as tier_prices
+          FROM products p
         `);
         
-        const productCatalog = prodRes.recordset;
+        const productCatalog = prodRes.rows;
 
         // 2a. Query Groq Cloud AI
         aiResponseText = await queryGroqAI(message_text, productCatalog);
@@ -207,29 +197,22 @@ const sendMessage = async (req, res) => {
       }
 
       // Append AI Response to database
-      await pool.request()
-        .input('RFQID', sql.BigInt, rfqId)
-        .input('SenderName', sql.NVarChar, 'AI Sommelier Assistant (Groq Llama-3.3)')
-        .input('SenderRole', sql.NVarChar, 'AI_ASSISTANT')
-        .input('MessageText', sql.NVarChar, aiResponseText.trim())
-        .query(`
-          INSERT INTO RFQMessages (RFQID, SenderName, SenderRole, MessageText, CreatedAt)
-          VALUES (@RFQID, @SenderName, @SenderRole, @MessageText, GETDATE())
-        `);
+      await pool.query(`
+        INSERT INTO rfq_messages (rfq_id, sender_name, sender_role, message_text, created_at)
+        VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      `, [rfqId, 'AI Sommelier Assistant (Groq Llama-3.3)', 'AI_ASSISTANT', aiResponseText.trim()]);
     }
 
     // Retrieve full updated history to return
-    const result = await pool.request()
-      .input('RFQID', sql.BigInt, rfqId)
-      .query('SELECT * FROM RFQMessages WHERE RFQID = @RFQID ORDER BY CreatedAt ASC');
+    const result = await pool.query('SELECT * FROM rfq_messages WHERE rfq_id = $1 ORDER BY created_at ASC', [rfqId]);
 
-    const updatedMessages = result.recordset.map(row => ({
-      message_id: row.MessageID,
-      rfq_id: row.RFQID,
-      sender_name: row.SenderName,
-      sender_role: row.SenderRole,
-      message_text: row.MessageText,
-      created_at: row.CreatedAt ? row.CreatedAt.toISOString().replace('T', ' ').slice(0, 16) : null
+    const updatedMessages = result.rows.map(row => ({
+      message_id: row.message_id,
+      rfq_id: row.rfq_id,
+      sender_name: row.sender_name,
+      sender_role: row.sender_role,
+      message_text: row.message_text,
+      created_at: row.created_at ? new Date(row.created_at).toISOString().replace('T', ' ').slice(0, 16) : null
     }));
 
     res.json({ success: true, data: updatedMessages });

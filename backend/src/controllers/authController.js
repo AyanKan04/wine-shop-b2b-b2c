@@ -1,4 +1,4 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -13,22 +13,20 @@ const login = async (req, res) => {
   try {
     const pool = await getPool();
     // Lấy thông tin user
-    const result = await pool.request()
-      .input('Username', sql.NVarChar, username)
-      .query(`
-        SELECT u.UserID, u.Username, u.Email, u.PasswordHash, u.UserType, u.CompanyID, c.CompanyName
-        FROM Users u
-        LEFT JOIN Companies c ON u.CompanyID = c.CompanyID
-        WHERE u.Username = @Username AND u.Status = 'ACTIVE'
-      `);
+    const result = await pool.query(`
+      SELECT u.user_id, u.username, u.email, u.password_hash, u.user_type, u.company_id, c.company_name
+      FROM users u
+      LEFT JOIN companies c ON u.company_id = c.company_id
+      WHERE u.username = $1 AND u.status = 'ACTIVE'
+    `, [username]);
 
-    const user = result.recordset[0];
+    const user = result.rows[0];
     if (!user) {
       return res.status(401).json({ success: false, message: 'Tên đăng nhập không tồn tại hoặc tài khoản bị khóa.' });
     }
 
     // Kiểm tra mật khẩu
-    const isMatch = await bcrypt.compare(password, user.PasswordHash);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Mật khẩu không chính xác.' });
     }
@@ -36,10 +34,10 @@ const login = async (req, res) => {
     // Tạo token thật (sử dụng JWT_SECRET)
     const token = jwt.sign(
       { 
-        user_id: user.UserID, 
-        username: user.Username, 
-        user_type: user.UserType,
-        company_id: user.CompanyID 
+        user_id: user.user_id, 
+        username: user.username, 
+        user_type: user.user_type,
+        company_id: user.company_id 
       }, 
       process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024',
       { expiresIn: '24h' }
@@ -50,11 +48,11 @@ const login = async (req, res) => {
       message: 'Đăng nhập thành công!',
       token: token,
       user: {
-        user_id: user.UserID,
-        username: user.Username,
-        email: user.Email,
-        user_type: user.UserType,
-        company_name: user.CompanyName || 'B2B Admin System'
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        user_type: user.user_type,
+        company_name: user.company_name || 'B2B Admin System'
       }
     });
 
@@ -76,12 +74,12 @@ const registerUser = async (req, res) => {
     const pool = await getPool();
 
     // Kiểm tra username/email đã tồn tại chưa
-    const checkUser = await pool.request()
-      .input('Email', sql.NVarChar, email)
-      .input('Username', sql.NVarChar, username)
-      .query('SELECT UserID FROM Users WHERE Email = @Email OR Username = @Username');
+    const checkUser = await pool.query(
+      'SELECT user_id FROM users WHERE email = $1 OR username = $2',
+      [email, username]
+    );
 
-    if (checkUser.recordset.length > 0) {
+    if (checkUser.rows.length > 0) {
       return res.status(400).json({ success: false, message: 'Email hoặc Tên đăng nhập đã tồn tại trên hệ thống.' });
     }
 
@@ -93,57 +91,44 @@ const registerUser = async (req, res) => {
     const companyCode = 'COMP-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
     // Transaction để đảm bảo tính toàn vẹn dữ liệu
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
     try {
+      await client.query('BEGIN');
+
       // 1. Tạo Company
-      const companyResult = await transaction.request()
-        .input('CompanyCode', sql.NVarChar, companyCode)
-        .input('CompanyName', sql.NVarChar, company_name)
-        .input('TaxCode', sql.NVarChar, tax_code)
-        .input('CompanyType', sql.NVarChar, 'BUYER')
-        .input('Status', sql.NVarChar, 'ACTIVE')
-        .query(`
-          INSERT INTO Companies (CompanyCode, CompanyName, TaxCode, CompanyType, Status)
-          OUTPUT INSERTED.CompanyID
-          VALUES (@CompanyCode, @CompanyName, @TaxCode, @CompanyType, @Status)
-        `);
+      const companyResult = await client.query(`
+        INSERT INTO companies (company_code, company_name, tax_code, company_type, status)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING company_id
+      `, [companyCode, company_name, tax_code, 'BUYER', 'ACTIVE']);
       
-      const newCompanyId = companyResult.recordset[0].CompanyID;
+      const newCompanyId = companyResult.rows[0].company_id;
 
       // 2. Tạo User
-      const userResult = await transaction.request()
-        .input('CompanyID', sql.BigInt, newCompanyId)
-        .input('Email', sql.NVarChar, email)
-        .input('Username', sql.NVarChar, username)
-        .input('PasswordHash', sql.NVarChar, hashedPassword)
-        .input('UserType', sql.NVarChar, 'BUYER_REP')
-        .input('Status', sql.NVarChar, 'ACTIVE')
-        .query(`
-          INSERT INTO Users (CompanyID, Email, Username, PasswordHash, UserType, Status)
-          OUTPUT INSERTED.UserID
-          VALUES (@CompanyID, @Email, @Username, @PasswordHash, @UserType, @Status)
-        `);
+      const userResult = await client.query(`
+        INSERT INTO users (company_id, email, username, password_hash, user_type, status)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING user_id
+      `, [newCompanyId, email, username, hashedPassword, 'BUYER_REP', 'ACTIVE']);
 
-      const newUserId = userResult.recordset[0].UserID;
+      const newUserId = userResult.rows[0].user_id;
 
       // 3. Tạo License (nếu được cung cấp trong registration payload)
       if (license_number) {
-        await transaction.request()
-          .input('CompanyID', sql.BigInt, newCompanyId)
-          .input('LicenseType', sql.NVarChar, license_type || 'Giấy phép Bán buôn Rượu')
-          .input('LicenseNumber', sql.NVarChar, license_number)
-          .input('IssueDate', sql.Date, issue_date ? new Date(issue_date) : new Date())
-          .input('ExpiryDate', sql.Date, expiry_date ? new Date(expiry_date) : new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000))
-          .input('DocumentUrl', sql.NVarChar, '/uploads/license_default.pdf')
-          .query(`
-            INSERT INTO CompanyLicenses (CompanyID, LicenseType, LicenseNumber, IssueDate, ExpiryDate, DocumentUrl, Status)
-            VALUES (@CompanyID, @LicenseType, @LicenseNumber, @IssueDate, @ExpiryDate, @DocumentUrl, 'PENDING_VERIFICATION')
-          `);
+        await client.query(`
+          INSERT INTO company_licenses (company_id, license_type, license_number, issue_date, expiry_date, document_url, status)
+          VALUES ($1, $2, $3, $4, $5, $6, 'PENDING_VERIFICATION')
+        `, [
+          newCompanyId, 
+          license_type || 'Giấy phép Bán buôn Rượu', 
+          license_number, 
+          issue_date ? new Date(issue_date) : new Date(), 
+          expiry_date ? new Date(expiry_date) : new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000), 
+          '/uploads/license_default.pdf'
+        ]);
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
 
       res.status(201).json({
         success: true,
@@ -158,8 +143,10 @@ const registerUser = async (req, res) => {
         }
       });
     } catch (txErr) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw txErr;
+    } finally {
+      client.release();
     }
 
   } catch (err) {
@@ -174,16 +161,14 @@ const getMe = async (req, res) => {
     const userId = req.user.user_id; // Đã được extract từ JWT ở Middleware
     
     const pool = await getPool();
-    const result = await pool.request()
-      .input('UserID', sql.BigInt, userId)
-      .query(`
-        SELECT u.UserID, u.Username, u.UserType, u.Email, c.CompanyID, c.CompanyName, c.TaxCode, c.Status as CompanyStatus
-        FROM Users u
-        LEFT JOIN Companies c ON u.CompanyID = c.CompanyID
-        WHERE u.UserID = @UserID
-      `);
+    const result = await pool.query(`
+      SELECT u.user_id, u.username, u.user_type, u.email, c.company_id, c.company_name, c.tax_code, c.status as company_status
+      FROM users u
+      LEFT JOIN companies c ON u.company_id = c.company_id
+      WHERE u.user_id = $1
+    `, [userId]);
 
-    const user = result.recordset[0];
+    const user = result.rows[0];
     if (!user) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
     }
@@ -191,15 +176,15 @@ const getMe = async (req, res) => {
     res.json({
       success: true,
       data: {
-        user_id: user.UserID,
-        username: user.Username,
-        user_type: user.UserType,
-        email: user.Email,
-        company: user.CompanyID ? {
-          company_id: user.CompanyID,
-          company_name: user.CompanyName,
-          tax_code: user.TaxCode,
-          status: user.CompanyStatus
+        user_id: user.user_id,
+        username: user.username,
+        user_type: user.user_type,
+        email: user.email,
+        company: user.company_id ? {
+          company_id: user.company_id,
+          company_name: user.company_name,
+          tax_code: user.tax_code,
+          status: user.company_status
         } : null
       }
     });

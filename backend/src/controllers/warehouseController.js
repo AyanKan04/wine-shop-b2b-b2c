@@ -1,26 +1,26 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
 // Get full inventory with computed available quantity
 const getInventory = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT i.InventoryID, i.ProductID, i.QuantityOnHand, i.ReservedQuantity,
-             p.ProductName, p.SKU, p.ImageUrl,
-             (i.QuantityOnHand - i.ReservedQuantity) AS available,
-             CASE WHEN (i.QuantityOnHand - i.ReservedQuantity) <= ISNULL(p.MOQ, 10) THEN 'LOW' ELSE 'OK' END AS stock_status
-      FROM Inventories i
-      JOIN Products p ON i.ProductID = p.ProductID
+    const result = await pool.query(`
+      SELECT i.inventory_id, i.product_id, i.quantity_on_hand, i.reserved_quantity,
+             p.product_name, p.sku, p.image_url,
+             (i.quantity_on_hand - i.reserved_quantity) AS available,
+             CASE WHEN (i.quantity_on_hand - i.reserved_quantity) <= COALESCE(p.moq, 10) THEN 'LOW' ELSE 'OK' END AS stock_status
+      FROM inventories i
+      JOIN products p ON i.product_id = p.product_id
     `);
 
-    const inventory = result.recordset.map(row => ({
-      inventory_id: row.InventoryID,
-      product_id: row.ProductID,
-      product_name: row.ProductName,
-      sku: row.SKU,
-      image_url: row.ImageUrl,
-      stock_on_hand: row.QuantityOnHand || 0,
-      reserved: row.ReservedQuantity || 0,
+    const inventory = result.rows.map(row => ({
+      inventory_id: row.inventory_id,
+      product_id: row.product_id,
+      product_name: row.product_name,
+      sku: row.sku,
+      image_url: row.image_url,
+      stock_on_hand: row.quantity_on_hand || 0,
+      reserved: row.reserved_quantity || 0,
       available: row.available || 0,
       stock_status: row.stock_status,
       min_stock_level: 10
@@ -52,62 +52,55 @@ const adjustStock = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
 
     try {
-      const invCheck = await transaction.request()
-        .input('ProductID', sql.BigInt, productId)
-        .query(`SELECT QuantityOnHand, ReservedQuantity FROM Inventories WHERE ProductID = @ProductID`);
+      await client.query('BEGIN');
+
+      const invCheck = await client.query(`SELECT quantity_on_hand, reserved_quantity FROM inventories WHERE product_id = $1`, [productId]);
       
       let currentStock = 0;
       let reserved = 0;
 
-      if (invCheck.recordset.length === 0) {
+      if (invCheck.rows.length === 0) {
         if (adjustment_type === 'EXPORT') {
-          await transaction.rollback();
+          await client.query('ROLLBACK');
           return res.status(400).json({ success: false, message: 'Sản phẩm chưa có trong kho, không thể xuất.' });
         }
-        await transaction.request()
-          .input('ProductID', sql.BigInt, productId)
-          .query(`INSERT INTO Inventories (ProductID, QuantityOnHand, ReservedQuantity) VALUES (@ProductID, 0, 0)`);
+        await client.query(`INSERT INTO inventories (product_id, quantity_on_hand, reserved_quantity) VALUES ($1, 0, 0)`, [productId]);
       } else {
-        currentStock = invCheck.recordset[0].QuantityOnHand || 0;
-        reserved = invCheck.recordset[0].ReservedQuantity || 0;
+        currentStock = invCheck.rows[0].quantity_on_hand || 0;
+        reserved = invCheck.rows[0].reserved_quantity || 0;
       }
 
       const available = currentStock - reserved;
 
       if (adjustment_type === 'IMPORT') {
-        await transaction.request()
-          .input('ProductID', sql.BigInt, productId)
-          .input('Qty', sql.Int, qty)
-          .query(`UPDATE Inventories SET QuantityOnHand = QuantityOnHand + @Qty WHERE ProductID = @ProductID`);
+        await client.query(`UPDATE inventories SET quantity_on_hand = quantity_on_hand + $1 WHERE product_id = $2`, [qty, productId]);
         
-        await transaction.commit();
+        await client.query('COMMIT');
         return res.json({ success: true, message: `Đã nhập kho thêm ${qty} thùng.` });
 
       } else if (adjustment_type === 'EXPORT') {
         if (qty > available) {
-          await transaction.rollback();
+          await client.query('ROLLBACK');
           return res.status(400).json({ success: false, message: `Không đủ hàng khả dụng. Chỉ còn ${available} thùng.` });
         }
 
-        await transaction.request()
-          .input('ProductID', sql.BigInt, productId)
-          .input('Qty', sql.Int, qty)
-          .query(`UPDATE Inventories SET QuantityOnHand = QuantityOnHand - @Qty WHERE ProductID = @ProductID`);
+        await client.query(`UPDATE inventories SET quantity_on_hand = quantity_on_hand - $1 WHERE product_id = $2`, [qty, productId]);
         
-        await transaction.commit();
+        await client.query('COMMIT');
         return res.json({ success: true, message: `Đã xuất kho ${qty} thùng.` });
       } else {
-        await transaction.rollback();
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'adjustment_type phải là IMPORT hoặc EXPORT' });
       }
 
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error adjusting stock:', err);
@@ -119,24 +112,24 @@ const adjustStock = async (req, res) => {
 const getShipments = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT s.ShipmentID, s.TrackingNumber, s.ShipmentStatus, s.EstimatedDeliveryDate, 
-             o.OrderNumber, bc.CompanyName as buyer_company
-      FROM Shipments s
-      LEFT JOIN Orders o ON s.OrderID = o.OrderID
-      LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-      ORDER BY s.EstimatedDeliveryDate DESC
+    const result = await pool.query(`
+      SELECT s.shipment_id, s.tracking_number, s.shipment_status, s.estimated_delivery_date, 
+             o.order_number, bc.company_name as buyer_company, s.carrier, s.items_summary
+      FROM shipments s
+      LEFT JOIN orders o ON s.order_id = o.order_id
+      LEFT JOIN companies bc ON o.buyer_company_id = bc.company_id
+      ORDER BY s.estimated_delivery_date DESC
     `);
 
-    const shipments = result.recordset.map(row => ({
-      shipment_id: row.ShipmentID,
-      tracking_number: row.TrackingNumber || row.tracking_number || `GHN-${row.ShipmentID || Math.floor(Math.random()*1000)}-VN`,
-      order_number: row.OrderNumber || row.order_number || `ORD-2026-${row.ShipmentID || 8842}`,
-      buyer_company: row.buyer_company || row.BuyerCompany || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
-      carrier: row.carrier || row.Carrier || 'Giao Hàng Nhanh (GHN)',
-      items_summary: row.items_summary || row.ItemsSummary || 'Rượu Vang & Whisky Sỉ',
-      shipment_status: row.ShipmentStatus || row.shipment_status || 'PICKING',
-      estimated_delivery: row.EstimatedDeliveryDate ? (typeof row.EstimatedDeliveryDate === 'string' ? row.EstimatedDeliveryDate : row.EstimatedDeliveryDate.toISOString().split('T')[0]) : '2026-08-10'
+    const shipments = result.rows.map(row => ({
+      shipment_id: row.shipment_id,
+      tracking_number: row.tracking_number || `GHN-${row.shipment_id || Math.floor(Math.random()*1000)}-VN`,
+      order_number: row.order_number || `ORD-2026-${row.shipment_id || 8842}`,
+      buyer_company: row.buyer_company || 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON',
+      carrier: row.carrier || 'Giao Hàng Nhanh (GHN)',
+      items_summary: row.items_summary || 'Rượu Vang & Whisky Sỉ',
+      shipment_status: row.shipment_status || 'PICKING',
+      estimated_delivery: row.estimated_delivery_date ? (typeof row.estimated_delivery_date === 'string' ? row.estimated_delivery_date : row.estimated_delivery_date.toISOString().split('T')[0]) : '2026-08-10'
     }));
 
     res.json({ success: true, data: shipments });
@@ -156,29 +149,20 @@ const createShipment = async (req, res) => {
     
     let orderId = null;
     if (order_number) {
-      const ordRes = await pool.request()
-        .input('OrderNumber', sql.NVarChar, order_number)
-        .query('SELECT OrderID FROM Orders WHERE OrderNumber = @OrderNumber');
-      if (ordRes.recordset.length > 0) {
-        orderId = ordRes.recordset[0].OrderID;
+      const ordRes = await pool.query('SELECT order_id FROM orders WHERE order_number = $1', [order_number]);
+      if (ordRes.rows.length > 0) {
+        orderId = ordRes.rows[0].order_id;
       }
     }
 
-    const result = await pool.request()
-      .input('OrderID', sql.BigInt, orderId)
-      .input('TrackingNumber', sql.NVarChar, trackingNumber)
-      .input('EstimatedDeliveryDate', sql.DateTime, estimated_delivery ? new Date(estimated_delivery) : null)
-      .input('BuyerCompany', sql.NVarChar, buyer_company || 'Doanh nghiệp')
-      .input('Carrier', sql.NVarChar, carrier || 'Giao Hàng Nhanh (GHN)')
-      .input('ItemsSummary', sql.NVarChar, items_summary || 'Rượu nhập khẩu')
-      .query(`
-        INSERT INTO Shipments (OrderID, TrackingNumber, ShipmentStatus, EstimatedDeliveryDate)
-        OUTPUT INSERTED.ShipmentID
-        VALUES (@OrderID, @TrackingNumber, 'PICKING', @EstimatedDeliveryDate)
-      `);
+    const result = await pool.query(`
+        INSERT INTO shipments (order_id, tracking_number, shipment_status, estimated_delivery_date, buyer_company, carrier, items_summary)
+        VALUES ($1, $2, 'PICKING', $3, $4, $5, $6)
+        RETURNING shipment_id
+      `, [orderId, trackingNumber, estimated_delivery ? new Date(estimated_delivery) : null, buyer_company || 'Doanh nghiệp', carrier || 'Giao Hàng Nhanh (GHN)', items_summary || 'Rượu nhập khẩu']);
 
     const newShipment = {
-      shipment_id: result.recordset[0].ShipmentID,
+      shipment_id: result.rows[0].shipment_id,
       tracking_number: trackingNumber,
       order_number: order_number,
       buyer_company: buyer_company || 'Doanh nghiệp',
@@ -203,82 +187,70 @@ const updateShipmentStatus = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      // 1. Fetch current shipment details
-      const shipCheck = await transaction.request()
-        .input('ShipmentID', sql.BigInt, shipmentId)
-        .query('SELECT OrderID, ShipmentStatus FROM Shipments WHERE ShipmentID = @ShipmentID');
+      await client.query('BEGIN');
 
-      if (shipCheck.recordset.length === 0) {
-        await transaction.rollback();
+      // 1. Fetch current shipment details
+      const shipCheck = await client.query('SELECT order_id, shipment_status FROM shipments WHERE shipment_id = $1', [shipmentId]);
+
+      if (shipCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ success: false, message: 'Không tìm thấy vận đơn' });
       }
 
-      const shipment = shipCheck.recordset[0];
-      if (shipment.ShipmentStatus === status) {
-        await transaction.rollback();
+      const shipment = shipCheck.rows[0];
+      if (shipment.shipment_status === status) {
+        await client.query('ROLLBACK');
         return res.json({ success: true, message: `Vận đơn đã ở trạng thái ${status} từ trước.` });
       }
 
       // 2. Update Shipment status
-      await transaction.request()
-        .input('ShipmentID', sql.BigInt, shipmentId)
-        .input('Status', sql.NVarChar, status)
-        .query('UPDATE Shipments SET ShipmentStatus = @Status WHERE ShipmentID = @ShipmentID');
+      await client.query('UPDATE shipments SET shipment_status = $1 WHERE shipment_id = $2', [status, shipmentId]);
 
       // 3. If transitioning to DELIVERED or CANCELLED
       if (status === 'DELIVERED' || status === 'CANCELLED') {
-        const orderId = shipment.OrderID;
+        const orderId = shipment.order_id;
         if (orderId) {
           // Fetch order items
-          const itemsRes = await transaction.request()
-            .input('OrderID', sql.BigInt, orderId)
-            .query('SELECT ProductID, Quantity FROM OrderItems WHERE OrderID = @OrderID');
+          const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
 
           // Update stock for each item
-          for (let item of itemsRes.recordset) {
+          for (let item of itemsRes.rows) {
             if (status === 'DELIVERED') {
               // Deduct stock
-              await transaction.request()
-                .input('ProductID', sql.BigInt, item.ProductID)
-                .input('Quantity', sql.Int, item.Quantity)
-                .query(`
-                  UPDATE Inventories 
-                  SET QuantityOnHand = QuantityOnHand - @Quantity,
-                      ReservedQuantity = ReservedQuantity - @Quantity
-                  WHERE ProductID = @ProductID
-                `);
+              await client.query(`
+                  UPDATE inventories 
+                  SET quantity_on_hand = quantity_on_hand - $1,
+                      reserved_quantity = reserved_quantity - $1
+                  WHERE product_id = $2
+                `, [item.quantity, item.product_id]);
             } else if (status === 'CANCELLED') {
               // Restore reserved stock
-              await transaction.request()
-                .input('ProductID', sql.BigInt, item.ProductID)
-                .input('Quantity', sql.Int, item.Quantity)
-                .query(`
-                  UPDATE Inventories 
-                  SET ReservedQuantity = ReservedQuantity - @Quantity
-                  WHERE ProductID = @ProductID
-                `);
+              await client.query(`
+                  UPDATE inventories 
+                  SET reserved_quantity = reserved_quantity - $1
+                  WHERE product_id = $2
+                `, [item.quantity, item.product_id]);
             }
           }
 
           // Complete or Cancel the order
-          await transaction.request()
-            .input('OrderID', sql.BigInt, orderId)
-            .query(`UPDATE Orders SET OrderStatus = '${status === 'DELIVERED' ? 'COMPLETED' : 'CANCELLED'}' WHERE OrderID = @OrderID`);
+          await client.query(`UPDATE orders SET order_status = $1 WHERE order_id = $2`, [status === 'DELIVERED' ? 'COMPLETED' : 'CANCELLED', orderId]);
         }
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({
         success: true,
         message: `Cập nhật trạng thái vận chuyển: ${status}`
       });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error updating shipment status:', err);

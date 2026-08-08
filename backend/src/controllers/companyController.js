@@ -1,4 +1,4 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
 // Register Company & Upload License
 const registerCompany = async (req, res) => {
@@ -9,39 +9,35 @@ const registerCompany = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      const compRes = await transaction.request()
-        .input('CompanyCode', sql.NVarChar, companyCode)
-        .input('CompanyName', sql.NVarChar, company_name || 'Doanh nghiệp đăng ký mới')
-        .input('TaxCode', sql.NVarChar, tax_code || '0309999888')
-        .input('CompanyType', sql.NVarChar, 'BUYER')
-        .query(`
-          INSERT INTO Companies (CompanyCode, CompanyName, TaxCode, CompanyType, Status, CreatedAt)
-          OUTPUT INSERTED.CompanyID
-          VALUES (@CompanyCode, @CompanyName, @TaxCode, @CompanyType, 'PENDING', GETDATE())
-        `);
-      
-      const companyId = compRes.recordset[0].CompanyID;
+      await client.query('BEGIN');
 
-      const licRes = await transaction.request()
-        .input('CompanyID', sql.BigInt, companyId)
-        .input('LicenseType', sql.NVarChar, license_type || 'Giấy phép Bán buôn Rượu')
-        .input('LicenseNumber', sql.NVarChar, license_number || '999/GP-SCT')
-        .input('IssueDate', sql.Date, issue_date ? new Date(issue_date) : new Date('2026-07-30'))
-        .input('ExpiryDate', sql.Date, expiry_date ? new Date(expiry_date) : new Date('2031-07-30'))
-        .input('DocumentUrl', sql.NVarChar, docUrl)
-        .query(`
-          INSERT INTO CompanyLicenses (CompanyID, LicenseType, LicenseNumber, IssueDate, ExpiryDate, DocumentUrl, Status)
-          OUTPUT INSERTED.LicenseID
-          VALUES (@CompanyID, @LicenseType, @LicenseNumber, @IssueDate, @ExpiryDate, @DocumentUrl, 'PENDING_VERIFICATION')
-        `);
-
-      const licenseId = licRes.recordset[0].LicenseID;
+      const compRes = await client.query(`
+        INSERT INTO companies (company_code, company_name, tax_code, company_type, status, created_at)
+        VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)
+        RETURNING company_id
+      `, [companyCode, company_name || 'Doanh nghiệp đăng ký mới', tax_code || '0309999888', 'BUYER']);
       
-      await transaction.commit();
+      const companyId = compRes.rows[0].company_id;
+
+      const licRes = await client.query(`
+        INSERT INTO company_licenses (company_id, license_type, license_number, issue_date, expiry_date, document_url, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING_VERIFICATION')
+        RETURNING license_id
+      `, [
+        companyId, 
+        license_type || 'Giấy phép Bán buôn Rượu', 
+        license_number || '999/GP-SCT', 
+        issue_date ? new Date(issue_date) : new Date('2026-07-30'), 
+        expiry_date ? new Date(expiry_date) : new Date('2031-07-30'), 
+        docUrl
+      ]);
+
+      const licenseId = licRes.rows[0].license_id;
+      
+      await client.query('COMMIT');
 
       res.status(201).json({ 
         success: true, 
@@ -50,8 +46,10 @@ const registerCompany = async (req, res) => {
         license: { license_id: licenseId, status: 'PENDING_VERIFICATION' }
       });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error registering company:', err);
@@ -63,22 +61,22 @@ const registerCompany = async (req, res) => {
 const getAdminLicenses = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT l.LicenseID as license_id, l.CompanyID as company_id, 
-             c.CompanyName as company_name, l.LicenseType as license_type,
-             l.LicenseNumber as license_number, l.IssueDate as issue_date,
-             l.ExpiryDate as expiry_date, l.DocumentUrl as document_url,
-             l.Status as status
-      FROM CompanyLicenses l
-      JOIN Companies c ON l.CompanyID = c.CompanyID
-      ORDER BY l.LicenseID DESC
+    const result = await pool.query(`
+      SELECT l.license_id as license_id, l.company_id as company_id, 
+             c.company_name as company_name, l.license_type as license_type,
+             l.license_number as license_number, l.issue_date as issue_date,
+             l.expiry_date as expiry_date, l.document_url as document_url,
+             l.status as status
+      FROM company_licenses l
+      JOIN companies c ON l.company_id = c.company_id
+      ORDER BY l.license_id DESC
     `);
     
     // Format dates to string
-    const data = result.recordset.map(row => ({
+    const data = result.rows.map(row => ({
       ...row,
-      issue_date: row.issue_date ? row.issue_date.toISOString().split('T')[0] : null,
-      expiry_date: row.expiry_date ? row.expiry_date.toISOString().split('T')[0] : null
+      issue_date: row.issue_date ? new Date(row.issue_date).toISOString().split('T')[0] : null,
+      expiry_date: row.expiry_date ? new Date(row.expiry_date).toISOString().split('T')[0] : null
     }));
 
     res.json({ success: true, data });
@@ -93,36 +91,33 @@ const approveLicense = async (req, res) => {
   
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      const licCheck = await transaction.request()
-        .input('LicenseID', sql.BigInt, licId)
-        .query(`SELECT CompanyID FROM CompanyLicenses WHERE LicenseID = @LicenseID`);
+      await client.query('BEGIN');
+
+      const licCheck = await client.query('SELECT company_id FROM company_licenses WHERE license_id = $1', [licId]);
       
-      if (licCheck.recordset.length === 0) {
-        await transaction.rollback();
+      if (licCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ success: false, message: 'Không tìm thấy giấy phép' });
       }
 
-      const companyId = licCheck.recordset[0].CompanyID;
+      const companyId = licCheck.rows[0].company_id;
 
       // Update license status
-      await transaction.request()
-        .input('LicenseID', sql.BigInt, licId)
-        .query(`UPDATE CompanyLicenses SET Status = 'VERIFIED' WHERE LicenseID = @LicenseID`);
+      await client.query(`UPDATE company_licenses SET status = 'VERIFIED' WHERE license_id = $1`, [licId]);
       
       // Auto active company
-      await transaction.request()
-        .input('CompanyID', sql.BigInt, companyId)
-        .query(`UPDATE Companies SET Status = 'ACTIVE' WHERE CompanyID = @CompanyID`);
+      await client.query(`UPDATE companies SET status = 'ACTIVE' WHERE company_id = $1`, [companyId]);
 
-      await transaction.commit();
+      await client.query('COMMIT');
       return res.json({ success: true, message: 'Đã phê duyệt Giấy phép Rượu hợp lệ!' });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error approving license:', err);
@@ -133,20 +128,20 @@ const approveLicense = async (req, res) => {
 const getCompanies = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    const result = await pool.query(`
       SELECT 
-        c.CompanyID as company_id, 
-        c.CompanyCode as company_code, 
-        c.CompanyName as company_name, 
-        c.TaxCode as tax_code, 
-        c.CompanyType as company_type, 
-        c.Status as status,
-        ISNULL((SELECT CreditLimitAmount FROM CreditLimits WHERE CompanyID = c.CompanyID), 0) as credit_limit,
-        ISNULL((SELECT UsedAmount FROM CreditLimits WHERE CompanyID = c.CompanyID), 0) as used_credit
-      FROM Companies c
-      ORDER BY c.CreatedAt DESC
+        c.company_id as company_id, 
+        c.company_code as company_code, 
+        c.company_name as company_name, 
+        c.tax_code as tax_code, 
+        c.company_type as company_type, 
+        c.status as status,
+        COALESCE((SELECT credit_limit_amount FROM credit_limits WHERE company_id = c.company_id LIMIT 1), 0) as credit_limit,
+        COALESCE((SELECT used_amount FROM credit_limits WHERE company_id = c.company_id LIMIT 1), 0) as used_credit
+      FROM companies c
+      ORDER BY c.created_at DESC
     `);
-    res.json({ success: true, data: result.recordset });
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     console.error('Error fetching companies:', err);
     res.status(500).json({ success: false, message: 'Lỗi tải danh sách công ty' });
@@ -157,9 +152,7 @@ const rejectLicense = async (req, res) => {
   const licId = parseInt(req.params.id);
   try {
     const pool = await getPool();
-    await pool.request()
-      .input('LicenseID', sql.BigInt, licId)
-      .query(`UPDATE CompanyLicenses SET Status = 'REJECTED' WHERE LicenseID = @LicenseID`);
+    await pool.query(`UPDATE company_licenses SET status = 'REJECTED' WHERE license_id = $1`, [licId]);
     res.json({ success: true, message: 'Đã từ chối Giấy phép!' });
   } catch (err) {
     console.error('Error rejecting license:', err);
@@ -171,18 +164,13 @@ const toggleCompanyStatus = async (req, res) => {
   const companyId = parseInt(req.params.id);
   try {
     const pool = await getPool();
-    const check = await pool.request()
-      .input('CompanyID', sql.BigInt, companyId)
-      .query(`SELECT Status FROM Companies WHERE CompanyID = @CompanyID`);
-    if (check.recordset.length === 0) {
+    const check = await pool.query(`SELECT status FROM companies WHERE company_id = $1`, [companyId]);
+    if (check.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy doanh nghiệp' });
     }
-    const currentStatus = check.recordset[0].Status;
+    const currentStatus = check.rows[0].status;
     const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    await pool.request()
-      .input('CompanyID', sql.BigInt, companyId)
-      .input('NewStatus', sql.NVarChar, newStatus)
-      .query(`UPDATE Companies SET Status = @NewStatus WHERE CompanyID = @CompanyID`);
+    await pool.query(`UPDATE companies SET status = $1 WHERE company_id = $2`, [newStatus, companyId]);
     res.json({ success: true, message: `Đã thay đổi trạng thái doanh nghiệp thành ${newStatus}`, status: newStatus });
   } catch (err) {
     console.error('Error toggling company status:', err);

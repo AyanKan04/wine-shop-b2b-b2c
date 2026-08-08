@@ -1,43 +1,42 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
 const getOrders = async (req, res) => {
   try {
     const pool = await getPool();
     let query = `
-      SELECT o.OrderID, o.OrderNumber, o.TotalAmount, o.OrderStatus, o.PaymentMethod, o.CreatedAt,
-             bc.CompanyName as buyer_company,
-             ISNULL(i.Status, 'UNPAID') as payment_status
-      FROM Orders o
-      LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-      LEFT JOIN Invoices i ON o.OrderID = i.OrderID
+      SELECT o.order_id, o.order_number, o.total_amount, o.order_status, o.payment_method, o.created_at,
+             bc.company_name as buyer_company,
+             COALESCE(i.status, 'UNPAID') as payment_status
+      FROM orders o
+      LEFT JOIN companies bc ON o.buyer_company_id = bc.company_id
+      LEFT JOIN invoices i ON o.order_id = i.order_id
     `;
 
-    const request = pool.request();
     const userType = req.user?.user_type || 'BUYER_REP';
     const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
+    let params = [];
 
     if (isBuyerRole) {
       if (req.user?.company_id) {
-        query += ` WHERE (o.BuyerCompanyID = @CompanyID OR o.CreatedBy = @UserID) `;
-        request.input('CompanyID', sql.BigInt, req.user.company_id);
-        request.input('UserID', sql.BigInt, req.user.user_id || 0);
+        query += ` WHERE (o.buyer_company_id = $1 OR o.created_by = $2) `;
+        params.push(req.user.company_id, req.user.user_id || 0);
       } else {
         query += ` WHERE 1=0 `;
       }
     }
-    query += ` ORDER BY o.CreatedAt DESC `;
+    query += ` ORDER BY o.created_at DESC `;
 
-    const result = await request.query(query);
+    const result = await pool.query(query, params);
 
-    const orders = result.recordset.map(row => ({
-      order_id: row.OrderID,
-      order_number: row.OrderNumber,
+    const orders = result.rows.map(row => ({
+      order_id: row.order_id,
+      order_number: row.order_number,
       buyer_company: row.buyer_company,
-      total_amount: row.TotalAmount,
-      order_status: row.OrderStatus,
-      payment_method: row.PaymentMethod,
+      total_amount: row.total_amount,
+      order_status: row.order_status,
+      payment_method: row.payment_method,
       payment_status: row.payment_status,
-      created_at: row.CreatedAt ? row.CreatedAt.toISOString().split('T')[0] : null
+      created_at: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : null
     }));
 
     res.json({ success: true, data: orders });
@@ -60,14 +59,12 @@ const getCreditLimit = async (req, res) => {
     if (isBuyerRole) {
       if (companyId) {
         // Fetch CreditLimit for this company
-        const result = await pool.request()
-          .input('CompanyID', sql.BigInt, companyId)
-          .query(`SELECT * FROM CreditLimits WHERE CompanyID = @CompanyID`);
+        const result = await pool.query(`SELECT * FROM credit_limits WHERE company_id = $1`, [companyId]);
 
-        if (result.recordset.length > 0) {
-          const row = result.recordset[0];
-          const total = Number(row.CreditLimitAmount || 0);
-          const used = Number(row.UsedAmount || 0);
+        if (result.rows.length > 0) {
+          const row = result.rows[0];
+          const total = Number(row.credit_limit_amount || 0);
+          const used = Number(row.used_amount || 0);
           credit_limit = {
             total_limit: total,
             used_amount: used,
@@ -76,30 +73,28 @@ const getCreditLimit = async (req, res) => {
         }
 
         // Fetch Invoices for this company ONLY
-        const invResult = await pool.request()
-          .input('BuyerCompanyID', sql.BigInt, companyId)
-          .query(`
-            SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
-                   o.OrderNumber, bc.CompanyName as BuyerCompany
-            FROM Invoices i
-            JOIN Orders o ON i.OrderID = o.OrderID
-            LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-            WHERE o.BuyerCompanyID = @BuyerCompanyID
-            ORDER BY i.InvoiceDate DESC
-          `);
+        const invResult = await pool.query(`
+            SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, COALESCE(i.paid_amount, 0) as paid_amount,
+                   o.order_number, bc.company_name as buyer_company
+            FROM invoices i
+            JOIN orders o ON i.order_id = o.order_id
+            LEFT JOIN companies bc ON o.buyer_company_id = bc.company_id
+            WHERE o.buyer_company_id = $1
+            ORDER BY i.invoice_date DESC
+          `, [companyId]);
 
-        invoices = invResult.recordset.map(row => {
-          const amt = Number(row.Amount || 0);
-          const paid = Number(row.PaidAmount || 0);
+        invoices = invResult.rows.map(row => {
+          const amt = Number(row.amount || 0);
+          const paid = Number(row.paid_amount || 0);
           const remaining = amt - paid > 0 ? amt - paid : 0;
           return {
-            invoice_id: row.InvoiceID,
-            order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
-            buyer_company: row.BuyerCompany || 'Red Apron Buyer',
-            invoice_number: row.InvoiceNumber,
-            issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
-            due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
-            status: row.Status,
+            invoice_id: row.invoice_id,
+            order_number: row.order_number || `ORD-2026-${8800 + row.order_id}`,
+            buyer_company: row.buyer_company || 'Red Apron Buyer',
+            invoice_number: row.invoice_number,
+            issue_date: row.invoice_date ? new Date(row.invoice_date).toISOString().split('T')[0] : null,
+            due_date: row.due_date ? new Date(row.due_date).toISOString().split('T')[0] : null,
+            status: row.status,
             amount: amt,
             paid_amount: paid,
             remaining_amount: remaining
@@ -108,14 +103,12 @@ const getCreditLimit = async (req, res) => {
       }
     } else {
       // ADMIN / FINANCE OFFICER: Fetch summary and all invoices
-      const result = await pool.request()
-        .input('CompanyID', sql.BigInt, companyId || 1)
-        .query(`SELECT * FROM CreditLimits WHERE CompanyID = @CompanyID`);
+      const result = await pool.query(`SELECT * FROM credit_limits WHERE company_id = $1`, [companyId || 1]);
 
-      if (result.recordset.length > 0) {
-        const row = result.recordset[0];
-        const total = Number(row.CreditLimitAmount || 0);
-        const used = Number(row.UsedAmount || 0);
+      if (result.rows.length > 0) {
+        const row = result.rows[0];
+        const total = Number(row.credit_limit_amount || 0);
+        const used = Number(row.used_amount || 0);
         credit_limit = {
           total_limit: total,
           used_amount: used,
@@ -123,27 +116,27 @@ const getCreditLimit = async (req, res) => {
         };
       }
 
-      const invResult = await pool.request().query(`
-        SELECT i.InvoiceID, i.OrderID, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount,
-               o.OrderNumber, bc.CompanyName as BuyerCompany
-        FROM Invoices i
-        JOIN Orders o ON i.OrderID = o.OrderID
-        LEFT JOIN Companies bc ON o.BuyerCompanyID = bc.CompanyID
-        ORDER BY i.InvoiceDate DESC
+      const invResult = await pool.query(`
+        SELECT i.invoice_id, i.order_id, i.invoice_number, i.invoice_date, i.due_date, i.status, i.amount, COALESCE(i.paid_amount, 0) as paid_amount,
+               o.order_number, bc.company_name as buyer_company
+        FROM invoices i
+        JOIN orders o ON i.order_id = o.order_id
+        LEFT JOIN companies bc ON o.buyer_company_id = bc.company_id
+        ORDER BY i.invoice_date DESC
       `);
 
-      invoices = invResult.recordset.map(row => {
-        const amt = Number(row.Amount || 0);
-        const paid = Number(row.PaidAmount || 0);
+      invoices = invResult.rows.map(row => {
+        const amt = Number(row.amount || 0);
+        const paid = Number(row.paid_amount || 0);
         const remaining = amt - paid > 0 ? amt - paid : 0;
         return {
-          invoice_id: row.InvoiceID,
-          order_number: row.OrderNumber || `ORD-2026-${8800 + row.OrderID}`,
-          buyer_company: row.BuyerCompany || 'Red Apron Buyer',
-          invoice_number: row.InvoiceNumber,
-          issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
-          due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
-          status: row.Status,
+          invoice_id: row.invoice_id,
+          order_number: row.order_number || `ORD-2026-${8800 + row.order_id}`,
+          buyer_company: row.buyer_company || 'Red Apron Buyer',
+          invoice_number: row.invoice_number,
+          issue_date: row.invoice_date ? new Date(row.invoice_date).toISOString().split('T')[0] : null,
+          due_date: row.due_date ? new Date(row.due_date).toISOString().split('T')[0] : null,
+          status: row.status,
           amount: amt,
           paid_amount: paid,
           remaining_amount: remaining
@@ -170,103 +163,77 @@ const payInvoice = async (req, res) => {
   
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      // 1. Swimlane System: Query invoice details
-      const invCheck = await transaction.request()
-        .input('InvoiceID', sql.BigInt, invId)
-        .query(`
-          SELECT i.Status, i.Amount, ISNULL(i.PaidAmount, 0) as PaidAmount, i.OrderID, o.BuyerCompanyID 
-          FROM Invoices i
-          JOIN Orders o ON i.OrderID = o.OrderID
-          WHERE i.InvoiceID = @InvoiceID
-        `);
+      await client.query('BEGIN');
 
-      if (invCheck.recordset.length === 0) {
-        await transaction.rollback();
+      const invCheck = await client.query(`
+          SELECT i.status, i.amount, COALESCE(i.paid_amount, 0) as paid_amount, i.order_id, o.buyer_company_id 
+          FROM invoices i
+          JOIN orders o ON i.order_id = o.order_id
+          WHERE i.invoice_id = $1
+        `, [invId]);
+
+      if (invCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ success: false, message: 'Không tìm thấy hóa đơn' });
       }
-      const inv = invCheck.recordset[0];
+      const inv = invCheck.rows[0];
 
-      // Ownership Validation (IDOR prevention)
-      if (req.user?.company_id && inv.BuyerCompanyID !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN' && req.user.user_type !== 'COMPANY_ADMIN') {
-         // COMPANY_ADMIN of the seller can probably view/pay? Wait, it's the Buyer who pays.
-         // Let's ensure if it's a buyer, they can only pay their own. If it's the seller or admin, they might process payment on behalf.
-         // But the BuyerCompanyID must match if they are BUYER_REP.
+      if (req.user?.company_id && inv.buyer_company_id !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN' && req.user.user_type !== 'COMPANY_ADMIN') {
          if (req.user.user_type === 'BUYER_REP') {
-             await transaction.rollback();
+             await client.query('ROLLBACK');
              return res.status(403).json({ success: false, message: 'Bạn không có quyền thanh toán hóa đơn của doanh nghiệp khác.' });
          }
       }
-      const totalAmt = Number(inv.Amount || 0);
-      const currentPaid = Number(inv.PaidAmount || 0);
+      const totalAmt = Number(inv.amount || 0);
+      const currentPaid = Number(inv.paid_amount || 0);
       const remainingUnpaid = totalAmt - currentPaid > 0 ? totalAmt - currentPaid : 0;
 
       const payVal = paid_amount ? Number(paid_amount) : remainingUnpaid;
 
-      // 2. Swimlane System: Validation (Kiểm tra số tiền > 0 và <= Số tiền nợ trên hóa đơn)
-      if (inv.Status === 'PAID' || remainingUnpaid <= 0) {
-        await transaction.rollback();
+      if (inv.status === 'PAID' || remainingUnpaid <= 0) {
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Hóa đơn này đã được thanh toán hoàn tất trước đó.' });
       }
 
       if (isNaN(payVal) || payVal <= 0) {
-        await transaction.rollback();
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Số tiền thanh toán phải lớn hơn 0.' });
       }
 
       if (payVal > remainingUnpaid) {
-        await transaction.rollback();
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: `Số tiền thanh toán (${payVal.toLocaleString()} đ) vượt quá dư nợ còn lại (${remainingUnpaid.toLocaleString()} đ).` });
       }
 
       const newTotalPaid = currentPaid + payVal;
       const newStatus = newTotalPaid >= totalAmt ? 'PAID' : 'PARTIALLY_PAID';
 
-      // 3. Swimlane Database: Thực thi song song 3 nhánh DB theo Activity Diagram
+      await client.query(`
+          INSERT INTO payments (invoice_id, amount, paid_amount, payment_method, payment_reference, paid_at)
+          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+        `, [invId, payVal, payVal, payMethod, payRef]);
 
-      // BRANCH 1: Ghi nhận dòng tiền thực tế -> INSERT INTO Payments
-      await transaction.request()
-        .input('InvoiceID', sql.BigInt, invId)
-        .input('Amount', sql.Decimal(18,2), payVal)
-        .input('PaidAmount', sql.Decimal(18,2), payVal)
-        .input('PaymentMethod', sql.NVarChar, payMethod)
-        .input('PaymentReference', sql.NVarChar, payRef)
-        .query(`
-          INSERT INTO Payments (InvoiceID, Amount, PaidAmount, PaymentMethod, PaymentReference, PaidAt)
-          VALUES (@InvoiceID, @Amount, @PaidAmount, @PaymentMethod, @PaymentReference, GETDATE())
-        `);
+      const invUpdateRes = await client.query(`
+          UPDATE invoices 
+          SET paid_amount = COALESCE(paid_amount, 0) + $1, status = CASE WHEN (COALESCE(paid_amount, 0) + $1) >= amount THEN 'PAID' ELSE 'PARTIALLY_PAID' END
+          WHERE invoice_id = $2 AND (amount - COALESCE(paid_amount, 0)) >= $1
+        `, [payVal, invId]);
 
-      // BRANCH 2: Cập nhật Hóa đơn -> UPDATE Invoices (Atomic conditional update)
-      const invUpdateRes = await transaction.request()
-        .input('InvoiceID', sql.BigInt, invId)
-        .input('PaidAmount', sql.Decimal(18,2), payVal)
-        .input('Status', sql.NVarChar, newStatus)
-        .query(`
-          UPDATE Invoices 
-          SET PaidAmount = PaidAmount + @PaidAmount, Status = CASE WHEN (PaidAmount + @PaidAmount) >= Amount THEN 'PAID' ELSE 'PARTIALLY_PAID' END
-          WHERE InvoiceID = @InvoiceID AND (Amount - PaidAmount) >= @PaidAmount
-        `);
-
-      if (invUpdateRes.rowsAffected[0] === 0) {
-        await transaction.rollback();
+      if (invUpdateRes.rowCount === 0) {
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Dữ liệu hóa đơn đã thay đổi hoặc dư nợ không đủ để thanh toán số tiền này. Vui lòng thử lại.' });
       }
 
-      // BRANCH 3: Cập nhật Hạn mức tín dụng -> UPDATE CreditLimits (Giảm UsedAmount theo số tiền trả)
-      await transaction.request()
-        .input('PaidAmount', sql.Decimal(18,2), payVal)
-        .input('CompanyID', sql.Int, inv.BuyerCompanyID)
-        .query(`
-          UPDATE CreditLimits 
-          SET UsedAmount = CASE WHEN (UsedAmount - @PaidAmount) < 0 THEN 0 ELSE (UsedAmount - @PaidAmount) END
-          WHERE CompanyID = @CompanyID
-        `);
+      await client.query(`
+          UPDATE credit_limits 
+          SET used_amount = CASE WHEN (COALESCE(used_amount, 0) - $1) < 0 THEN 0 ELSE (COALESCE(used_amount, 0) - $1) END
+          WHERE company_id = $2
+        `, [payVal, inv.buyer_company_id]);
 
-      // Commit Transaction
-      await transaction.commit();
+      await client.query('COMMIT');
       return res.json({ 
         success: true, 
         message: `Ghi nhận thanh toán thành công ${payVal.toLocaleString('vi-VN')} đ!`,
@@ -275,8 +242,10 @@ const payInvoice = async (req, res) => {
         status: newStatus
       });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error paying invoice:', err);
@@ -294,29 +263,21 @@ const updateCreditLimit = async (req, res) => {
   try {
     const company_id = req.user.company_id;
     const pool = await getPool();
-    const check = await pool.request()
-      .input('CompanyID', sql.Int, company_id)
-      .query(`SELECT UsedAmount FROM CreditLimits WHERE CompanyID = @CompanyID`);
+    const check = await pool.query(`SELECT used_amount FROM credit_limits WHERE company_id = $1`, [company_id]);
     
     let used = 0;
-    if (check.recordset.length > 0) {
-      used = check.recordset[0].UsedAmount;
-      await pool.request()
-        .input('TotalLimit', sql.Decimal(18,2), newLimit)
-        .input('CompanyID', sql.Int, company_id)
-        .query(`
-          UPDATE CreditLimits 
-          SET CreditLimitAmount = @TotalLimit
-          WHERE CompanyID = @CompanyID
-        `);
+    if (check.rows.length > 0) {
+      used = Number(check.rows[0].used_amount || 0);
+      await pool.query(`
+          UPDATE credit_limits 
+          SET credit_limit_amount = $1
+          WHERE company_id = $2
+        `, [newLimit, company_id]);
     } else {
-      await pool.request()
-        .input('TotalLimit', sql.Decimal(18,2), newLimit)
-        .input('CompanyID', sql.Int, company_id)
-        .query(`
-          INSERT INTO CreditLimits (CompanyID, CreditLimitAmount, UsedAmount)
-          VALUES (@CompanyID, @TotalLimit, 0)
-        `);
+      await pool.query(`
+          INSERT INTO credit_limits (company_id, credit_limit_amount, used_amount)
+          VALUES ($1, $2, 0)
+        `, [company_id, newLimit]);
     }
 
     const newCreditLimit = {
@@ -335,40 +296,42 @@ const updateCreditLimit = async (req, res) => {
 const getFinancialSummary = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
+    const result = await pool.query(`
       SELECT 
-        SUM(Amount) as total_invoiced,
-        SUM(CASE WHEN Status = 'PAID' THEN Amount ELSE 0 END) as total_paid,
-        SUM(CASE WHEN Status = 'UNPAID' THEN Amount ELSE 0 END) as total_unpaid,
-        COUNT(CASE WHEN Status = 'UNPAID' AND DueDate < GETDATE() THEN 1 END) as overdue_count,
-        SUM(CASE WHEN Status = 'UNPAID' AND DueDate < GETDATE() THEN Amount ELSE 0 END) as overdue_amount
-      FROM Invoices
+        SUM(amount) as total_invoiced,
+        SUM(CASE WHEN status = 'PAID' THEN amount ELSE 0 END) as total_paid,
+        SUM(CASE WHEN status = 'UNPAID' THEN amount ELSE 0 END) as total_unpaid,
+        COUNT(CASE WHEN status = 'UNPAID' AND due_date < CURRENT_DATE THEN 1 END) as overdue_count,
+        SUM(CASE WHEN status = 'UNPAID' AND due_date < CURRENT_DATE THEN amount ELSE 0 END) as overdue_amount
+      FROM invoices
     `);
     
-    const stats = result.recordset[0];
-    const creditResult = await pool.request().query(`SELECT * FROM CreditLimits WHERE CompanyID = 1`);
+    const stats = result.rows[0];
+    const creditResult = await pool.query(`SELECT * FROM credit_limits WHERE company_id = 1`);
     
     let credit_limit = { total_limit: 1000000000, used_amount: 0, available_balance: 1000000000 };
-    if (creditResult.recordset.length > 0) {
-      const row = creditResult.recordset[0];
+    if (creditResult.rows.length > 0) {
+      const row = creditResult.rows[0];
+      const tLimit = Number(row.credit_limit_amount || 0);
+      const tUsed = Number(row.used_amount || 0);
       credit_limit = {
-        total_limit: row.CreditLimitAmount,
-        used_amount: row.UsedAmount,
-        available_balance: row.AvailableAmount
+        total_limit: tLimit,
+        used_amount: tUsed,
+        available_balance: tLimit - tUsed
       };
     }
 
-    const total_invoiced = stats.total_invoiced || 0;
-    const total_paid = stats.total_paid || 0;
+    const total_invoiced = Number(stats.total_invoiced || 0);
+    const total_paid = Number(stats.total_paid || 0);
 
     res.json({
       success: true,
       summary: {
         total_invoiced: total_invoiced,
         total_paid: total_paid,
-        total_unpaid: stats.total_unpaid || 0,
-        overdue_count: stats.overdue_count || 0,
-        overdue_amount: stats.overdue_amount || 0,
+        total_unpaid: Number(stats.total_unpaid || 0),
+        overdue_count: Number(stats.overdue_count || 0),
+        overdue_amount: Number(stats.overdue_amount || 0),
         credit_limit: credit_limit,
         payment_rate: total_invoiced > 0 ? Math.round((total_paid / total_invoiced) * 100) : 0
       }
@@ -382,20 +345,20 @@ const getFinancialSummary = async (req, res) => {
 const getOverdueInvoices = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request().query(`
-      SELECT InvoiceID, OrderID, InvoiceNumber, InvoiceDate, DueDate, Status, Amount 
-      FROM Invoices 
-      WHERE Status = 'UNPAID' AND DueDate < GETDATE()
-      ORDER BY DueDate ASC
+    const result = await pool.query(`
+      SELECT invoice_id, order_id, invoice_number, invoice_date, due_date, status, amount 
+      FROM invoices 
+      WHERE status = 'UNPAID' AND due_date < CURRENT_DATE
+      ORDER BY due_date ASC
     `);
 
-    const overdue = result.recordset.map(row => ({
-      invoice_id: row.InvoiceID,
-      invoice_number: row.InvoiceNumber,
-      issue_date: row.InvoiceDate ? row.InvoiceDate.toISOString().split('T')[0] : null,
-      due_date: row.DueDate ? row.DueDate.toISOString().split('T')[0] : null,
-      status: row.Status,
-      amount: row.Amount
+    const overdue = result.rows.map(row => ({
+      invoice_id: row.invoice_id,
+      invoice_number: row.invoice_number,
+      issue_date: row.invoice_date ? new Date(row.invoice_date).toISOString().split('T')[0] : null,
+      due_date: row.due_date ? new Date(row.due_date).toISOString().split('T')[0] : null,
+      status: row.status,
+      amount: row.amount
     }));
 
     res.json({ success: true, data: overdue });
@@ -412,31 +375,31 @@ const getLCDocuments = async (req, res) => {
     const isBuyerRole = userType === 'BUYER_REP' || userType === 'BUYER';
     const companyId = req.user?.company_id;
 
-    let query = `SELECT * FROM LCDocuments WHERE 1=1 `;
-    const request = pool.request();
+    let query = `SELECT * FROM lc_documents WHERE 1=1 `;
+    let params = [];
 
     if (isBuyerRole) {
       if (companyId) {
-        query += ` AND BuyerCompany IN (SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID) `;
-        request.input('CompanyID', sql.BigInt, companyId);
+        query += ` AND buyer_company IN (SELECT company_name FROM companies WHERE company_id = $1) `;
+        params.push(companyId);
       } else {
         query += ` AND 1=0 `;
       }
     }
 
-    query += ` ORDER BY CreatedAt DESC `;
-    const result = await request.query(query);
+    query += ` ORDER BY created_at DESC `;
+    const result = await pool.query(query, params);
     
-    const docs = result.recordset.map(row => ({
-      lc_id: row.LCID,
-      buyer_company: row.BuyerCompany,
-      lc_number: row.LCNumber,
-      issuing_bank: row.IssuingBank,
-      amount: row.Amount,
-      expiry_date: row.ExpiryDate ? row.ExpiryDate.toISOString().split('T')[0] : null,
-      document_url: row.DocumentUrl,
-      status: row.Status,
-      created_at: row.CreatedAt ? row.CreatedAt.toISOString().split('T')[0] : null
+    const docs = result.rows.map(row => ({
+      lc_id: row.lc_id,
+      buyer_company: row.buyer_company,
+      lc_number: row.lc_number,
+      issuing_bank: row.issuing_bank,
+      amount: row.amount,
+      expiry_date: row.expiry_date ? new Date(row.expiry_date).toISOString().split('T')[0] : null,
+      document_url: row.document_url,
+      status: row.status,
+      created_at: row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : null
     }));
 
     res.json({ success: true, data: docs });
@@ -458,30 +421,21 @@ const submitLCDocument = async (req, res) => {
     const pool = await getPool();
     let actualCompanyName = buyer_company;
     if (req.user && req.user.company_id) {
-      const compRes = await pool.request()
-        .input('CompanyID', sql.BigInt, req.user.company_id)
-        .query('SELECT CompanyName FROM Companies WHERE CompanyID = @CompanyID');
-      if (compRes.recordset.length > 0) {
-        actualCompanyName = compRes.recordset[0].CompanyName;
+      const compRes = await pool.query('SELECT company_name FROM companies WHERE company_id = $1', [req.user.company_id]);
+      if (compRes.rows.length > 0) {
+        actualCompanyName = compRes.rows[0].company_name;
       }
     }
     if (!actualCompanyName) actualCompanyName = 'CÔNG TY CP KHÁCH SẠN LOTTE SAIGON';
 
-    const result = await pool.request()
-      .input('BuyerCompany', sql.NVarChar, actualCompanyName)
-      .input('LCNumber', sql.NVarChar, lc_number)
-      .input('IssuingBank', sql.NVarChar, issuing_bank)
-      .input('Amount', sql.Decimal(18,2), parseFloat(amount))
-      .input('ExpiryDate', sql.Date, new Date(expiry_date))
-      .input('DocumentUrl', sql.NVarChar, docUrl)
-      .query(`
-        INSERT INTO LCDocuments (BuyerCompany, LCNumber, IssuingBank, Amount, ExpiryDate, DocumentUrl, Status, CreatedAt)
-        OUTPUT INSERTED.LCID
-        VALUES (@BuyerCompany, @LCNumber, @IssuingBank, @Amount, @ExpiryDate, @DocumentUrl, 'SUBMITTED', GETDATE())
-      `);
+    const result = await pool.query(`
+        INSERT INTO lc_documents (buyer_company, lc_number, issuing_bank, amount, expiry_date, document_url, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, 'SUBMITTED', CURRENT_TIMESTAMP)
+        RETURNING lc_id
+      `, [actualCompanyName, lc_number, issuing_bank, parseFloat(amount), new Date(expiry_date), docUrl]);
 
     const newLC = {
-      lc_id: result.recordset[0].LCID,
+      lc_id: result.rows[0].lc_id,
       lc_number,
       issuing_bank,
       amount: parseFloat(amount),
@@ -504,72 +458,56 @@ const verifyLCDocument = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      // 1. Fetch LC Document details
-      const lcRes = await transaction.request()
-        .input('LCID', sql.Int, lcid)
-        .query('SELECT BuyerCompany, Amount, Status FROM LCDocuments WHERE LCID = @LCID');
+      await client.query('BEGIN');
 
-      if (lcRes.recordset.length === 0) {
-        await transaction.rollback();
+      const lcRes = await client.query('SELECT buyer_company, amount, status FROM lc_documents WHERE lc_id = $1', [lcid]);
+
+      if (lcRes.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C.' });
       }
 
-      const lc = lcRes.recordset[0];
-      if (lc.Status !== 'SUBMITTED') {
-        await transaction.rollback();
+      const lc = lcRes.rows[0];
+      if (lc.status !== 'SUBMITTED') {
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý trước đó.' });
       }
 
-      // 2. Update status of LC
-      await transaction.request()
-        .input('LCID', sql.Int, lcid)
-        .input('Status', sql.NVarChar, status)
-        .query('UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID');
+      await client.query('UPDATE lc_documents SET status = $1 WHERE lc_id = $2', [status, lcid]);
 
-      // 3. If verified, link and add L/C amount to the buyer company's Credit Limit
       if (status === 'VERIFIED') {
-        const compRes = await transaction.request()
-          .input('CompanyName', sql.NVarChar, lc.BuyerCompany)
-          .query('SELECT CompanyID FROM Companies WHERE CompanyName = @CompanyName');
+        const compRes = await client.query('SELECT company_id FROM companies WHERE company_name = $1', [lc.buyer_company]);
 
-        if (compRes.recordset.length > 0) {
-          const companyId = compRes.recordset[0].CompanyID;
+        if (compRes.rows.length > 0) {
+          const companyId = compRes.rows[0].company_id;
           
-          // Check if CreditLimit entry exists
-          const limitCheck = await transaction.request()
-            .input('CompanyID', sql.BigInt, companyId)
-            .query('SELECT CompanyID FROM CreditLimits WHERE CompanyID = @CompanyID');
+          const limitCheck = await client.query('SELECT company_id FROM credit_limits WHERE company_id = $1', [companyId]);
 
-          if (limitCheck.recordset.length > 0) {
-            await transaction.request()
-              .input('CompanyID', sql.BigInt, companyId)
-              .input('LCAmount', sql.Decimal(18, 2), lc.Amount)
-              .query(`
-                UPDATE CreditLimits 
-                SET CreditLimitAmount = CreditLimitAmount + @LCAmount 
-                WHERE CompanyID = @CompanyID
-              `);
+          if (limitCheck.rows.length > 0) {
+            await client.query(`
+                UPDATE credit_limits 
+                SET credit_limit_amount = COALESCE(credit_limit_amount,0) + $1 
+                WHERE company_id = $2
+              `, [lc.amount, companyId]);
           } else {
-            await transaction.request()
-              .input('CompanyID', sql.BigInt, companyId)
-              .input('LCAmount', sql.Decimal(18, 2), lc.Amount)
-              .query(`
-                INSERT INTO CreditLimits (CompanyID, CreditLimitAmount, UsedAmount)
-                VALUES (@CompanyID, @LCAmount, 0)
-              `);
+            await client.query(`
+                INSERT INTO credit_limits (company_id, credit_limit_amount, used_amount)
+                VALUES ($1, $2, 0)
+              `, [companyId, lc.amount]);
           }
         }
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true, message: `Đã cập nhật trạng thái L/C thành ${status}` });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error verifying L/C doc:', err);
@@ -581,34 +519,32 @@ const rejectLCDocument = async (req, res) => {
   const lcid = parseInt(req.params.id);
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      const lcRes = await transaction.request()
-        .input('LCID', sql.Int, lcid)
-        .query('SELECT Status FROM LCDocuments WHERE LCID = @LCID');
+      await client.query('BEGIN');
 
-      if (lcRes.recordset.length === 0) {
-        await transaction.rollback();
+      const lcRes = await client.query('SELECT status FROM lc_documents WHERE lc_id = $1', [lcid]);
+
+      if (lcRes.rows.length === 0) {
+        await client.query('ROLLBACK');
         return res.status(404).json({ success: false, message: 'Không tìm thấy tài liệu L/C.' });
       }
 
-      if (lcRes.recordset[0].Status !== 'SUBMITTED') {
-        await transaction.rollback();
+      if (lcRes.rows[0].status !== 'SUBMITTED') {
+        await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Tài liệu L/C này đã được xử lý trước đó.' });
       }
 
-      await transaction.request()
-        .input('LCID', sql.Int, lcid)
-        .input('Status', sql.NVarChar, 'REJECTED')
-        .query(`UPDATE LCDocuments SET Status = @Status WHERE LCID = @LCID`);
+      await client.query(`UPDATE lc_documents SET status = 'REJECTED' WHERE lc_id = $1`, [lcid]);
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true, message: `Đã từ chối L/C` });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error rejecting L/C doc:', err);

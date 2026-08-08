@@ -1,4 +1,4 @@
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 
 // Helper to map SQL Server PascalCase keys to Frontend camelCase/snake_case keys
 const mapProductToFrontend = (prod) => {
@@ -45,32 +45,46 @@ const getProducts = async (req, res) => {
     const pool = await getPool();
     
     let query = `
-      SELECT p.*, c.CategoryName as Category,
-             pp.CostPrice, pp.BasePrice,
-             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
-      FROM Products p
-      LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
-      LEFT JOIN ProductPrices pp ON pp.ProductID = p.ProductID
-      WHERE p.Status != 'DELETED'
+      SELECT p.*, c.category_name as category,
+             pp.cost_price, pp.base_price,
+             (SELECT json_agg(t.* ORDER BY t.tier_level ASC) FROM product_tier_prices t WHERE t.product_id = p.product_id) as tier_prices
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      LEFT JOIN product_prices pp ON pp.product_id = p.product_id
+      WHERE p.status != 'DELETED'
     `;
     
-    if (category && category !== 'ALL') query += ` AND c.CategoryName LIKE @Category`;
-    if (country) query += ` AND p.CountryOfOrigin LIKE @Country`;
-    if (grape) query += ` AND p.GrapeVariety LIKE @Grape`;
-    if (search) query += ` AND (p.ProductName LIKE @Search OR p.SKU LIKE @Search)`;
-    if (priceStatus === 'PRICED') query += ` AND (pp.BasePrice > 0 OR EXISTS (SELECT 1 FROM ProductTierPrices WHERE ProductID = p.ProductID))`;
-    if (priceStatus === 'UNPRICED') query += ` AND (pp.BasePrice IS NULL OR pp.BasePrice = 0) AND NOT EXISTS (SELECT 1 FROM ProductTierPrices WHERE ProductID = p.ProductID)`;
-    
-    const request = pool.request();
-    if (category && category !== 'ALL') request.input('Category', sql.NVarChar, `%${category}%`);
-    if (country) request.input('Country', sql.NVarChar, `%${country}%`);
-    if (grape) request.input('Grape', sql.NVarChar, `%${grape}%`);
-    if (search) request.input('Search', sql.NVarChar, `%${search}%`);
+    let params = [];
+    let paramIndex = 1;
 
-    const result = await request.query(query);
+    if (category && category !== 'ALL') {
+      query += ` AND c.category_name ILIKE $${paramIndex++}`;
+      params.push(`%${category}%`);
+    }
+    if (country) {
+      query += ` AND p.country_of_origin ILIKE $${paramIndex++}`;
+      params.push(`%${country}%`);
+    }
+    if (grape) {
+      query += ` AND p.grape_variety ILIKE $${paramIndex++}`;
+      params.push(`%${grape}%`);
+    }
+    if (search) {
+      query += ` AND (p.product_name ILIKE $${paramIndex} OR p.sku ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+    if (priceStatus === 'PRICED') {
+      query += ` AND (pp.base_price > 0 OR EXISTS (SELECT 1 FROM product_tier_prices WHERE product_id = p.product_id))`;
+    }
+    if (priceStatus === 'UNPRICED') {
+      query += ` AND (pp.base_price IS NULL OR pp.base_price = 0) AND NOT EXISTS (SELECT 1 FROM product_tier_prices WHERE product_id = p.product_id)`;
+    }
+
+    const result = await pool.query(query, params);
 
     // Map database results to frontend format
-    const products = result.recordset.map(prod => mapProductToFrontend(prod));
+    const products = result.rows.map(prod => mapProductToFrontend(prod));
 
     res.json({ success: true, count: products.length, data: products });
   } catch (err) {
@@ -83,21 +97,19 @@ const getProducts = async (req, res) => {
 const getProductById = async (req, res) => {
   try {
     const pool = await getPool();
-    const result = await pool.request()
-      .input('ProductID', sql.BigInt, req.params.id)
-      .query(`
-        SELECT p.*, c.CategoryName as Category,
-             (SELECT * FROM ProductTierPrices t WHERE t.ProductID = p.ProductID ORDER BY TierLevel ASC FOR JSON PATH) as tier_prices
-      FROM Products p
-      LEFT JOIN Categories c ON p.CategoryID = c.CategoryID
-      WHERE p.ProductID = @ProductID
-      `);
+    const result = await pool.query(`
+      SELECT p.*, c.category_name as category,
+             (SELECT json_agg(t.* ORDER BY t.tier_level ASC) FROM product_tier_prices t WHERE t.product_id = p.product_id) as tier_prices
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.category_id
+      WHERE p.product_id = $1
+    `, [req.params.id]);
 
-    if (result.recordset.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại' });
     }
 
-    const prod = mapProductToFrontend(result.recordset[0]);
+    const prod = mapProductToFrontend(result.rows[0]);
 
     res.json({ success: true, data: prod });
   } catch (err) {
@@ -115,51 +127,36 @@ const createProduct = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
 
     try {
-      const result = await transaction.request()
-        .input('SKU', sql.NVarChar, sku)
-        .input('ProductName', sql.NVarChar, product_name)
-        .input('Category', sql.NVarChar, category)
-        .input('CountryOfOrigin', sql.NVarChar, country_of_origin)
-        .input('Region', sql.NVarChar, region)
-        .input('GrapeVariety', sql.NVarChar, grape_variety)
-        .input('VintageYear', sql.Int, vintage_year)
-        .input('AlcoholContent', sql.Decimal(5,2), alcohol_content)
-        .input('VolumeML', sql.Int, volume_ml)
-        .input('MOQ', sql.Int, moq)
-        .input('ImageUrl', sql.NVarChar, image_url)
-        .input('Description', sql.NVarChar, description)
-        .query(`
-          INSERT INTO Products (SKU, ProductName, Category, CountryOfOrigin, Region, GrapeVariety, VintageYear, AlcoholContent, VolumeML, MOQ, ImageUrl, Description)
-          OUTPUT INSERTED.ProductID
-          VALUES (@SKU, @ProductName, @Category, @CountryOfOrigin, @Region, @GrapeVariety, @VintageYear, @AlcoholContent, @VolumeML, @MOQ, @ImageUrl, @Description)
-        `);
+      await client.query('BEGIN');
 
-      const productId = result.recordset[0].ProductID;
+      const result = await client.query(`
+          INSERT INTO products (sku, product_name, category_id, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description)
+          VALUES ($1, $2, (SELECT category_id FROM categories WHERE category_name = $3 LIMIT 1), $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING product_id
+        `, [sku, product_name, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description]);
+
+      const productId = result.rows[0].product_id;
 
       // Insert Tier Prices
       if (tier_prices && Array.isArray(tier_prices)) {
         for (const tier of tier_prices) {
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('TierLevel', sql.Int, tier.tier_level)
-            .input('MinQuantity', sql.Int, tier.min_quantity)
-            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
-            .query(`
-              INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit)
-              VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)
-            `);
+          await client.query(`
+              INSERT INTO product_tier_prices (product_id, tier_level, min_quantity, price_per_unit)
+              VALUES ($1, $2, $3, $4)
+            `, [productId, tier.tier_level, tier.min_quantity, tier.price_per_unit]);
         }
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.status(201).json({ success: true, message: 'Thêm sản phẩm thành công', product_id: productId });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error creating product:', err);
@@ -177,63 +174,52 @@ const updateProduct = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
-      const updateResult = await transaction.request()
-        .input('ProductID', sql.BigInt, productId)
-        .input('CompanyID', sql.BigInt, req.user?.company_id || 0)
-        .input('SKU', sql.NVarChar, sku)
-        .input('ProductName', sql.NVarChar, product_name)
-        .input('Category', sql.NVarChar, category)
-        .input('CountryOfOrigin', sql.NVarChar, country_of_origin)
-        .input('Region', sql.NVarChar, region)
-        .input('GrapeVariety', sql.NVarChar, grape_variety)
-        .input('VintageYear', sql.Int, vintage_year)
-        .input('AlcoholContent', sql.Decimal(5,2), alcohol_content)
-        .input('VolumeML', sql.Int, volume_ml)
-        .input('MOQ', sql.Int, moq)
-        .input('ImageUrl', sql.NVarChar, image_url)
-        .input('Description', sql.NVarChar, description)
-        .query(`
-          UPDATE Products SET 
-            SKU = @SKU, ProductName = @ProductName, Category = @Category, 
-            CountryOfOrigin = @CountryOfOrigin, Region = @Region, GrapeVariety = @GrapeVariety, 
-            VintageYear = @VintageYear, AlcoholContent = @AlcoholContent, VolumeML = @VolumeML, 
-            MOQ = @MOQ, ImageUrl = @ImageUrl, Description = @Description
-          WHERE ProductID = @ProductID 
-          ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}
-        `);
+      await client.query('BEGIN');
 
-      if (updateResult.rowsAffected[0] === 0) {
-        await transaction.rollback();
+      const companyId = req.user?.company_id || 0;
+      let updateQuery = `
+          UPDATE products SET 
+            sku = $1, product_name = $2, category_id = (SELECT category_id FROM categories WHERE category_name = $3 LIMIT 1), 
+            country_of_origin = $4, region = $5, grape_variety = $6, 
+            vintage_year = $7, alcohol_content = $8, volume_ml = $9, 
+            moq = $10, image_url = $11, description = $12
+          WHERE product_id = $13 
+        `;
+      let params = [sku, product_name, category, country_of_origin, region, grape_variety, vintage_year, alcohol_content, volume_ml, moq, image_url, description, productId];
+      
+      if (req.user?.user_type === 'COMPANY_ADMIN') {
+        updateQuery += ` AND seller_company_id = $14 `;
+        params.push(companyId);
+      }
+
+      const updateResult = await client.query(updateQuery, params);
+
+      if (updateResult.rowCount === 0) {
+        await client.query('ROLLBACK');
         return res.status(403).json({ success: false, message: 'Bạn không có quyền cập nhật sản phẩm này hoặc sản phẩm không tồn tại.' });
       }
 
-      await transaction.request()
-        .input('ProductID', sql.BigInt, productId)
-        .query(`DELETE FROM ProductTierPrices WHERE ProductID = @ProductID`);
+      await client.query(`DELETE FROM product_tier_prices WHERE product_id = $1`, [productId]);
 
       if (tier_prices && Array.isArray(tier_prices)) {
         for (const tier of tier_prices) {
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('TierLevel', sql.Int, tier.tier_level)
-            .input('MinQuantity', sql.Int, tier.min_quantity)
-            .input('PricePerUnit', sql.Decimal(18,2), tier.price_per_unit)
-            .query(`
-              INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit)
-              VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)
-            `);
+          await client.query(`
+              INSERT INTO product_tier_prices (product_id, tier_level, min_quantity, price_per_unit)
+              VALUES ($1, $2, $3, $4)
+            `, [productId, tier.tier_level, tier.min_quantity, tier.price_per_unit]);
         }
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true, message: 'Cập nhật sản phẩm & giá thành công' });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error updating product:', err);
@@ -247,47 +233,58 @@ const deleteProduct = async (req, res) => {
 
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
+    const client = await pool.connect();
+    
     try {
+      await client.query('BEGIN');
+
       // 1. Dọn dẹp các bảng con liên quan đến giá và tồn kho
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ProductPrices WHERE ProductID = @ProductID');
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM ContractPrices WHERE ProductID = @ProductID');
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM CustomerPrices WHERE ProductID = @ProductID');
-      await transaction.request().input('ProductID', sql.BigInt, productId).query('DELETE FROM Inventories WHERE ProductID = @ProductID AND ReservedQuantity = 0');
+      await client.query('DELETE FROM product_tier_prices WHERE product_id = $1', [productId]);
+      await client.query('DELETE FROM product_prices WHERE product_id = $1', [productId]);
+      await client.query('DELETE FROM contract_prices WHERE product_id = $1', [productId]);
+      await client.query('DELETE FROM customer_prices WHERE product_id = $1', [productId]);
+      await client.query('DELETE FROM inventories WHERE product_id = $1 AND reserved_quantity = 0', [productId]);
 
       // 2. Thử xóa cứng sản phẩm khỏi bảng Products
-      const delReq = transaction.request().input('ProductID', sql.BigInt, productId);
+      const companyId = req.user?.company_id || 0;
+      let delQuery = `DELETE FROM products WHERE product_id = $1`;
+      let params = [productId];
+
       if (req.user?.user_type === 'COMPANY_ADMIN') {
-        delReq.input('CompanyID', sql.BigInt, req.user.company_id || 0);
+        delQuery += ` AND seller_company_id = $2`;
+        params.push(companyId);
       }
       
-      const delResult = await delReq.query(`DELETE FROM Products WHERE ProductID = @ProductID ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}`);
+      const delResult = await client.query(delQuery, params);
 
-      if (delResult.rowsAffected[0] === 0) {
-        await transaction.rollback();
+      if (delResult.rowCount === 0) {
+        await client.query('ROLLBACK');
         return res.status(403).json({ success: false, message: 'Sản phẩm không tồn tại hoặc bạn không có quyền xóa.' });
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true, message: 'Đã xóa hoàn tất sản phẩm khỏi danh mục.' });
     } catch (delErr) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
 
       // 3. Nếu vướng Foreign Key ở OrderItems/RFQs, tự động chuyển sang Soft Delete (Status = 'DELETED')
-      const softDelReq = pool.request().input('ProductID', sql.BigInt, productId);
+      const companyId = req.user?.company_id || 0;
+      let softDelQuery = `UPDATE products SET status = 'DELETED' WHERE product_id = $1`;
+      let params = [productId];
+
       if (req.user?.user_type === 'COMPANY_ADMIN') {
-         softDelReq.input('CompanyID', sql.BigInt, req.user.company_id || 0);
+        softDelQuery += ` AND seller_company_id = $2`;
+        params.push(companyId);
       }
-      const softResult = await softDelReq.query(`UPDATE Products SET Status = 'DELETED' WHERE ProductID = @ProductID ${req.user?.user_type === 'COMPANY_ADMIN' ? 'AND SellerCompanyID = @CompanyID' : ''}`);
+      const softResult = await pool.query(softDelQuery, params);
       
-      if (softResult.rowsAffected[0] === 0) {
+      if (softResult.rowCount === 0) {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa sản phẩm này.' });
       }
 
       res.json({ success: true, message: 'Sản phẩm có đơn hàng lịch sử đã được lưu vết và đánh dấu Đã Xóa (Soft Delete).' });
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error deleting product:', err);
@@ -319,72 +316,50 @@ const updateProductPrices = async (req, res) => {
 
   try {
     const pool = await getPool();
-
-    // 2. Swimlane System: Khởi tạo Transaction
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
 
     try {
+      await client.query('BEGIN');
+
+      const companyId = req.user?.company_id || 0;
+
       for (const pId of targetIds) {
         const productId = parseInt(pId);
         if (isNaN(productId)) continue;
 
         if (req.user?.user_type === 'COMPANY_ADMIN') {
-          const pCheck = await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('CompanyID', sql.BigInt, req.user.company_id || 0)
-            .query('SELECT 1 FROM Products WHERE ProductID = @ProductID AND SellerCompanyID = @CompanyID');
-          if (pCheck.recordset.length === 0) continue; // Không có quyền
+          const pCheck = await client.query('SELECT 1 FROM products WHERE product_id = $1 AND seller_company_id = $2', [productId, companyId]);
+          if (pCheck.rows.length === 0) continue; // Không có quyền
         }
 
-        // 3. Swimlane Database: Thực thi theo từng chế độ trong Activity Diagram
-
-        // CHẾ ĐỘ 1: GIÁ GỐC -> Chạy vòng lặp UPSERT vào ProductPrices
+        // CHẾ ĐỘ 1: GIÁ GỐC -> Chạy vòng lặp UPSERT vào product_prices
         if (priceType === 'ORIGINAL') {
           const costVal = Number(costPrice || 0);
           const baseVal = Number(basePrice || 0);
 
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .input('CostPrice', sql.Decimal(18,2), costVal)
-            .input('BasePrice', sql.Decimal(18,2), baseVal)
-            .query(`
-              IF EXISTS (SELECT 1 FROM ProductPrices WHERE ProductID = @ProductID)
-              BEGIN
-                UPDATE ProductPrices 
-                SET CostPrice = @CostPrice, BasePrice = @BasePrice
-                WHERE ProductID = @ProductID;
-              END
-              ELSE
-              BEGIN
-                INSERT INTO ProductPrices (ProductID, CostPrice, BasePrice)
-                VALUES (@ProductID, @CostPrice, @BasePrice);
-              END
-            `);
+          await client.query(`
+            INSERT INTO product_prices (product_id, cost_price, base_price)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (product_id) DO UPDATE SET cost_price = EXCLUDED.cost_price, base_price = EXCLUDED.base_price
+          `, [productId, costVal, baseVal]);
         } 
         
-        // CHẾ ĐỘ 2: SỐ LƯỢNG (TIER) -> Chạy vòng lặp DELETE và vòng lặp INSERT vào ProductTierPrices
+        // CHẾ ĐỘ 2: SỐ LƯỢNG (TIER) -> Chạy vòng lặp DELETE và vòng lặp INSERT vào product_tier_prices
         else if (priceType === 'TIER') {
-          // Step 2a: Chạy DELETE vào ProductTierPrices
-          await transaction.request()
-            .input('ProductID', sql.BigInt, productId)
-            .query('DELETE FROM ProductTierPrices WHERE ProductID = @ProductID');
+          await client.query('DELETE FROM product_tier_prices WHERE product_id = $1', [productId]);
 
-          // Step 2b: Chạy vòng lặp INSERT vào ProductTierPrices
           if (Array.isArray(prices)) {
             for (const tier of prices) {
               if (!tier.price_per_unit || Number(tier.price_per_unit) <= 0) continue;
-              await transaction.request()
-                .input('ProductID', sql.BigInt, productId)
-                .input('TierLevel', sql.Int, tier.tier_level)
-                .input('MinQuantity', sql.Int, tier.min_quantity || 1)
-                .input('PricePerUnit', sql.Decimal(18,2), Number(tier.price_per_unit))
-                .query('INSERT INTO ProductTierPrices (ProductID, TierLevel, MinQuantity, PricePerUnit) VALUES (@ProductID, @TierLevel, @MinQuantity, @PricePerUnit)');
+              await client.query(
+                'INSERT INTO product_tier_prices (product_id, tier_level, min_quantity, price_per_unit) VALUES ($1, $2, $3, $4)', 
+                [productId, tier.tier_level, tier.min_quantity || 1, Number(tier.price_per_unit)]
+              );
             }
           }
         } 
         
-        // CHẾ ĐỘ 3: HỢP ĐỒNG (CONTRACT) -> Chạy vòng lặp INSERT và UPDATE vào ContractPrices
+        // CHẾ ĐỘ 3: HỢP ĐỒNG (CONTRACT) -> Chạy vòng lặp INSERT và UPDATE vào contract_prices
         else if (priceType === 'CONTRACT') {
           if (Array.isArray(prices)) {
             for (const ctp of prices) {
@@ -393,52 +368,41 @@ const updateProductPrices = async (req, res) => {
               const contractNumber = ctp.contract_number || `CTR-${ctp.company_id}-${Date.now()}`;
               
               // Find or create Contract
-              let contractResult = await transaction.request()
-                .input('ContractNumber', sql.NVarChar, contractNumber)
-                .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
-                .query('SELECT ContractID FROM Contracts WHERE ContractNumber = @ContractNumber AND BuyerCompanyID = @BuyerCompanyID');
+              let contractResult = await client.query(
+                'SELECT contract_id FROM contracts WHERE contract_number = $1 AND buyer_company_id = $2', 
+                [contractNumber, ctp.company_id]
+              );
               
               let contractId;
-              if (contractResult.recordset.length === 0) {
-                const insertResult = await transaction.request()
-                  .input('BuyerCompanyID', sql.BigInt, ctp.company_id)
-                  .input('ContractNumber', sql.NVarChar, contractNumber)
-                  .input('EndDate', sql.DateTime, ctp.valid_until ? new Date(ctp.valid_until) : new Date('2027-12-31'))
-                  .query("INSERT INTO Contracts (BuyerCompanyID, ContractNumber, EndDate, Status) OUTPUT INSERTED.ContractID VALUES (@BuyerCompanyID, @ContractNumber, @EndDate, 'ACTIVE')");
-                contractId = insertResult.recordset[0].ContractID;
+              if (contractResult.rows.length === 0) {
+                const insertResult = await client.query(
+                  "INSERT INTO contracts (buyer_company_id, contract_number, end_date, status) VALUES ($1, $2, $3, 'ACTIVE') RETURNING contract_id", 
+                  [ctp.company_id, contractNumber, ctp.valid_until ? new Date(ctp.valid_until) : new Date('2027-12-31')]
+                );
+                contractId = insertResult.rows[0].contract_id;
               } else {
-                contractId = contractResult.recordset[0].ContractID;
+                contractId = contractResult.rows[0].contract_id;
               }
 
-              // Exec INSERT or UPDATE into ContractPrices as specified by activity diagram
-              await transaction.request()
-                .input('ContractID', sql.BigInt, contractId)
-                .input('ProductID', sql.BigInt, productId)
-                .input('ContractPrice', sql.Decimal(18,2), Number(ctp.price_per_unit))
-                .query(`
-                  IF EXISTS (SELECT 1 FROM ContractPrices WHERE ContractID = @ContractID AND ProductID = @ProductID)
-                  BEGIN
-                    UPDATE ContractPrices 
-                    SET ContractPrice = @ContractPrice
-                    WHERE ContractID = @ContractID AND ProductID = @ProductID;
-                  END
-                  ELSE
-                  BEGIN
-                    INSERT INTO ContractPrices (ContractID, ProductID, ContractPrice)
-                    VALUES (@ContractID, @ProductID, @ContractPrice);
-                  END
-                `);
+              const cpCheck = await client.query('SELECT 1 FROM contract_prices WHERE contract_id = $1 AND product_id = $2', [contractId, productId]);
+
+              if (cpCheck.rows.length > 0) {
+                await client.query('UPDATE contract_prices SET contract_price = $1 WHERE contract_id = $2 AND product_id = $3', [Number(ctp.price_per_unit), contractId, productId]);
+              } else {
+                await client.query('INSERT INTO contract_prices (contract_id, product_id, contract_price) VALUES ($1, $2, $3)', [contractId, productId, Number(ctp.price_per_unit)]);
+              }
             }
           }
         }
       }
 
-      // 4. Swimlane Database: Commit Transaction
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true, message: 'Cập nhật giá thành công' });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Error updating prices:', err);
