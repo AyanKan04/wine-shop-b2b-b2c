@@ -14,15 +14,23 @@ const login = async (req, res) => {
     const pool = await getPool();
     // Lấy thông tin user
     const result = await pool.query(`
-      SELECT u.user_id, u.username, u.email, u.password_hash, u.user_type, u.company_id, c.company_name
+      SELECT u.user_id, u.username, u.email, u.password_hash, u.user_type, u.company_id, c.company_name, u.status
       FROM users u
       LEFT JOIN companies c ON u.company_id = c.company_id
-      WHERE u.username = $1 AND u.status = 'ACTIVE'
+      WHERE u.username = $1
     `, [username]);
 
     const user = result.rows[0];
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Tên đăng nhập không tồn tại hoặc tài khoản bị khóa.' });
+      return res.status(401).json({ success: false, message: 'Tên đăng nhập không tồn tại.' });
+    }
+    
+    if (user.status === 'PENDING') {
+      return res.status(401).json({ success: false, message: 'Tài khoản của bạn đang chờ Admin phê duyệt. Vui lòng thử lại sau.' });
+    }
+    
+    if (user.status !== 'ACTIVE') {
+      return res.status(401).json({ success: false, message: 'Tài khoản của bạn đã bị khóa hoặc từ chối.' });
     }
 
     // Kiểm tra mật khẩu
@@ -100,7 +108,7 @@ const registerUser = async (req, res) => {
         INSERT INTO companies (company_code, company_name, tax_code, company_type, status)
         VALUES ($1, $2, $3, $4, $5)
         RETURNING company_id
-      `, [companyCode, company_name, tax_code, 'BUYER', 'ACTIVE']);
+      `, [companyCode, company_name, tax_code, 'BUYER', 'PENDING']);
       
       const newCompanyId = companyResult.rows[0].company_id;
 
@@ -109,7 +117,7 @@ const registerUser = async (req, res) => {
         INSERT INTO users (company_id, email, username, password_hash, user_type, status)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING user_id
-      `, [newCompanyId, email, username, hashedPassword, 'BUYER_REP', 'ACTIVE']);
+      `, [newCompanyId, email, username, hashedPassword, 'BUYER_REP', 'PENDING']);
 
       const newUserId = userResult.rows[0].user_id;
 

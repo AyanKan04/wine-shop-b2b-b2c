@@ -108,8 +108,9 @@ const approveLicense = async (req, res) => {
       // Update license status
       await client.query(`UPDATE company_licenses SET status = 'VERIFIED' WHERE license_id = $1`, [licId]);
       
-      // Auto active company
+      // Auto active company and its users
       await client.query(`UPDATE companies SET status = 'ACTIVE' WHERE company_id = $1`, [companyId]);
+      await client.query(`UPDATE users SET status = 'ACTIVE' WHERE company_id = $1`, [companyId]);
 
       await client.query('COMMIT');
       return res.json({ success: true, message: 'Đã phê duyệt Giấy phép Rượu hợp lệ!' });
@@ -152,8 +153,18 @@ const rejectLicense = async (req, res) => {
   const licId = parseInt(req.params.id);
   try {
     const pool = await getPool();
+    
+    // Find company associated with this license
+    const licRes = await pool.query('SELECT company_id FROM company_licenses WHERE license_id = $1', [licId]);
+    if (licRes.rows.length > 0) {
+       const companyId = licRes.rows[0].company_id;
+       // We can reject company and users if we want, or just reject the license. Let's reject company and users to prevent login.
+       await pool.query(`UPDATE companies SET status = 'REJECTED' WHERE company_id = $1`, [companyId]);
+       await pool.query(`UPDATE users SET status = 'REJECTED' WHERE company_id = $1`, [companyId]);
+    }
+
     await pool.query(`UPDATE company_licenses SET status = 'REJECTED' WHERE license_id = $1`, [licId]);
-    res.json({ success: true, message: 'Đã từ chối Giấy phép!' });
+    res.json({ success: true, message: 'Đã từ chối Giấy phép và vô hiệu hóa tài khoản công ty!' });
   } catch (err) {
     console.error('Error rejecting license:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi từ chối giấy phép' });
