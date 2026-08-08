@@ -171,7 +171,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     invoice_date DATE NOT NULL,
     due_date DATE, 
     status VARCHAR(50) DEFAULT 'UNPAID',
-    amount DECIMAL(18,2) NOT NULL
+    amount DECIMAL(18,2) NOT NULL,
+    paid_amount DECIMAL(18,2) DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS inventories (
