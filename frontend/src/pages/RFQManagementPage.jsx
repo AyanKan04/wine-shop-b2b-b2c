@@ -5,8 +5,10 @@ import apiService from '../services/api.js';
 export default function RFQManagementPage({ rfqs, quotations, showToast }) {
   const [rfqList, setRfqList] = useState(rfqs || []);
   const [quotationList, setQuotationList] = useState(quotations || []);
+  const [companies, setCompanies] = useState([]);
   const [showNewRfqModal, setShowNewRfqModal] = useState(false);
   const [newRfq, setNewRfq] = useState({
+    seller_company_id: '',
     product_name: 'Macallan 18 Year Old Sherry Oak Single Malt',
     quantity: 50,
     target_price: 68000000,
@@ -19,15 +21,22 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
 
   const fetchData = async () => {
     try {
-      const [rfqRes, quoteRes] = await Promise.all([
+      const [rfqRes, quoteRes, compRes] = await Promise.all([
         apiService.getRFQs(),
-        apiService.getQuotations()
+        apiService.getQuotations(),
+        apiService.getCompanies().catch(() => ({ success: false }))
       ]);
       if (rfqRes.success && rfqRes.data) {
         setRfqList(rfqRes.data);
       }
       if (quoteRes.success && quoteRes.data) {
         setQuotationList(quoteRes.data);
+      }
+      if (compRes && compRes.success && compRes.data) {
+        setCompanies(compRes.data);
+        if (compRes.data.length > 0 && !newRfq.seller_company_id) {
+          setNewRfq(prev => ({ ...prev, seller_company_id: compRes.data[0].company_id }));
+        }
       }
     } catch (err) {
       console.error('Error fetching RFQs:', err);
@@ -37,6 +46,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
   const handleCreateRfq = (e) => {
     e.preventDefault();
     const created = {
+      seller_company_id: newRfq.seller_company_id,
       product_name: newRfq.product_name,
       quantity: parseInt(newRfq.quantity) || 1,
       target_price: parseInt(newRfq.target_price) || 0,
@@ -53,7 +63,7 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
         if (showToast) showToast('Lỗi khi tạo RFQ.');
       });
     setShowNewRfqModal(false);
-    setNewRfq({ product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 50, target_price: 68000000, notes: '' });
+    setNewRfq({ seller_company_id: companies.length > 0 ? companies[0].company_id : '', product_name: 'Macallan 18 Year Old Sherry Oak Single Malt', quantity: 50, target_price: 68000000, notes: '' });
   };
 
   const [selectedRfqChat, setSelectedRfqChat] = useState(null);
@@ -316,6 +326,14 @@ export default function RFQManagementPage({ rfqs, quotations, showToast }) {
               <button onClick={() => setShowNewRfqModal(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={handleCreateRfq}>
+              <div className="form-group">
+                <label>Nhà Cung Cấp (Seller) *</label>
+                <select className="form-control" value={newRfq.seller_company_id} onChange={e => setNewRfq({ ...newRfq, seller_company_id: e.target.value })} required>
+                  {companies.map(c => (
+                    <option key={c.company_id} value={c.company_id}>{c.company_name}</option>
+                  ))}
+                </select>
+              </div>
               <div className="form-group">
                 <label>Sản Phẩm Cần Báo Giá *</label>
                 <select className="form-control" value={newRfq.product_name} onChange={e => setNewRfq({ ...newRfq, product_name: e.target.value })}>

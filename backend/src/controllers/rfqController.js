@@ -27,6 +27,17 @@ const getRFQs = async (req, res) => {
       } else {
         query += ` AND 1=0 `;
       }
+    } else {
+      if (userType === 'SALES_REP' || userType === 'SALES') {
+        if (req.user?.company_id) {
+          query += ` AND r.seller_company_id = $1 `;
+          params.push(req.user.company_id);
+        } else {
+          query += ` AND 1=0 `;
+        }
+      } else {
+        query += ` AND 1=0 `; // PLATFORM_ADMIN cannot see RFQs
+      }
     }
 
     query += ` ORDER BY r.created_at DESC `;
@@ -54,10 +65,11 @@ const getRFQs = async (req, res) => {
 };
 
 const createRFQ = async (req, res) => {
-  const { product_name, quantity, requested_quantity, target_price, title, product_id } = req.body;
+  const { product_name, quantity, requested_quantity, target_price, title, product_id, seller_company_id } = req.body;
   const qty = parseInt(quantity || requested_quantity) || 50;
   const price = parseFloat(target_price) || 70000000;
   const productId = parseInt(product_id) || 101;
+  const sellerCompanyId = parseInt(seller_company_id) || 1;
 
   try {
     const pool = await getPool();
@@ -101,10 +113,10 @@ const createRFQ = async (req, res) => {
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
 
       const rfqResult = await client.query(`
-          INSERT INTO rfqs (buyer_company_id, created_by, title, description, status, created_at)
-          VALUES ($1, $2, $3, $4, 'SUBMITTED', CURRENT_TIMESTAMP)
+          INSERT INTO rfqs (buyer_company_id, seller_company_id, created_by, title, description, status, created_at)
+          VALUES ($1, $2, $3, $4, $5, 'SUBMITTED', CURRENT_TIMESTAMP)
           RETURNING rfq_id, created_at
-        `, [buyerCompanyId, createdBy, finalTitle, finalProductName]);
+        `, [buyerCompanyId, sellerCompanyId, createdBy, finalTitle, finalProductName]);
 
       const newId = rfqResult.rows[0].rfq_id;
       const createdAt = rfqResult.rows[0].created_at;
@@ -165,6 +177,17 @@ const getQuotations = async (req, res) => {
         params.push(req.user.company_id);
       } else {
         query += ` AND 1=0 `;
+      }
+    } else {
+      if (userType === 'SALES_REP' || userType === 'SALES') {
+        if (req.user?.company_id) {
+          query += ` AND q.seller_company_id = $1 `;
+          params.push(req.user.company_id);
+        } else {
+          query += ` AND 1=0 `;
+        }
+      } else {
+        query += ` AND 1=0 `; // PLATFORM_ADMIN cannot see Quotations
       }
     }
 

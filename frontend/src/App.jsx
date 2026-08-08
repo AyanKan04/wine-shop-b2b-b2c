@@ -170,6 +170,7 @@ export default function App() {
         {currentRoute === 'master-admin' && (
           currentUser && currentUser.role !== 'BUYER_REP' ? (
             <MasterAdminWorkspacePage
+              currentUser={currentUser}
               showToast={showToast}
               products={products}
               rfqs={rfqs}

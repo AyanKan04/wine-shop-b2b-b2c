@@ -182,6 +182,7 @@ const toggleCompanyStatus = async (req, res) => {
     const currentStatus = check.rows[0].status;
     const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
     await pool.query(`UPDATE companies SET status = $1 WHERE company_id = $2`, [newStatus, companyId]);
+    await pool.query(`UPDATE users SET status = $1 WHERE company_id = $2 AND status != 'DELETED'`, [newStatus, companyId]);
     res.json({ success: true, message: `Đã thay đổi trạng thái doanh nghiệp thành ${newStatus}`, status: newStatus });
   } catch (err) {
     console.error('Error toggling company status:', err);

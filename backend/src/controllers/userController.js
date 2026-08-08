@@ -80,6 +80,13 @@ const createUser = async (req, res) => {
       if (user_type === 'PLATFORM_ADMIN') {
         return res.status(403).json({ success: false, message: 'Không có quyền tạo tài khoản Platform Admin' });
       }
+      
+      // Giới hạn tạo tối đa 5 tài khoản nhân viên (Tổng cộng 6 tính cả admin)
+      const countResult = await pool.query(`SELECT COUNT(*) FROM users WHERE company_id = $1 AND status != 'DELETED'`, [targetCompanyId]);
+      const currentCount = parseInt(countResult.rows[0].count);
+      if (currentCount >= 6) {
+        return res.status(400).json({ success: false, message: 'Doanh nghiệp đã đạt giới hạn tạo 5 tài khoản nhân viên nội bộ.' });
+      }
     }
 
     const result = await pool.query(`

@@ -262,6 +262,7 @@ function OverviewDashboard() {
 }
 
 export default function MasterAdminWorkspacePage({
+  currentUser,
   showToast,
   products,
   rfqs,
@@ -274,17 +275,27 @@ export default function MasterAdminWorkspacePage({
 }) {
   const [activeAdminModule, setActiveAdminModule] = useState('overview');
 
-  const adminModules = [
-    { id: 'overview', title: 'Tổng Quan', icon: 'fa-chart-line', desc: 'Dashboard Analytics & Activity Feed' },
-    { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá' },
-    { id: 'executive', title: '2. Admin Duyệt Phép', icon: 'fa-shield-halved', desc: 'Thẩm định Giấy Phép Rượu & Doanh Nghiệp' },
-    { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm' },
-    { id: 'buyer-rfq-mgmt', title: '4. Quản Lý RFQ', icon: 'fa-file-invoice-dollar', desc: 'Quản Lý RFQ, Đàm Phán & Chấp Nhận Báo Giá' },
-    { id: 'sales-rfq', title: '5. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation' },
-    { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ' },
-    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển' },
-    { id: 'iam-account', title: '8. Quản Lý Tài Khoản', icon: 'fa-users-gear', desc: 'Phân Quyền & Tài Khoản (IAM)' }
+  const allAdminModules = [
+    { id: 'overview', title: 'Tổng Quan', icon: 'fa-chart-line', desc: 'Dashboard Analytics & Activity Feed', roles: ['COMPANY_ADMIN'] },
+    { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
+    { id: 'executive', title: '2. Admin Duyệt Phép', icon: 'fa-shield-halved', desc: 'Thẩm định Giấy Phép Rượu & Doanh Nghiệp', roles: ['PLATFORM_ADMIN'] },
+    { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
+    { id: 'buyer-rfq-mgmt', title: '4. Quản Lý RFQ', icon: 'fa-file-invoice-dollar', desc: 'Quản Lý RFQ, Đàm Phán & Chấp Nhận Báo Giá', roles: ['COMPANY_ADMIN', 'BUYER_REP', 'BUYER'] },
+    { id: 'sales-rfq', title: '5. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
+    { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ', roles: ['COMPANY_ADMIN', 'FINANCE'] },
+    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển', roles: ['COMPANY_ADMIN', 'WAREHOUSE'] },
+    { id: 'iam-account', title: '8. Quản Lý Tài Khoản', icon: 'fa-users-gear', desc: 'Phân Quyền & Tài Khoản (IAM)', roles: ['PLATFORM_ADMIN', 'COMPANY_ADMIN'] }
   ];
+
+  const userRole = currentUser?.role || 'COMPANY_ADMIN';
+  const adminModules = allAdminModules.filter(mod => mod.roles.includes(userRole));
+
+  // Initialize with the first available tab for the role
+  React.useEffect(() => {
+    if (adminModules.length > 0 && !adminModules.some(m => m.id === activeAdminModule)) {
+      setActiveAdminModule(adminModules[0].id);
+    }
+  }, [userRole, activeAdminModule]);
 
   return (
     <div style={{ background: 'var(--bg-primary)', minHeight: '90vh', paddingBottom: '50px' }}>
@@ -334,7 +345,7 @@ export default function MasterAdminWorkspacePage({
 
           <div style={{ background: '#FFFFFF', border: '1px solid var(--border-gold)', padding: '8px 16px', borderRadius: '20px', fontSize: '0.8rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <i className="fa-solid fa-user-shield" style={{ color: '#9F2F2D' }}></i>
-            <span>Role: <strong>Master Administrator</strong></span>
+            <span>Role: <strong>{userRole}</strong></span>
           </div>
         </div>
       </div>

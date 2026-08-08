@@ -8,7 +8,7 @@ router.use(authenticateToken);
 
 // Company routes
 router.post('/companies/register', upload.single('license_document'), registerCompany);
-router.get('/companies', requireRole('PLATFORM_ADMIN', 'COMPANY_ADMIN'), getCompanies);
+router.get('/companies', requireRole('PLATFORM_ADMIN', 'COMPANY_ADMIN', 'BUYER_REP', 'SALES_REP'), getCompanies);
 router.put('/companies/:id/status', requireRole('PLATFORM_ADMIN'), toggleCompanyStatus);
 
 // Admin License routes
