@@ -26,7 +26,7 @@ export default function CRMKanbanPage({ showToast }) {
         rfqRes.data.forEach(rfq => {
           let status = 'new_rfq';
           if (rfq.status === 'IN_REVIEW' || rfq.status === 'IN_NEGOTIATION') status = 'in_negotiation';
-          if (rfq.status === 'QUOTATION_SENT') return; 
+          if (rfq.status === 'QUOTATION_SENT' || rfq.status === 'ACCEPTED' || rfq.status === 'FULFILLED') return; 
           if (rfq.status === 'REJECTED') return;
           
           newDeals.push({
