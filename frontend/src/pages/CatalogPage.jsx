@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Skeleton from '../components/ui/Skeleton.jsx';
 import ProductCard from '../components/ui/ProductCard.jsx';
+import apiService from '../services/api.js';
 
 export default function CatalogPage({ products, isLoading, onSelectProduct }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -260,8 +261,10 @@ export default function CatalogPage({ products, isLoading, onSelectProduct }) {
                     <div key={p.product_id} className="card-box" style={{
                       padding: '16px 20px', display: 'flex', gap: '20px', alignItems: 'center', cursor: 'pointer'
                     }} onClick={() => onSelectProduct(p.product_id)}>
-                      <img src={p.image_url} alt={p.product_name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ width: '80px', height: '80px', background: '#F8F9FA', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={apiService.getMediaUrl(p.image_url)} alt={p.product_name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }} />
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
                           <span style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--accent-gold)', padding: '2px 8px', fontSize: '0.65rem', border: '1px solid var(--border-gold)', borderRadius: '3px' }}>{p.category}</span>
                           <code style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{p.sku}</code>

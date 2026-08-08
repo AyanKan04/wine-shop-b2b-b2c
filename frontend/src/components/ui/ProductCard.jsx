@@ -1,4 +1,5 @@
 import React from 'react';
+import apiService from '../../services/api';
 
 const formatVND = (val) => {
   if (val >= 1000000000) return (val / 1000000000).toFixed(2) + ' Tỷ ₫';
@@ -25,7 +26,7 @@ export default function ProductCard({ p, onSelectProduct }) {
         <code className="product-sku">{p.sku}</code>
       </div>
       <div className="product-image-container">
-        <img src={p.image_url} alt={p.product_name} className="product-image" />
+        <img src={apiService.getMediaUrl(p.image_url)} alt={p.product_name} className="product-image" />
       </div>
       <h3 className="product-title">{p.product_name}</h3>
       <p className="product-meta">

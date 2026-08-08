@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import apiService from '../services/api.js';
 
 export default function HomePage({ onNavigateCatalog, onSelectProduct, products }) {
   // Animated counter hook simulating real-world physics deceleration
@@ -189,7 +190,7 @@ export default function HomePage({ onNavigateCatalog, onSelectProduct, products 
                     {/* Product Image */}
                     <div style={{ width: isLarge ? '45%' : '100%', display: 'flex', justifyContent: 'center' }}>
                       <img 
-                        src={p.image_url} 
+                        src={apiService.getMediaUrl(p.image_url)} 
                         alt={p.product_name} 
                         style={{
                           height: isLarge ? '280px' : '200px',

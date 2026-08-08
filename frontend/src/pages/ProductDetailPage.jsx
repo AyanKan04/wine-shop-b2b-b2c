@@ -45,7 +45,7 @@ export default function ProductDetailPage({ productId, products, showToast }) {
             }}>
               {prod.category}
             </div>
-            <img src={prod.image_url} alt={prod.product_name} style={{
+            <img src={apiService.getMediaUrl(prod.image_url)} alt={prod.product_name} style={{
               maxHeight: '380px', maxWidth: '100%', objectFit: 'contain',
               filter: 'drop-shadow(0 10px 30px rgba(0,0,0,0.6))'
             }} />
