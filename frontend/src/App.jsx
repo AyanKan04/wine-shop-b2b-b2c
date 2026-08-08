@@ -86,9 +86,9 @@ export default function App() {
             // Dynamic redirect if user lands on login/register/unauthorized admin page
             setCurrentRoute(prevRoute => {
               if (prevRoute === 'login' || prevRoute === 'register') {
-                return user.role !== 'PLATFORM_ADMIN' ? 'home' : 'master-admin';
+                return user.role !== 'BUYER_REP' ? 'master-admin' : 'home';
               }
-              if (prevRoute === 'master-admin' && user.role !== 'PLATFORM_ADMIN') {
+              if (prevRoute === 'master-admin' && user.role === 'BUYER_REP') {
                 return 'home';
               }
               return prevRoute;
@@ -144,10 +144,10 @@ export default function App() {
               const role = user.role || user.user_type;
               user.role = role;
               setCurrentUser(user);
-              if (role === 'PLATFORM_ADMIN') {
+              if (role !== 'BUYER_REP') {
                 setCurrentRoute('master-admin');
               } else {
-                setCurrentRoute('orders-credit');
+                setCurrentRoute('buyer-rfqs');
               }
             }}
             onNavigateRegister={() => setCurrentRoute('register')}
