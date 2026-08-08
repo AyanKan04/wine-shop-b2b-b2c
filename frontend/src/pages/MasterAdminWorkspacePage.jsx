@@ -277,13 +277,13 @@ export default function MasterAdminWorkspacePage({
 
   const allAdminModules = [
     { id: 'overview', title: 'Tổng Quan', icon: 'fa-chart-line', desc: 'Dashboard Analytics & Activity Feed', roles: ['COMPANY_ADMIN'] },
-    { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
+    { id: 'kanban', title: '1. CRM Kanban', icon: 'fa-square-kanban', desc: 'Đàm phán RFQ & Pipeline Báo Giá', roles: ['COMPANY_ADMIN'] },
     { id: 'executive', title: '2. Admin Duyệt Phép', icon: 'fa-shield-halved', desc: 'Thẩm định Giấy Phép Rượu & Doanh Nghiệp', roles: ['PLATFORM_ADMIN'] },
-    { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
+    { id: 'sales-products', title: '3. Sales Đăng Giá', icon: 'fa-tags', desc: 'Bảng Giá Sỉ 5 Tiers & Sản Phẩm', roles: ['COMPANY_ADMIN'] },
     { id: 'buyer-rfq-mgmt', title: '4. Quản Lý RFQ', icon: 'fa-file-invoice-dollar', desc: 'Quản Lý RFQ, Đàm Phán & Chấp Nhận Báo Giá', roles: ['COMPANY_ADMIN', 'BUYER_REP', 'BUYER'] },
     { id: 'sales-rfq', title: '5. Xử Lý Báo Giá', icon: 'fa-comments-dollar', desc: 'Tiếp Nhận RFQ & Phát Hành Quotation', roles: ['COMPANY_ADMIN', 'SALES_REP', 'SALES'] },
-    { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ', roles: ['COMPANY_ADMIN', 'FINANCE'] },
-    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển', roles: ['COMPANY_ADMIN', 'WAREHOUSE'] },
+    { id: 'finance', title: '6. Kế Toán Nợ', icon: 'fa-scale-balanced', desc: 'Hạn Mức Net-30 & Giám Sát Nợ', roles: ['COMPANY_ADMIN', 'FINANCE', 'FINANCE_OFFICER'] },
+    { id: 'warehouse', title: '7. Kho & Vận Chuyển', icon: 'fa-boxes-stacked', desc: 'Tồn Kho, Đặt Trước & Vận Chuyển', roles: ['COMPANY_ADMIN', 'WAREHOUSE', 'WAREHOUSE_STAFF'] },
     { id: 'iam-account', title: '8. Quản Lý Tài Khoản', icon: 'fa-users-gear', desc: 'Phân Quyền & Tài Khoản (IAM)', roles: ['PLATFORM_ADMIN', 'COMPANY_ADMIN'] }
   ];
 
