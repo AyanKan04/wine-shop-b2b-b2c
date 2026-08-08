@@ -24,9 +24,12 @@ export default function Navbar({ currentRoute, setCurrentRoute, currentUser, set
         <button className={currentRoute === 'home' ? 'active' : ''} onClick={() => setCurrentRoute('home')}>Trang Chủ</button>
         <button className={currentRoute === 'catalog' ? 'active' : ''} onClick={() => setCurrentRoute('catalog')}>Catalog & Sản Phẩm</button>
         
-        {/* BUYER REP: Đơn Hàng & Công Nợ Cá Nhân */}
+        {/* BUYER REP: Quản lý Báo Giá & Đơn Hàng */}
         {(!currentUser || currentUser.role === 'BUYER_REP') && (
-          <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>Đơn Hàng & Nợ</button>
+          <>
+            <button className={currentRoute === 'buyer-rfqs' ? 'active' : ''} onClick={() => setCurrentRoute('buyer-rfqs')}>Quản Lý RFQ</button>
+            <button className={currentRoute === 'orders-credit' ? 'active' : ''} onClick={() => setCurrentRoute('orders-credit')}>Đơn Hàng & Nợ</button>
+          </>
         )}
 
         {/* ADMIN / STAFF ROLE: Dẫn thẳng vào Trang Quản Trị Admin */}
