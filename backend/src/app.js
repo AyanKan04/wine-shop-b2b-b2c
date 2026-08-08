@@ -15,6 +15,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const userRoutes = require('./routes/userRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const testRoutes = require('./routes/testRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api', financeRoutes);
 app.use('/api', warehouseRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api', chatRoutes);
+app.use('/api/upload', uploadRoutes);
 app.use('/api/test', testRoutes);
 
 module.exports = app;
