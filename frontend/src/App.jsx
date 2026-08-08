@@ -27,6 +27,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
 
   const [products, setProducts] = useState([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
   const [rfqs, setRfqs] = useState([]);
   const [quotations, setQuotations] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -38,27 +39,11 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
-
-
-    // Load products
+    setIsProductsLoading(true);
     apiService.getProducts()
       .then(res => { if (res.success && res.data && res.data.length > 0) setProducts(res.data); })
-      .catch(() => {});
-
-    // Load RFQs
-    apiService.getRFQs()
-      .then(res => { if (res.success && res.data && res.data.length > 0) setRfqs(res.data); })
-      .catch(() => {});
-
-    // Load Quotations
-    apiService.getQuotations()
-      .then(res => { if (res.success && res.data && res.data.length > 0) setQuotations(res.data); })
-      .catch(() => {});
-
-    // Load Orders
-    apiService.getOrders()
-      .then(res => { if (res.success && res.data && res.data.length > 0) setOrders(res.data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsProductsLoading(false));
 
     const token = localStorage.getItem('token');
     if (token) {
@@ -92,6 +77,11 @@ export default function App() {
                 if (r.success && r.inventory) setInventory(r.inventory);
               }).catch(() => {});
             }
+
+            // Fetch protected data if logged in
+            apiService.getRFQs().then(res => { if (res.success && res.data) setRfqs(res.data); }).catch(() => {});
+            apiService.getQuotations().then(res => { if (res.success && res.data) setQuotations(res.data); }).catch(() => {});
+            apiService.getOrders().then(res => { if (res.success && res.data) setOrders(res.data); }).catch(() => {});
 
             // Dynamic redirect if user lands on login/register/unauthorized admin page
             setCurrentRoute(prevRoute => {
@@ -142,7 +132,7 @@ export default function App() {
           <HomePage onNavigateCatalog={() => setCurrentRoute('catalog')} onSelectProduct={navigateToProductDetail} products={products} />
         )}
         {currentRoute === 'catalog' && (
-          <CatalogPage products={products} onSelectProduct={navigateToProductDetail} />
+          <CatalogPage products={products} isLoading={isProductsLoading} onSelectProduct={navigateToProductDetail} />
         )}
         {currentRoute === 'product-detail' && (
           <ProductDetailPage productId={selectedProductId} products={products} showToast={showToast} />

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import Skeleton from '../components/ui/Skeleton.jsx';
+import ProductCard from '../components/ui/ProductCard.jsx';
 
-export default function CatalogPage({ products, onSelectProduct }) {
+export default function CatalogPage({ products, isLoading, onSelectProduct }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCountry, setFilterCountry] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
@@ -219,84 +221,20 @@ export default function CatalogPage({ products, onSelectProduct }) {
             </div>
           </div>
 
-          {/* PRODUCT GRID VIEW */}
-          {viewMode === 'grid' && (
+          {/* CONDITIONAL RENDERING: LOADING -> EMPTY -> CONTENT */}
+          {isLoading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {filtered.map(p => (
-                <div key={p.product_id} className="card-box" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => onSelectProduct(p.product_id)}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--accent-gold)', padding: '3px 8px', fontSize: '0.65rem', border: '1px solid var(--border-gold)', borderRadius: '3px', fontFamily: 'var(--font-brand)' }}>
-                      {p.category}
-                    </span>
-                    <code style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{p.sku}</code>
-                  </div>
-                  <img src={p.image_url} alt={p.product_name} style={{ width: '100%', height: '200px', objectFit: 'contain', margin: '10px 0', filter: 'drop-shadow(0 6px 15px rgba(0,0,0,0.5))' }} />
-                  <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', marginBottom: '6px', lineHeight: 1.3 }}>{p.product_name}</h3>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <i className="fa-solid fa-map-pin gold-text" style={{ marginRight: '4px' }}></i>
-                    {p.country_of_origin} · {p.region}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    <strong>Giống:</strong> {p.grape_variety} | <strong>ABV:</strong> {p.alcohol_content}% | <strong>MOQ:</strong> {p.moq}
-                  </p>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '10px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Giá Tier 1</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(getTierPrice(p, 0))}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Giá Tier 5</div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#10B981' }}>{formatVND(getTierPrice(p, 'last'))}</div>
-                    </div>
-                  </div>
-
-                  <button className="btn-redapron-gold" style={{ width: '100%', marginTop: '12px', padding: '10px', fontSize: '0.8rem' }} onClick={(e) => { e.stopPropagation(); onSelectProduct(p.product_id); }}>
-                    <i className="fa-solid fa-eye"></i> Xem Chi Tiết & Giá Sỉ Tier
-                  </button>
+              {Array(6).fill(0).map((_, idx) => (
+                <div key={`skel-${idx}`} className="card-box" style={{ padding: '20px', background: '#fff', borderRadius: '8px' }}>
+                  <Skeleton height="20px" width="30%" style={{ marginBottom: '10px' }} />
+                  <Skeleton height="200px" style={{ marginBottom: '15px' }} />
+                  <Skeleton height="24px" width="80%" style={{ marginBottom: '10px' }} />
+                  <Skeleton height="20px" width="60%" style={{ marginBottom: '10px' }} />
+                  <Skeleton height="40px" width="100%" style={{ marginTop: '20px' }} />
                 </div>
               ))}
             </div>
-          )}
-
-          {/* PRODUCT LIST VIEW */}
-          {viewMode === 'list' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {filtered.map(p => (
-                <div key={p.product_id} className="card-box" style={{
-                  padding: '16px 20px', display: 'flex', gap: '20px', alignItems: 'center', cursor: 'pointer'
-                }} onClick={() => onSelectProduct(p.product_id)}>
-                  <img src={p.image_url} alt={p.product_name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--accent-gold)', padding: '2px 8px', fontSize: '0.65rem', border: '1px solid var(--border-gold)', borderRadius: '3px' }}>{p.category}</span>
-                      <code style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{p.sku}</code>
-                    </div>
-                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', marginBottom: '4px' }}>{p.product_name}</h3>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
-                      {p.country_of_origin} · {p.region} · {p.grape_variety} · ABV {p.alcohol_content}% · MOQ {p.moq} thùng
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '25px', alignItems: 'center', flexShrink: 0 }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Tier 1</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(getTierPrice(p, 0))}</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Tier 5</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#10B981' }}>{formatVND(getTierPrice(p, 'last'))}</div>
-                    </div>
-                    <button className="btn-redapron-gold" style={{ padding: '8px 16px', fontSize: '0.75rem', whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); onSelectProduct(p.product_id); }}>
-                      Chi Tiết
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* EMPTY STATE */}
-          {filtered.length === 0 && (
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
               <i className="fa-solid fa-wine-glass" style={{ fontSize: '3rem', marginBottom: '15px', display: 'block', opacity: 0.3 }}></i>
               <p style={{ fontSize: '1rem' }}>Không tìm thấy sản phẩm phù hợp với bộ lọc.</p>
@@ -304,6 +242,53 @@ export default function CatalogPage({ products, onSelectProduct }) {
                 Xóa Bộ Lọc
               </button>
             </div>
+          ) : (
+            <>
+              {/* PRODUCT GRID VIEW */}
+              {viewMode === 'grid' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                  {filtered.map(p => (
+                    <ProductCard key={p.product_id} p={p} onSelectProduct={onSelectProduct} />
+                  ))}
+                </div>
+              )}
+
+              {/* PRODUCT LIST VIEW */}
+              {viewMode === 'list' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {filtered.map(p => (
+                    <div key={p.product_id} className="card-box" style={{
+                      padding: '16px 20px', display: 'flex', gap: '20px', alignItems: 'center', cursor: 'pointer'
+                    }} onClick={() => onSelectProduct(p.product_id)}>
+                      <img src={p.image_url} alt={p.product_name} style={{ width: '80px', height: '80px', objectFit: 'contain', borderRadius: '6px', flexShrink: 0, filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.5))' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                          <span style={{ background: 'rgba(212,175,55,0.15)', color: 'var(--accent-gold)', padding: '2px 8px', fontSize: '0.65rem', border: '1px solid var(--border-gold)', borderRadius: '3px' }}>{p.category}</span>
+                          <code style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{p.sku}</code>
+                        </div>
+                        <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1rem', marginBottom: '4px' }}>{p.product_name}</h3>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                          {p.country_of_origin} · {p.region} · {p.grape_variety} · ABV {p.alcohol_content}% · MOQ {p.moq} thùng
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '25px', alignItems: 'center', flexShrink: 0 }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>Tier 1</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--accent-gold)' }}>{formatVND(getTierPrice(p, 0))}</div>
+                        </div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Tier 5</div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#10B981' }}>{formatVND(getTierPrice(p, 'last'))}</div>
+                        </div>
+                        <button className="btn-redapron-gold" style={{ padding: '8px 16px', fontSize: '0.75rem', whiteSpace: 'nowrap' }} onClick={(e) => { e.stopPropagation(); onSelectProduct(p.product_id); }}>
+                          Chi Tiết
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

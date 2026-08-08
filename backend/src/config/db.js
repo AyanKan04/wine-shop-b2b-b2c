@@ -22,23 +22,28 @@ try {
 const { seedIfEmpty } = require('./dbSeeder');
 
 // Configure connection parameters
-const dbServer = process.env.DB_SERVER || 'localhost';
+const dbServer = process.env.DB_SERVER || 'localhost\\SQLEXPRESS';
 const serverName = dbServer.includes('\\') ? dbServer.split('\\')[0] : dbServer;
 const instanceName = dbServer.includes('\\') ? dbServer.split('\\')[1] : undefined;
+const dbDatabase = process.env.DB_NAME || 'B2B_Alcohol_Ecommerce';
 
-const config = useOdbc ? {
-  connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'DESKTOP-BFLA0CO\\SQLEXPRESS'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
-} : {
+const odbcConfig = {
+  connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${dbServer};Database=${dbDatabase};Trusted_Connection=yes;`
+};
+
+const tcpConfig = {
   user: process.env.DB_USER || 'sa',
   password: process.env.DB_PASSWORD || '123456',
   server: serverName,
-  database: process.env.DB_NAME || 'B2B_Alcohol_Ecommerce',
+  database: dbDatabase,
   options: {
     encrypt: false,
     trustServerCertificate: true,
     instanceName: instanceName
   }
 };
+
+const config = useOdbc ? odbcConfig : tcpConfig;
 
 let isConnected = false;
 let mssqlPool = null;
@@ -66,28 +71,23 @@ async function connectDB() {
       console.log('SUCCESSFULLY connected to MS SQL Server (Primary Driver)');
     } catch (primaryErr) {
       console.warn('Primary connection failed, trying fallback:', primaryErr.message);
-      const fallbackConfig = useOdbc ? {
-        user: process.env.DB_USER || 'sa',
-        password: process.env.DB_PASSWORD || '123456',
-        server: serverName,
-        database: process.env.DB_NAME || 'B2B_Alcohol_Ecommerce',
-        options: {
-          encrypt: false,
-          trustServerCertificate: true,
-          instanceName: instanceName
-        }
-      } : {
-        connectionString: process.env.DATABASE_URL || `Driver={ODBC Driver 17 for SQL Server};Server=${process.env.DB_SERVER || 'DESKTOP-BFLA0CO\\SQLEXPRESS'};Database=B2B_Alcohol_Ecommerce;Trusted_Connection=yes;`
-      };
-      
-      let altSql = require('mssql');
+      let altSql;
+      let fallbackConfig;
+
       try {
         if (!useOdbc) {
           altSql = require('mssql/msnodesqlv8');
+          fallbackConfig = odbcConfig;
+        } else {
+          altSql = require('mssql');
+          fallbackConfig = tcpConfig;
         }
       } catch(e) {
+        // If msnodesqlv8 fails to load (e.g., on Linux), fallback strictly to standard tcpConfig
         altSql = require('mssql');
+        fallbackConfig = tcpConfig;
       }
+      
       mssqlPool = await altSql.connect(fallbackConfig);
       sql = altSql;
       isConnected = true;
