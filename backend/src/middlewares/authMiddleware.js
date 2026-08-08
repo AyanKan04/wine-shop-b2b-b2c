@@ -109,11 +109,12 @@ const verifyAlcoholLicense = async (req, res, next) => {
       return next();
     }
 
-    const result = await pool.request()
-      .input('CompanyID', companyId)
-      .query(`SELECT Status FROM CompanyLicenses WHERE CompanyID = @CompanyID`);
+    const result = await pool.query(
+      `SELECT status FROM company_licenses WHERE company_id = $1`, 
+      [companyId]
+    );
 
-    if (result.recordset.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(403).json({
         success: false,
         message: 'Chưa thể thực hiện giao dịch sỉ: Giấy phép Bán buôn Rượu của doanh nghiệp chưa được nộp!',
@@ -121,7 +122,7 @@ const verifyAlcoholLicense = async (req, res, next) => {
       });
     }
 
-    const licenseStatus = result.recordset[0].Status;
+    const licenseStatus = result.rows[0].status;
     if (licenseStatus !== 'VERIFIED') {
       return res.status(403).json({
         success: false,
