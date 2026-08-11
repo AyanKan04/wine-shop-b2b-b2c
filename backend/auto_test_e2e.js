@@ -71,8 +71,21 @@ async function runE2E() {
       issue_date: '2025-01-01',
       expiry_date: '2030-01-01'
     };
-    await fetchAPI('/auth/register', 'POST', regData);
+    const regRes = await fetchAPI('/auth/register', 'POST', regData);
     console.log('✅ Đăng ký tài khoản Buyer thành công');
+
+    testCompanyId = regRes.company_id || regRes.user?.company_id;
+
+    console.log(`\n[ADMIN] Duyệt giấy phép cho công ty mới`);
+    const licenses = await fetchAPI('/admin/licenses', 'GET', null, adminToken);
+    const targetLicense = licenses.data.find(l => l.company_name === regData.company_name || l.company_id === testCompanyId);
+    if (targetLicense) {
+      await fetchAPI(`/admin/licenses/${targetLicense.license_id}/approve`, 'POST', null, adminToken);
+      console.log('✅ Đã duyệt giấy phép thành công');
+    } else if (testCompanyId) {
+      await fetchAPI(`/admin/licenses/${testCompanyId}/approve`, 'POST', null, adminToken);
+      console.log('✅ Đã duyệt giấy phép thành công');
+    }
 
     console.log(`\n[BUYER] Đăng nhập`);
     const buyerLogin = await fetchAPI('/auth/login', 'POST', { username: regData.username, password: 'password123' });
@@ -84,15 +97,6 @@ async function runE2E() {
     testCompanyId = meData.data.company.company_id;
     console.log(`✅ Lấy thông tin cá nhân thành công (CompanyID: ${testCompanyId})`);
 
-    console.log(`\n[ADMIN] Duyệt giấy phép cho công ty mới`);
-    const licenses = await fetchAPI('/admin/licenses', 'GET', null, adminToken);
-    const targetLicense = licenses.data.find(l => l.company_id === testCompanyId);
-    if (targetLicense) {
-      await fetchAPI(`/admin/licenses/${targetLicense.license_id}/approve`, 'POST', null, adminToken);
-      console.log('✅ Đã duyệt giấy phép thành công');
-    } else {
-      console.warn('⚠️ Không tìm thấy giấy phép để duyệt (có thể mock data không tạo)');
-    }
 
     console.log(`\n[ADMIN] Quản Lý Tài Khoản (Activity Diagram Flow)`);
     const newUserRes = await fetchAPI('/users', 'POST', {

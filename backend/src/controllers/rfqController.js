@@ -121,18 +121,21 @@ const createRFQ = async (req, res) => {
 
       const buyerCompanyId = req.user && req.user.company_id ? req.user.company_id : 1;
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
+      const sellerCompanyId = parseInt(seller_company_id) || 1;
 
       // STRICT RBAC: Prevent Intra-company RFQs
       if (parseInt(buyerCompanyId) === parseInt(sellerCompanyId)) {
+
         await client.query('ROLLBACK');
         return res.status(400).json({ success: false, message: 'Tuyệt đối không thể giao dịch nội bộ.' });
       }
 
       const rfqResult = await client.query(`
-          INSERT INTO rfqs (buyer_company_id, seller_company_id, created_by, title, description, status, created_at)
-          VALUES ($1, $2, $3, $4, $5, 'SUBMITTED', CURRENT_TIMESTAMP)
+          INSERT INTO rfqs (buyer_company_id, created_by, title, description, status, created_at)
+          VALUES ($1, $2, $3, $4, 'SUBMITTED', CURRENT_TIMESTAMP)
           RETURNING rfq_id, created_at
-        `, [buyerCompanyId, sellerCompanyId, createdBy, finalTitle, finalProductName]);
+        `, [buyerCompanyId, createdBy, finalTitle, finalProductName]);
+
 
       const newId = rfqResult.rows[0].rfq_id;
       const createdAt = rfqResult.rows[0].created_at;

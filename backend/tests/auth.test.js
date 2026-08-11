@@ -26,7 +26,15 @@ describe('API Module 1: Authentication & User Management (Real DB)', () => {
     assert.equal(res.body.success, true);
     assert.equal(res.body.data.username, testUsername);
     assert.equal(res.body.data.user_type, 'BUYER_REP');
+
+    // Auto-approve test user and company for login test
+    const { getPool } = require('../src/config/db');
+    const pool = await getPool();
+    await pool.query("UPDATE users SET status = 'ACTIVE' WHERE username = $1", [testUsername]);
+    await pool.query("UPDATE companies SET status = 'APPROVED' WHERE company_id = (SELECT company_id FROM users WHERE username = $1)", [testUsername]);
   });
+
+
 
   it('POST /api/auth/login - Should successfully authenticate user and return real JWT token', async () => {
     const res = await request(app)

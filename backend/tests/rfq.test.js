@@ -42,8 +42,10 @@ describe('API Module 4 & 5: RFQs, Quotations, Finance & Orders', () => {
       .send({
         title: 'Dynamic Test RFQ',
         requested_quantity: 10,
-        target_price: 1000000
+        target_price: 1000000,
+        seller_company_id: 2
       });
+
 
     assert.equal(res.status, 201);
     assert.equal(res.body.success, true);
