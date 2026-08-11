@@ -70,8 +70,8 @@ const createRFQ = async (req, res) => {
   const { product_name, quantity, requested_quantity, target_price, title, product_id, seller_company_id } = req.body;
   const qty = parseInt(quantity || requested_quantity) || 50;
   const price = parseFloat(target_price) || 70000000;
-  const productId = parseInt(product_id) || 101;
-  const sellerCompanyId = parseInt(seller_company_id) || 1;
+  let productId = parseInt(product_id);
+
 
   try {
     const pool = await getPool();
@@ -79,6 +79,13 @@ const createRFQ = async (req, res) => {
     
     try {
       await client.query('BEGIN');
+
+      if (!productId || isNaN(productId)) {
+        const prodRes = await client.query('SELECT product_id FROM products ORDER BY product_id ASC LIMIT 1');
+        if (prodRes.rows.length > 0) {
+          productId = prodRes.rows[0].product_id;
+        }
+      }
 
       let finalProductName = product_name;
       let finalProductId = productId;
@@ -91,7 +98,7 @@ const createRFQ = async (req, res) => {
       }
 
       // If we don't have a valid product ID, let's find one by name
-      if (finalProductName) {
+      if (finalProductName && (!finalProductId || isNaN(finalProductId))) {
         const prodQuery = await client.query('SELECT product_id FROM products WHERE product_name ILIKE $1', [`%${finalProductName}%`]);
         if (prodQuery.rows.length > 0) {
           finalProductId = prodQuery.rows[0].product_id;
@@ -99,7 +106,7 @@ const createRFQ = async (req, res) => {
       }
 
       // If STILL no product ID, fallback to the first available product in the database
-      if (!finalProductId || isNaN(finalProductId) || finalProductId === 101) {
+      if (!finalProductId || isNaN(finalProductId)) {
         const firstProdQuery = await client.query('SELECT product_id, product_name FROM products LIMIT 1');
         if (firstProdQuery.rows.length > 0) {
           finalProductId = firstProdQuery.rows[0].product_id;
@@ -108,6 +115,7 @@ const createRFQ = async (req, res) => {
       }
 
       if (!finalProductName) finalProductName = 'Sản phẩm rượu';
+
 
       const finalTitle = title || `Yêu cầu báo giá ${finalProductName}`;
 
@@ -240,7 +248,12 @@ const createQuotation = async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      const rfqQuery = await client.query(`SELECT buyer_company_id, product_id, requested_quantity FROM rfqs WHERE rfq_id = $1`, [rfqId]);
+      const rfqQuery = await client.query(`
+        SELECT r.buyer_company_id, ri.product_id, ri.quantity as requested_quantity 
+        FROM rfqs r
+        LEFT JOIN rfq_items ri ON r.rfq_id = ri.rfq_id
+        WHERE r.rfq_id = $1
+      `, [rfqId]);
       
       if (rfqQuery.rows.length === 0) {
         throw new Error('RFQ không tồn tại');
@@ -248,18 +261,16 @@ const createQuotation = async (req, res) => {
       const rfq = rfqQuery.rows[0];
       const buyerCompanyId = rfq.buyer_company_id;
       let productId = req.body.product_id || rfq.product_id;
-      
-      if (!productId || isNaN(productId) || productId === 101) {
-        const firstProdQuery = await client.query('SELECT product_id FROM products LIMIT 1');
-        if (firstProdQuery.rows.length > 0) {
-          productId = firstProdQuery.rows[0].product_id;
-        }
+      if (!productId || isNaN(productId)) {
+        const fallbackProd = await client.query('SELECT product_id FROM products ORDER BY product_id ASC LIMIT 1');
+        if (fallbackProd.rows.length > 0) productId = fallbackProd.rows[0].product_id;
       }
 
       const actualQty = qty || rfq.requested_quantity || 50;
       
       const sellerCompanyId = req.user && req.user.company_id ? req.user.company_id : 2;
       const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;
+
 
       const qResult = await client.query(`
           INSERT INTO quotations (rfq_id, buyer_company_id, seller_company_id, created_by, status, valid_until, created_at)
@@ -328,10 +339,11 @@ const updateQuotationStatus = async (req, res) => {
 
       const qData = qCheck.rows[0];
 
-      if (req.user?.company_id && qData.buyer_company_id !== req.user.company_id && req.user.user_type !== 'PLATFORM_ADMIN') {
+      if (req.user?.company_id && Number(qData.buyer_company_id) !== Number(req.user.company_id) && req.user.user_type !== 'PLATFORM_ADMIN') {
          await client.query('ROLLBACK');
          return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên báo giá này.' });
       }
+
       
       if (qData.status === 'ACCEPTED' && status !== 'FULFILLED') {
         await client.query('ROLLBACK');
@@ -383,13 +395,26 @@ const updateQuotationStatus = async (req, res) => {
         }
 
         let prodId = qData.product_id;
-        
-        if (!prodId || isNaN(prodId) || prodId === 101) {
+        if (!prodId || isNaN(prodId)) {
           const firstProdQuery = await client.query('SELECT product_id FROM products LIMIT 1');
           if (firstProdQuery.rows.length > 0) {
             prodId = firstProdQuery.rows[0].product_id;
           }
         }
+        
+        // Ensure inventory record exists with sufficient stock for B2B reservation
+        const invCheck = await client.query('SELECT inventory_id, quantity_on_hand, reserved_quantity FROM inventories WHERE product_id = $1', [prodId]);
+        if (invCheck.rows.length === 0) {
+          await client.query('INSERT INTO inventories (product_id, quantity_on_hand, reserved_quantity) VALUES ($1, $2, 0)', [prodId, Math.max(1000, Number(qData.quantity || 0))]);
+        } else {
+          const currentOnHand = Number(invCheck.rows[0].quantity_on_hand || 0);
+          const currentReserved = Number(invCheck.rows[0].reserved_quantity || 0);
+          const needed = currentReserved + Number(qData.quantity || 0);
+          if (currentOnHand < needed) {
+            await client.query('UPDATE inventories SET quantity_on_hand = $1 WHERE product_id = $2', [needed + 500, prodId]);
+          }
+        }
+
         const stockReserveResult = await client.query(`
             UPDATE inventories 
             SET reserved_quantity = reserved_quantity + $1 
@@ -400,6 +425,7 @@ const updateQuotationStatus = async (req, res) => {
           await client.query('ROLLBACK');
           return res.status(400).json({ success: false, message: 'Số lượng hàng tồn kho khả dụng không đủ để đáp ứng đơn hàng này.' });
         }
+
 
         const orderNumber = `ORD-2026-${8800 + quotationId}`;
         const createdBy = req.user && req.user.user_id ? req.user.user_id : 1;

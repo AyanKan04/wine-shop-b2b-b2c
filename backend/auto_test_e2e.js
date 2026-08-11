@@ -1,4 +1,24 @@
+const app = require('./src/app');
 const API_URL = 'http://localhost:5000/api';
+let serverInstance = null;
+
+let testCompanyId = null;
+let testProductId = null;
+let testRFQId = null;
+let testQuotationId = null;
+
+async function ensureServerRunning() {
+  try {
+    const res = await fetch(`${API_URL}/health`).catch(() => null);
+    if (!res) {
+      serverInstance = app.listen(5000, () => console.log('⚡ Temporary Express server started on port 5000 for E2E test'));
+      await new Promise(r => setTimeout(r, 800));
+    }
+  } catch (err) {
+    serverInstance = app.listen(5000, () => console.log('⚡ Temporary Express server started on port 5000 for E2E test'));
+    await new Promise(r => setTimeout(r, 800));
+  }
+}
 
 async function fetchAPI(endpoint, method = 'GET', body = null, token = null) {
   const headers = { 'Content-Type': 'application/json' };
@@ -19,18 +39,17 @@ async function fetchAPI(endpoint, method = 'GET', body = null, token = null) {
 
 async function runE2E() {
   console.log('--- BẮT ĐẦU E2E TEST TOÀN DIỆN ---');
+  await ensureServerRunning();
+
   let adminToken = '';
   let buyerToken = '';
-  let testCompanyId = null;
-  let testProductId = null;
-  let testRFQId = null;
-  let testQuotationId = null;
 
   try {
     console.log('\n[ADMIN] Đăng nhập Master Admin');
-    const adminLogin = await fetchAPI('/auth/login', 'POST', { username: 'admin_user', password: 'Password123!' });
+    const adminLogin = await fetchAPI('/auth/login', 'POST', { username: 'admin', password: 'Password123!' });
     adminToken = adminLogin.token;
     console.log('✅ Master Admin đăng nhập thành công');
+
 
     console.log(`\n[ADMIN] Dashboard Stats`);
     await fetchAPI('/dashboard/stats', 'GET', null, adminToken);
@@ -166,6 +185,7 @@ async function runE2E() {
 
     console.log('\n🎉 E2E TEST THÀNH CÔNG 100%! HỆ THỐNG HOẠT ĐỘNG HOÀN HẢO TỪ A ĐẾN Z.');
     console.log('Đạt 31/31 bài test thành công (100% PASS).');
+    if (serverInstance) serverInstance.close();
     process.exit(0);
 
   } catch (err) {
@@ -173,13 +193,13 @@ async function runE2E() {
     console.error(err.message);
     console.log('\n🧹 Đang xóa dữ liệu của phiên test thất bại...');
     await cleanupTestData(adminToken);
+    if (serverInstance) serverInstance.close();
     process.exit(1);
   }
 }
 
 async function cleanupTestData(adminToken) {
   try {
-    // Delete Invoice
     if (testQuotationId) {
        await fetchAPI(`/test/cleanup?type=invoice&quotationId=${testQuotationId}`, 'DELETE', null, adminToken).catch(()=>null);
        await fetchAPI(`/test/cleanup?type=order&quotationId=${testQuotationId}`, 'DELETE', null, adminToken).catch(()=>null);
@@ -198,3 +218,4 @@ async function cleanupTestData(adminToken) {
 }
 
 runE2E();
+

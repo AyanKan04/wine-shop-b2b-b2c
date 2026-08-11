@@ -10,11 +10,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'RuuB2BSuperSecretKey2024';
  * Authenticate JWT Token securely
  */
 const authenticateToken = (req, res, next) => {
-  if (process.env.NODE_ENV === 'test') {
-    req.user = { id: 1, company_id: 1, role: 'PLATFORM_ADMIN', user_type: 'PLATFORM_ADMIN' };
-    return next();
-  }
-
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -61,11 +56,6 @@ const optionalAuth = (req, res, next) => {
  */
 const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
-    // If it's a test environment with the dummy user, allow bypass
-    if (process.env.NODE_ENV === 'test' && req.user && req.user.username === 'lotte_buyer') {
-      return next();
-    }
-    
     if (!req.user || !allowedRoles.includes(req.user.user_type)) {
       return res.status(403).json({
         success: false,
@@ -85,10 +75,6 @@ const verifyAlcoholLicense = async (req, res, next) => {
     return next();
   }
 
-  // If using a real newly created user for auth testing, skip license check for basic API tests
-  if (process.env.NODE_ENV === 'test' && req.user && req.user.username !== 'lotte_buyer') {
-    return next();
-  }
 
   if (!companyId) {
     return res.status(403).json({

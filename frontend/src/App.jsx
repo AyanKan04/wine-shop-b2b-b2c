@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ToastProvider, useToast } from './context/ToastContext.jsx';
 
 // Layout Components
 import TopBar from './components/TopBar.jsx';
@@ -21,7 +22,8 @@ import MasterAdminWorkspacePage from './pages/MasterAdminWorkspacePage.jsx';
 
 import apiService from './services/api.js';
 
-export default function App() {
+function MainApp() {
+  const toast = useToast();
   const [currentRoute, setCurrentRoute] = useState('home');
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -35,8 +37,6 @@ export default function App() {
   const [invoices, setInvoices] = useState([]);
   const [licenses, setLicenses] = useState([]);
   const [inventory, setInventory] = useState([]);
-
-  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     setIsProductsLoading(true);
@@ -103,9 +103,11 @@ export default function App() {
     }
   }, []);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const showToast = (msg, type = 'success') => {
+    if (type === 'error') toast.error(msg);
+    else if (type === 'warning') toast.warning(msg);
+    else if (type === 'info') toast.info(msg);
+    else toast.success(msg);
   };
 
   const navigateToProductDetail = (id) => {
@@ -117,7 +119,7 @@ export default function App() {
     localStorage.removeItem('token');
     setCurrentUser(null);
     setCurrentRoute('home');
-    showToast('Đã đăng xuất thành công.');
+    toast.info('Đã đăng xuất thành công.');
   };
 
   return (
@@ -125,7 +127,7 @@ export default function App() {
       <div className="noise-overlay" />
       <AgeVerificationModal />
       <TopBar currentUser={currentUser} />
-      <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} currentUser={currentUser} setCurrentUser={setCurrentUser} showToast={showToast} />
+      <Navbar currentRoute={currentRoute} setCurrentRoute={setCurrentRoute} currentUser={currentUser} setCurrentUser={setCurrentUser} showToast={showToast} handleLogout={handleLogout} />
 
       <main>
         {currentRoute === 'home' && (
@@ -144,12 +146,14 @@ export default function App() {
               const role = user.role || user.user_type;
               user.role = role;
               setCurrentUser(user);
-              if (role !== 'BUYER_REP') {
+              toast.success(`Chào mừng ${user.full_name || user.username}!`, 'Đăng nhập thành công');
+              if (role === 'PLATFORM_ADMIN') {
                 setCurrentRoute('master-admin');
               } else {
-                setCurrentRoute('buyer-rfqs');
+                setCurrentRoute('orders-credit');
               }
             }}
+
             onNavigateRegister={() => setCurrentRoute('register')}
           />
         )}
@@ -196,16 +200,17 @@ export default function App() {
         )}
       </main>
 
-      {toastMessage && (
-        <div className="toast-container">
-          <div className="toast">
-            <i className="fa-solid fa-circle-check gold-text"></i> {toastMessage}
-          </div>
-        </div>
-      )}
-
       <SommelierBotWidget />
       <Footer />
     </div>
   );
 }
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <MainApp />
+    </ToastProvider>
+  );
+}
+

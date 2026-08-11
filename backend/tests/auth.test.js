@@ -86,15 +86,17 @@ describe('API Module 1: Authentication & User Management (Real DB)', () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({
-        username: 'admin_platform',
-        password: 'Admin@123!'
+        username: 'admin',
+        password: 'Password123!'
       });
 
     assert.equal(res.status, 200);
     assert.equal(res.body.success, true);
     assert.ok(res.body.token);
-    assert.equal(res.body.user.username, 'admin_platform');
+    assert.equal(res.body.user.username, 'admin');
     assert.equal(res.body.user.user_type, 'PLATFORM_ADMIN');
   });
+
+
 
 });

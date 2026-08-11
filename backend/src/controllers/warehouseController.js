@@ -244,8 +244,13 @@ const updateShipmentStatus = async (req, res) => {
       await client.query('COMMIT');
       res.json({
         success: true,
-        message: `Cập nhật trạng thái vận chuyển: ${status}`
+        message: `Cập nhật trạng thái vận chuyển: ${status}`,
+        shipment: {
+          shipment_id: shipmentId,
+          shipment_status: status
+        }
       });
+
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

@@ -158,7 +158,12 @@ const createProduct = async (req, res) => {
       }
 
       await client.query('COMMIT');
-      res.status(201).json({ success: true, message: 'Thêm sản phẩm thành công', product_id: productId });
+      res.status(201).json({
+        success: true,
+        message: 'Thêm sản phẩm thành công',
+        product_id: productId,
+        data: { product_id: productId, sku, product_name, category, country_of_origin }
+      });
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -187,25 +192,33 @@ const updateProduct = async (req, res) => {
       await client.query('BEGIN');
 
       const companyId = req.user?.company_id || 0;
-      const v_year = vintage_year === '' ? null : vintage_year;
-      const a_content = alcohol_content === '' ? null : alcohol_content;
-      const v_ml = volume_ml === '' ? null : volume_ml;
-      const m_q = moq === '' ? null : moq;
+      const v_year = (vintage_year === '' || vintage_year === undefined) ? null : vintage_year;
+      const a_content = (alcohol_content === '' || alcohol_content === undefined) ? null : alcohol_content;
+      const v_ml = (volume_ml === '' || volume_ml === undefined) ? null : volume_ml;
+      const m_q = (moq === '' || moq === undefined) ? null : moq;
 
       let updateQuery = `
           UPDATE products SET 
-            sku = $1, product_name = $2, category_id = (SELECT category_id FROM categories WHERE category_name = $3 LIMIT 1), 
-            country_of_origin = $4, region = $5, grape_variety = $6, 
-            vintage_year = $7, alcohol_content = $8, volume_ml = $9, 
-            moq = $10, image_url = $11, description = $12
-          WHERE product_id = $13 
+            sku = COALESCE($1, sku), 
+            product_name = COALESCE($2, product_name), 
+            country_of_origin = COALESCE($3, country_of_origin), 
+            region = COALESCE($4, region), 
+            grape_variety = COALESCE($5, grape_variety), 
+            vintage_year = COALESCE($6, vintage_year), 
+            alcohol_content = COALESCE($7, alcohol_content), 
+            volume_ml = COALESCE($8, volume_ml), 
+            moq = COALESCE($9, moq), 
+            image_url = COALESCE($10, image_url), 
+            description = COALESCE($11, description)
+          WHERE product_id = $12 
         `;
-      let params = [sku, product_name, category, country_of_origin, region, grape_variety, v_year, a_content, v_ml, m_q, image_url, description, productId];
+      let params = [sku || null, product_name || null, country_of_origin || null, region || null, grape_variety || null, v_year, a_content, v_ml, m_q, image_url || null, description || null, productId];
       
       if (req.user?.user_type === 'COMPANY_ADMIN') {
-        updateQuery += ` AND seller_company_id = $14 `;
+        updateQuery += ` AND seller_company_id = $13 `;
         params.push(companyId);
       }
+
 
       const updateResult = await client.query(updateQuery, params);
 
@@ -213,6 +226,7 @@ const updateProduct = async (req, res) => {
         await client.query('ROLLBACK');
         return res.status(403).json({ success: false, message: 'Bạn không có quyền cập nhật sản phẩm này hoặc sản phẩm không tồn tại.' });
       }
+
 
       await client.query(`DELETE FROM product_tier_prices WHERE product_id = $1`, [productId]);
 

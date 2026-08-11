@@ -9,6 +9,11 @@ const pool = new Pool({
   }
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client:', err.message);
+});
+
+
 let isConnected = false;
 
 const getPool = async () => {
@@ -31,19 +36,20 @@ async function connectDB() {
     // 1. Create LCDocuments table if it does not exist (PostgreSQL syntax)
     try {
       await client.query(`
-        CREATE TABLE IF NOT EXISTS LCDocuments (
-          LCID SERIAL PRIMARY KEY,
-          BuyerCompany VARCHAR(255) NOT NULL,
-          LCNumber VARCHAR(100) NOT NULL,
-          IssuingBank VARCHAR(255) NOT NULL,
-          Amount DECIMAL(18,2) NOT NULL,
-          ExpiryDate DATE NOT NULL,
-          DocumentUrl VARCHAR(500) NOT NULL,
-          Status VARCHAR(50) NOT NULL DEFAULT 'SUBMITTED',
-          CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS lc_documents (
+          lc_id SERIAL PRIMARY KEY,
+          buyer_company VARCHAR(255) NOT NULL,
+          lc_number VARCHAR(100) NOT NULL,
+          issuing_bank VARCHAR(255) NOT NULL,
+          amount DECIMAL(18,2) NOT NULL,
+          expiry_date DATE NOT NULL,
+          document_url VARCHAR(500) NOT NULL,
+          status VARCHAR(50) NOT NULL DEFAULT 'SUBMITTED',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      console.log('LCDocuments table checked/created successfully.');
+      console.log('lc_documents table checked/created successfully.');
+
     } catch (lcTableErr) {
       console.error('Failed to create tables:', lcTableErr.message);
     } finally {

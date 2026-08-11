@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
 router.delete('/cleanup', authenticateToken, async (req, res) => {
@@ -8,56 +8,44 @@ router.delete('/cleanup', authenticateToken, async (req, res) => {
   
   try {
     const pool = await getPool();
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
+    const client = await pool.connect();
 
     try {
+      await client.query('BEGIN');
+
       if (type === 'invoice' && quotationId) {
-        // Find order ID
-        const ord = await transaction.request()
-          .input('QuotationID', sql.BigInt, quotationId)
-          .query(`SELECT OrderID FROM Orders WHERE QuotationID = @QuotationID`);
-        if (ord.recordset.length > 0) {
-           const orderId = ord.recordset[0].OrderID;
-           await transaction.request().input('OrderID', sql.BigInt, orderId)
-             .query(`DELETE FROM Invoices WHERE OrderID = @OrderID`);
+        const ord = await client.query(`SELECT order_id FROM orders WHERE quotation_id = $1`, [quotationId]);
+        if (ord.rows.length > 0) {
+           const orderId = ord.rows[0].order_id;
+           await client.query(`DELETE FROM invoices WHERE order_id = $1`, [orderId]);
         }
       } else if (type === 'order' && quotationId) {
-        const ord = await transaction.request()
-          .input('QuotationID', sql.BigInt, quotationId)
-          .query(`SELECT OrderID FROM Orders WHERE QuotationID = @QuotationID`);
-        if (ord.recordset.length > 0) {
-           const orderId = ord.recordset[0].OrderID;
-           await transaction.request().input('OrderID', sql.BigInt, orderId)
-             .query(`DELETE FROM OrderItems WHERE OrderID = @OrderID`);
-           await transaction.request().input('OrderID', sql.BigInt, orderId)
-             .query(`DELETE FROM Orders WHERE OrderID = @OrderID`);
+        const ord = await client.query(`SELECT order_id FROM orders WHERE quotation_id = $1`, [quotationId]);
+        if (ord.rows.length > 0) {
+           const orderId = ord.rows[0].order_id;
+           await client.query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
+           await client.query(`DELETE FROM orders WHERE order_id = $1`, [orderId]);
         }
       } else if (type === 'quotation' && quotationId) {
-        await transaction.request().input('QuotationID', sql.BigInt, quotationId)
-          .query(`DELETE FROM QuotationItems WHERE QuotationID = @QuotationID`);
-        await transaction.request().input('QuotationID', sql.BigInt, quotationId)
-          .query(`DELETE FROM Quotations WHERE QuotationID = @QuotationID`);
+        await client.query(`DELETE FROM quotation_items WHERE quotation_id = $1`, [quotationId]);
+        await client.query(`DELETE FROM quotations WHERE quotation_id = $1`, [quotationId]);
       } else if (type === 'rfq' && rfqId) {
-        await transaction.request().input('RFQID', sql.BigInt, rfqId)
-          .query(`DELETE FROM RFQs WHERE RFQID = @RFQID`);
+        await client.query(`DELETE FROM rfq_items WHERE rfq_id = $1`, [rfqId]);
+        await client.query(`DELETE FROM rfqs WHERE rfq_id = $1`, [rfqId]);
       } else if (type === 'company' && companyId) {
-        // Delete Users associated with Company
-        await transaction.request().input('CompanyID', sql.BigInt, companyId)
-          .query(`DELETE FROM Users WHERE CompanyID = @CompanyID`);
-        // Delete CreditLimits
-        await transaction.request().input('CompanyID', sql.BigInt, companyId)
-          .query(`DELETE FROM CreditLimits WHERE CompanyID = @CompanyID`);
-        // Delete Company
-        await transaction.request().input('CompanyID', sql.BigInt, companyId)
-          .query(`DELETE FROM Companies WHERE CompanyID = @CompanyID`);
+        await client.query(`DELETE FROM users WHERE company_id = $1`, [companyId]);
+        await client.query(`DELETE FROM credit_limits WHERE company_id = $1`, [companyId]);
+        await client.query(`DELETE FROM company_licenses WHERE company_id = $1`, [companyId]);
+        await client.query(`DELETE FROM companies WHERE company_id = $1`, [companyId]);
       }
 
-      await transaction.commit();
+      await client.query('COMMIT');
       res.json({ success: true });
     } catch (err) {
-      await transaction.rollback();
+      await client.query('ROLLBACK');
       throw err;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('Test cleanup error:', err);
@@ -66,3 +54,4 @@ router.delete('/cleanup', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+

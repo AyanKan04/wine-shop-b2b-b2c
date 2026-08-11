@@ -444,8 +444,9 @@ const submitLCDocument = async (req, res) => {
       status: 'SUBMITTED'
     };
 
-    res.json({ success: true, message: 'Nộp L/C thành công!', lc_document: newLC });
+    res.json({ success: true, message: 'Nộp L/C thành công!', lc_document: newLC, data: newLC });
   } catch (err) {
+
     console.error('Error submitting L/C doc:', err);
     res.status(500).json({ success: false, message: 'Lỗi server khi nộp L/C' });
   }
